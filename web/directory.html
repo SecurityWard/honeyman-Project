@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Directory - Secured Foundations LLC
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .directory-container {
+            background: white;
+            margin: 2rem auto;
+            padding: 3rem;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            max-width: 1000px;
+        }
+        .employee-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        .employee-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+            transition: transform 0.2s ease;
+        }
+        .employee-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .employee-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 1rem;
+        }
+        .search-box {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .contact-info {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .department-filter {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <img src="logo.svg" alt="Secured Foundations LLC" width="180">
+            </div>
+            <nav class="nav">
+                <a href="index.html">Home</a>
+                <a href="#" class="active">Directory</a>
+                <a href="helpdesk.html">IT Support</a>
+                <a href="logout.html">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="directory-container">
+            <h1>Employee Directory</h1>
+            <p>Search and connect with your colleagues across Secured Foundations LLC</p>
+            
+            <input type="text" class="search-box" id="searchBox" placeholder="Search by name, department, or email...">
+            
+            <div class="department-filter">
+                <button class="filter-btn active" data-dept="all">All Departments</button>
+                <button class="filter-btn" data-dept="IT">IT</button>
+                <button class="filter-btn" data-dept="Security">Security</button>
+                <button class="filter-btn" data-dept="HR">HR</button>
+                <button class="filter-btn" data-dept="Finance">Finance</button>
+                <button class="filter-btn" data-dept="Operations">Operations</button>
+            </div>
+            
+            <div class="employee-grid" id="employeeGrid">
+                <!-- Employees will be populated by JavaScript -->
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Secured Foundations LLC. Employee Directory v1.2.3</p>
+        </div>
+    </footer>
+    
+    <script>
+        const employees = [
+            {
+                name: "Sarah Johnson",
+                position: "CISO",
+                department: "Security",
+                email: "s.johnson@securedfoundations.com",
+                phone: "ext. 2001",
+                location: "Building A, Floor 3"
+            },
+            {
+                name: "Michael Chen",
+                position: "IT Director",
+                department: "IT",
+                email: "m.chen@securedfoundations.com",
+                phone: "ext. 2100",
+                location: "Building B, Floor 2"
+            },
+            {
+                name: "Emily Rodriguez",
+                position: "Security Analyst",
+                department: "Security",
+                email: "e.rodriguez@securedfoundations.com",
+                phone: "ext. 2045",
+                location: "Building A, Floor 2"
+            },
+            {
+                name: "David Kim",
+                position: "Network Administrator",
+                department: "IT",
+                email: "d.kim@securedfoundations.com",
+                phone: "ext. 2110",
+                location: "Building B, Floor 1"
+            },
+            {
+                name: "Lisa Thompson",
+                position: "HR Manager",
+                department: "HR",
+                email: "l.thompson@securedfoundations.com",
+                phone: "ext. 3001",
+                location: "Building C, Floor 1"
+            },
+            {
+                name: "Robert Wilson",
+                position: "Financial Controller",
+                department: "Finance",
+                email: "r.wilson@securedfoundations.com",
+                phone: "ext. 4001",
+                location: "Building C, Floor 2"
+            },
+            {
+                name: "Jennifer Davis",
+                position: "Operations Manager",
+                department: "Operations",
+                email: "j.davis@securedfoundations.com",
+                phone: "ext. 5001",
+                location: "Building A, Floor 1"
+            },
+            {
+                name: "Thomas Anderson",
+                position: "Senior DevOps Engineer",
+                department: "IT",
+                email: "t.anderson@securedfoundations.com",
+                phone: "ext. 2120",
+                location: "Building B, Floor 3"
+            }
+        ];
+
+        function renderEmployees(employeeList) {
+            const grid = document.getElementById('employeeGrid');
+            grid.innerHTML = '';
+            
+            employeeList.forEach(employee => {
+                const initials = employee.name.split(' ').map(n => n[0]).join('');
+                
+                const card = document.createElement('div');
+                card.className = 'employee-card';
+                card.innerHTML = `
+                    <div class="employee-header">
+                        <div class="avatar">${initials}</div>
+                        <div>
+                            <h3>${employee.name}</h3>
+                            <p style="color: #667eea; font-weight: 500;">${employee.position}</p>
+                        </div>
+                    </div>
+                    <div class="contact-info">
+                        <p><strong>Department:</strong> ${employee.department}</p>
+                        <p><strong>Email:</strong> <a href="mailto:${employee.email}">${employee.email}</a></p>
+                        <p><strong>Phone:</strong> ${employee.phone}</p>
+                        <p><strong>Location:</strong> ${employee.location}</p>
+                    </div>
+                `;
+                
+                // Add click tracking
+                card.addEventListener('click', function() {
+                    fetch('/api/directory-access', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            timestamp: new Date().toISOString(),
+                            accessed_employee: employee.name,
+                            accessed_email: employee.email,
+                            user_agent: navigator.userAgent,
+                            page: 'directory'
+                        })
+                    }).catch(() => {});
+                });
+                
+                grid.appendChild(card);
+            });
+        }
+
+        // Initial render
+        renderEmployees(employees);
+
+        // Search functionality
+        document.getElementById('searchBox').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = employees.filter(emp => 
+                emp.name.toLowerCase().includes(searchTerm) ||
+                emp.department.toLowerCase().includes(searchTerm) ||
+                emp.email.toLowerCase().includes(searchTerm) ||
+                emp.position.toLowerCase().includes(searchTerm)
+            );
+            renderEmployees(filtered);
+        });
+
+        // Department filter
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const dept = this.dataset.dept;
+                const filtered = dept === 'all' ? employees : employees.filter(emp => emp.department === dept);
+                renderEmployees(filtered);
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+# Canary Token Integration Instructions
+
+## To integrate real canary tokens from canarytokens.org:
+
+1. Visit https://canarytokens.org/nest/generate
+2. Generate the following token types:
+
+### PDF Document Tokens:
+- Q4-2024-Financial-Report.pdf (Financial data token)
+- Strategic-Plan-2025-2027.pdf (Executive document token)
+- Information-Security-Policy.pdf (Security document token)
+- Incident-Response-Plan.pdf (Security incident token)
+
+### Microsoft Office Tokens:
+- Employee-Handbook-2024.docx (HR document token)
+- Budget-2025-Executive-Summary.xlsx (Financial spreadsheet token)
+- Network-Access-Procedures.docx (IT procedures token)
+- Board-Meeting-Minutes-Dec-2024.docx (Executive minutes token)
+
+### Web Bug Tokens:
+- Embed web bug tokens in the document portal HTML
+- Add email tokens for document access notifications
+
+### DNS Tokens:
+- Configure DNS tokens for document server monitoring
+
+## Configuration Steps:
+
+1. Generate each token with descriptive names
+2. Download the generated files
+3. Replace the placeholder files in this directory
+4. Update the OpenCanary configuration to serve these files
+5. Configure token alerting to your monitoring system
+
+## Token Placement Strategy:
+
+- Financial documents: High-value targets for financial data theft
+- HR documents: Attractive for identity theft and social engineering
+- Security documents: Targets for understanding security controls
+- Executive documents: High-value strategic information
+
+## Monitoring:
+
+All token activations should be forwarded to:
+- Local honeypot monitoring system
+- VPS dashboard for real-time alerts
+- Email notifications for critical token access
+
+## Note:
+The current implementation logs document access attempts but does not contain real canary tokens.
+Replace with actual generated tokens for production deployment.

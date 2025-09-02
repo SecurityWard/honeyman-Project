@@ -1,0 +1,87 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# Logs
+logs/
+*.log
+*.log.*
+*.pid
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# API Keys and Secrets  
+*api_key*
+*secret*
+*password*
+*credentials*
+HOSTINGER_API_KEY
+
+# Backup files
+*.backup
+*.bak
+backup/
+backups/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Personal/Conversation files
+claude*
+conversation*
+reminder*
+
+# Data files (except config)
+*.json
+!config/*.json
+!dashboard/package.json
+*.csv
+*.db
+*.sqlite
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Node modules (for dashboard)
+node_modules/
+npm-debug.log*
+dashboard/node_modules/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Test files
+test_*.py
+test_*.sh
+*.test

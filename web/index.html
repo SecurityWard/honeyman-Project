@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secured Foundations LLC - Employee Portal</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <img src="logo.svg" alt="Secured Foundations LLC" width="180">
+            </div>
+            <nav class="nav">
+                <a href="#">Home</a>
+                <a href="intranet.html">Intranet</a>
+                <a href="documents.html">Documents</a>
+                <a href="support.html">IT Support</a>
+                <a href="directory.html">Directory</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <div class="login-section">
+                <div class="login-box">
+                    <h2>Employee Login</h2>
+                    <p class="notice">Access to company resources requires valid credentials</p>
+                    
+                    <form id="loginForm" action="/login" method="POST">
+                        <div class="form-group">
+                            <label for="username">Employee ID / Username</label>
+                            <input type="text" id="username" name="username" placeholder="e.g. jsmith or 12345" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" name="password" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <input type="checkbox" id="remember" name="remember">
+                            <label for="remember">Remember me on this device</label>
+                        </div>
+                        
+                        <button type="submit" class="login-btn">Sign In</button>
+                    </form>
+                    
+                    <div class="login-footer">
+                        <a href="reset.html">Forgot Password?</a>
+                        <a href="unlock.html">Account Locked?</a>
+                    </div>
+                </div>
+                
+                <div class="info-panel">
+                    <h3>Quick Access</h3>
+                    <ul>
+                        <li><a href="payroll.html">Payroll System</a></li>
+                        <li><a href="benefits.html">Employee Benefits</a></li>
+                        <li><a href="helpdesk.html">IT Helpdesk</a></li>
+                        <li><a href="vpn.html">VPN Access</a></li>
+                        <li><a href="timesheet.html">Timesheet Entry</a></li>
+                    </ul>
+                    
+                    <div class="announcement">
+                        <h4>IT Security Notice</h4>
+                        <p>Please ensure your password meets company requirements: minimum 8 characters with uppercase, lowercase, and numbers.</p>
+                        <p><strong>Last security update:</strong> December 15, 2024</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Secured Foundations LLC. All rights reserved. | <a href="privacy.html">Privacy Policy</a> | <a href="terms.html">Terms of Service</a></p>
+            <p>For IT support, contact: support@securedfoundations.com | Phone: (555) 123-4567</p>
+        </div>
+    </footer>
+    
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+[Unit]
+Description=Honeyman Project Dashboard Server (for VPS)
+After=network.target
+Requires=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+User=root
+WorkingDirectory=/root/dashboard
+ExecStart=/usr/bin/node /root/dashboard/api/server.js
+StandardOutput=append:/root/dashboard/server.log
+StandardError=append:/root/dashboard/server.log
+
+[Install]
+WantedBy=multi-user.target

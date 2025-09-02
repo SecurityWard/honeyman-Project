@@ -1,0 +1,25 @@
+[Unit]
+Description=Honeypot OpenCanary Event Forwarder
+Documentation=man:systemd.service(5)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/home/burner
+ExecStart=/usr/bin/python3 /home/burner/honeypot-minimal/opencanary_forwarder.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+
+# Security settings (simplified for debugging)
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=honeypot.target

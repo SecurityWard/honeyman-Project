@@ -1,0 +1,17 @@
+[Unit]
+Description=Honeypot OpenCanary Service
+After=network.target docker.service honeypot-elasticsearch.service
+Requires=docker.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+WorkingDirectory=/home/burner/honeypot-minimal
+ExecStart=/usr/bin/docker compose up opencanary
+ExecStop=/usr/bin/docker compose stop opencanary
+StandardOutput=append:/home/burner/honeypot-minimal/logs/opencanary.log
+StandardError=append:/home/burner/honeypot-minimal/logs/opencanary.log
+
+[Install]
+WantedBy=honeypot.target

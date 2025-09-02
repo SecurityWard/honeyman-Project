@@ -1,0 +1,20 @@
+[Unit]
+Description=Honeypot Data Forwarder to Dashboard
+After=network.target docker.service
+Requires=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=30
+User=burner
+WorkingDirectory=/home/burner/honeypot-minimal
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/home/burner/honeypot-minimal/.env
+ExecStartPre=/bin/bash -c 'until curl -s http://localhost:9200/_cluster/health > /dev/null 2>&1; do echo "Waiting for Elasticsearch..."; sleep 10; done'
+ExecStart=/usr/bin/python3 /home/burner/honeypot-minimal/hostinger_data_forwarder.py
+StandardOutput=append:/home/burner/honeypot-minimal/logs/hostinger_forwarder.log
+StandardError=append:/home/burner/honeypot-minimal/logs/hostinger_forwarder.log
+
+[Install]
+WantedBy=honeypot.target

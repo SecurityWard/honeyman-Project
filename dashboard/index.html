@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Honeyman Project - Real-time Threat Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem 2rem;
+            border-bottom: 2px solid #0d7377;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            color: #14a085;
+            font-size: 2rem;
+            text-shadow: 0 0 10px rgba(20, 160, 133, 0.5);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card h3 {
+            color: #14a085;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        
+        .threat-critical { color: #e74c3c; }
+        .threat-high { color: #f39c12; }
+        .threat-medium { color: #f1c40f; }
+        .threat-low { color: #2ecc71; }
+        
+        .charts-section {
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .threats-feed {
+            padding: 2rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .threat-item {
+            background: rgba(255, 255, 255, 0.05);
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        
+        .threat-item.critical { border-left-color: #e74c3c; }
+        .threat-item.high { border-left-color: #f39c12; }
+        .threat-item.medium { border-left-color: #f1c40f; }
+        .threat-item.low { border-left-color: #2ecc71; }
+        
+        .threat-time {
+            font-size: 0.8rem;
+            color: #bbb;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-online { background: #2ecc71; }
+        .status-offline { background: #e74c3c; }
+        .status-warning { background: #f39c12; }
+        
+        @media (max-width: 768px) {
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🍯 Honeyman Project Dashboard</h1>
+        <p>Real-time Honeypot Threat Monitoring</p>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>System Status</h3>
+            <div id="system-status">
+                <span class="status-indicator status-online"></span>
+                Online
+            </div>
+            <div id="uptime">Uptime: --</div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Active Threats</h3>
+            <div class="stat-value threat-critical" id="critical-threats">--</div>
+            <div>Critical Threats</div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Detection Systems</h3>
+            <div id="detection-status">
+                <div>USB: <span id="usb-status">--</span></div>
+                <div>WiFi: <span id="wifi-status">--</span></div>
+                <div>BLE: <span id="ble-status">--</span></div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Total Events</h3>
+            <div class="stat-value" id="total-events">--</div>
+            <div>Last 24 hours</div>
+        </div>
+    </div>
+    
+    <div class="charts-section">
+        <div class="chart-container">
+            <h3>Threat Timeline</h3>
+            <canvas id="threatChart"></canvas>
+        </div>
+        
+        <div class="chart-container">
+            <h3>Threat Categories</h3>
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="threats-feed">
+        <h3>Live Threat Feed</h3>
+        <div id="threats-list">
+            <!-- Threats will be populated here -->
+        </div>
+    </div>
+    
+    <script>
+        // Dashboard functionality
+        class HoneymanDashboard {
+            constructor() {
+                this.socket = null;
+                this.threatChart = null;
+                this.categoryChart = null;
+                this.init();
+            }
+            
+            init() {
+                this.setupCharts();
+                this.connectWebSocket();
+                this.startPolling();
+            }
+            
+            setupCharts() {
+                // Threat Timeline Chart
+                const threatCtx = document.getElementById('threatChart').getContext('2d');
+                this.threatChart = new Chart(threatCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Threats per Hour',
+                            data: [],
+                            borderColor: '#e74c3c',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { labels: { color: '#fff' } }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#fff' } },
+                            y: { ticks: { color: '#fff' } }
+                        }
+                    }
+                });
+                
+                // Category Chart
+                const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+                this.categoryChart = new Chart(categoryCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['USB Threats', 'WiFi Threats', 'BLE Threats', 'Network Threats'],
+                        datasets: [{
+                            data: [0, 0, 0, 0],
+                            backgroundColor: ['#3498db', '#e74c3c', '#f39c12', '#2ecc71']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { labels: { color: '#fff' } }
+                        }
+                    }
+                });
+            }
+            
+            connectWebSocket() {
+                // In production, this would connect to your WebSocket server
+                // For now, we'll simulate with periodic updates
+                console.log('WebSocket connection would be established here');
+            }
+            
+            startPolling() {
+                // Simulate real-time updates
+                this.updateStats();
+                setInterval(() => this.updateStats(), 30000);
+            }
+            
+            updateStats() {
+                // In production, this would fetch from your API
+                // For now, simulate with random data
+                this.simulateData();
+            }
+            
+            simulateData() {
+                // Update system status
+                document.getElementById('system-status').innerHTML = 
+                    '<span class="status-indicator status-online"></span>Online';
+                document.getElementById('uptime').textContent = 'Uptime: 2d 15h 32m';
+                
+                // Update threat counts
+                document.getElementById('critical-threats').textContent = Math.floor(Math.random() * 10);
+                document.getElementById('total-events').textContent = Math.floor(Math.random() * 1000) + 500;
+                
+                // Update detection status
+                document.getElementById('usb-status').textContent = 'Active';
+                document.getElementById('wifi-status').textContent = 'Active';
+                document.getElementById('ble-status').textContent = 'Active';
+                
+                // Update charts
+                this.updateCharts();
+                this.addThreatToFeed();
+            }
+            
+            updateCharts() {
+                // Add new data point to timeline
+                const now = new Date();
+                const timeLabel = now.toLocaleTimeString();
+                
+                this.threatChart.data.labels.push(timeLabel);
+                this.threatChart.data.datasets[0].data.push(Math.floor(Math.random() * 20));
+                
+                // Keep only last 10 points
+                if (this.threatChart.data.labels.length > 10) {
+                    this.threatChart.data.labels.shift();
+                    this.threatChart.data.datasets[0].data.shift();
+                }
+                
+                this.threatChart.update('none');
+                
+                // Update category chart
+                this.categoryChart.data.datasets[0].data = [
+                    Math.floor(Math.random() * 50),
+                    Math.floor(Math.random() * 100),
+                    Math.floor(Math.random() * 30),
+                    Math.floor(Math.random() * 40)
+                ];
+                this.categoryChart.update('none');
+            }
+            
+            addThreatToFeed() {
+                const threats = [
+                    { type: 'USB', message: 'Suspicious device detected', level: 'critical' },
+                    { type: 'WiFi', message: 'Evil twin AP detected', level: 'high' },
+                    { type: 'BLE', message: 'Flipper Zero detected', level: 'critical' },
+                    { type: 'Network', message: 'Port scan detected', level: 'medium' }
+                ];
+                
+                const threat = threats[Math.floor(Math.random() * threats.length)];
+                const threatsList = document.getElementById('threats-list');
+                
+                const threatElement = document.createElement('div');
+                threatElement.className = `threat-item ${threat.level}`;
+                threatElement.innerHTML = `
+                    <div><strong>${threat.type}:</strong> ${threat.message}</div>
+                    <div class="threat-time">${new Date().toLocaleString()}</div>
+                `;
+                
+                threatsList.insertBefore(threatElement, threatsList.firstChild);
+                
+                // Keep only last 10 threats
+                while (threatsList.children.length > 10) {
+                    threatsList.removeChild(threatsList.lastChild);
+                }
+            }
+        }
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            new HoneymanDashboard();
+        });
+    </script>
+</body>
+</html>

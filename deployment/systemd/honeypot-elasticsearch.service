@@ -1,0 +1,17 @@
+[Unit]
+Description=Honeypot Elasticsearch Service
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+WorkingDirectory=/home/burner/honeypot-minimal
+ExecStart=/usr/bin/docker compose up elasticsearch
+ExecStop=/usr/bin/docker compose stop elasticsearch
+StandardOutput=append:/home/burner/honeypot-minimal/logs/elasticsearch.log
+StandardError=append:/home/burner/honeypot-minimal/logs/elasticsearch.log
+
+[Install]
+WantedBy=honeypot.target

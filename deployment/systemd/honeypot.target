@@ -1,0 +1,8 @@
+[Unit]
+Description=Honeyman Project Honeypot System
+After=network.target docker.service
+Requires=network.target
+Wants=honeypot-opencanary.service honeypot-wifi-detector.service honeypot-multi-vector.service honeypot-forwarder.service honeypot-usb-advanced.service honeypot-airdrop.service honeypot-ble-enhanced.service
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,37 @@
+# Core dependencies
+requests>=2.28.0
+elasticsearch>=8.0.0
+flask>=2.2.0
+
+# Bluetooth and wireless
+bleak>=0.20.0
+pybluez>=0.23
+scapy>=2.5.0
+
+# USB detection
+pyusb>=1.2.1
+pyudev>=0.24.0
+
+# System monitoring
+psutil>=5.9.0
+watchdog>=3.0.0
+
+# Data processing
+numpy>=1.24.0
+python-magic>=0.4.27
+
+# Logging and monitoring
+python-json-logger>=2.0.0
+
+# Network discovery
+zeroconf>=0.70.0
+netifaces>=0.11.0
+
+# Async operations
+asyncio>=3.4.3
+aiofiles>=23.0.0
+
+# Development tools (optional)
+pytest>=7.3.0
+black>=23.0.0
+flake8>=6.0.0

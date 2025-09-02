@@ -1,0 +1,23 @@
+[Unit]
+Description=Honeypot Advanced USB Threat Detection System
+Documentation=man:systemd.service(5)
+After=network.target docker.service
+Requires=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+User=root
+WorkingDirectory=/home/burner/honeypot-minimal
+ExecStart=/usr/bin/python3 /home/burner/honeypot-minimal/usb_advanced_threat_system.py
+StandardOutput=append:/home/burner/honeypot-minimal/logs/usb_advanced.log
+StandardError=append:/home/burner/honeypot-minimal/logs/usb_advanced.log
+
+# Environment variables
+Environment=PYTHONUNBUFFERED=1
+Environment=ELASTICSEARCH_HOST=localhost:9200
+Environment=LOG_LEVEL=INFO
+
+[Install]
+WantedBy=honeypot.target

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payroll System - Secured Foundations LLC
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .payroll-container {
+            background: white;
+            margin: 2rem auto;
+            padding: 3rem;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            max-width: 800px;
+        }
+        .employee-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        .info-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .sensitive-data {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <img src="logo.svg" alt="Secured Foundations LLC" width="180">
+            </div>
+            <nav class="nav">
+                <a href="index.html">Home</a>
+                <a href="#" class="active">Payroll</a>
+                <a href="benefits.html">Benefits</a>
+                <a href="logout.html">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="payroll-container">
+            <h1>Employee Payroll Information</h1>
+            
+            <div class="sensitive-data">
+                <strong>⚠️ CONFIDENTIAL:</strong> This page contains sensitive payroll information. 
+                Unauthorized access is strictly prohibited and monitored.
+            </div>
+            
+            <div class="employee-info">
+                <div class="info-card">
+                    <h3>Employee Details</h3>
+                    <p><strong>Name:</strong> John Smith</p>
+                    <p><strong>Employee ID:</strong> SF-10245</p>
+                    <p><strong>Department:</strong> IT Security</p>
+                    <p><strong>Position:</strong> Senior Security Engineer</p>
+                    <p><strong>SSN:</strong> ***-**-4567</p>
+                </div>
+                
+                <div class="info-card">
+                    <h3>Current Pay Period</h3>
+                    <p><strong>Gross Pay:</strong> $6,250.00</p>
+                    <p><strong>Net Pay:</strong> $4,875.32</p>
+                    <p><strong>Federal Tax:</strong> $875.00</p>
+                    <p><strong>State Tax:</strong> $312.50</p>
+                    <p><strong>401k:</strong> $187.50</p>
+                </div>
+            </div>
+            
+            <div class="login-box" style="margin-top: 2rem;">
+                <h3>Access Payroll Records</h3>
+                <form id="payrollForm">
+                    <div class="form-group">
+                        <label for="empId">Employee ID</label>
+                        <input type="text" id="empId" name="empId" placeholder="Enter your employee ID" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ssn">Last 4 digits of SSN</label>
+                        <input type="password" id="ssn" name="ssn" placeholder="Enter last 4 digits" maxlength="4" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="payrollPin">Payroll PIN</label>
+                        <input type="password" id="payrollPin" name="payrollPin" placeholder="4-digit PIN" maxlength="4" required>
+                    </div>
+                    <button type="submit" class="login-btn">Access Records</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Secured Foundations LLC. Payroll System v2.1.4</p>
+            <p><strong>Security Notice:</strong> All access attempts are logged and monitored.</p>
+        </div>
+    </footer>
+    
+    <script>
+        document.getElementById('payrollForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const empId = document.getElementById('empId').value;
+            const ssn = document.getElementById('ssn').value;
+            const pin = document.getElementById('payrollPin').value;
+            
+            // Log the attempt
+            fetch('/api/payroll-access', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    timestamp: new Date().toISOString(),
+                    employee_id: empId,
+                    ssn_last4: ssn,
+                    payroll_pin: pin,
+                    user_agent: navigator.userAgent,
+                    page: 'payroll'
+                })
+            }).catch(() => {});
+            
+            // Show error after delay
+            setTimeout(() => {
+                alert('Access denied. Please verify your credentials or contact HR.');
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

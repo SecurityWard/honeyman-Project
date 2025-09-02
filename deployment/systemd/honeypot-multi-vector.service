@@ -1,0 +1,17 @@
+[Unit]
+Description=Honeypot Multi-Vector Detection System
+After=network.target docker.service
+Requires=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+User=root
+WorkingDirectory=/home/burner/honeypot-minimal
+ExecStart=/usr/bin/python3 /home/burner/honeypot-minimal/multi_vector_detection.py
+StandardOutput=append:/home/burner/honeypot-minimal/logs/multi_vector.log
+StandardError=append:/home/burner/honeypot-minimal/logs/multi_vector.log
+
+[Install]
+WantedBy=honeypot.target

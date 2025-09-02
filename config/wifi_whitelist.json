@@ -1,0 +1,28 @@
+{
+  "bssid_whitelist": [],
+  "ssid_whitelist": [
+    "eduroam",
+    "Guest Network",
+    "Visitor",
+    "WiFi.ie",
+    "FREEINTERNET",
+    "Free WiFi",
+    "VenetianLasVegas",
+    ".VenetianLasVegas",
+    "VLV",
+    "MandalayBay",
+    "MGMGrand",
+    "CaesarsPalace",
+    "Paris",
+    "Bellagio",
+    "LasVegasConventionCenter",
+    "LVCC",
+    "DefCon",
+    "DefCon-Open",
+    "DefCon-WPA3",
+    "EMBEDDEDSYSTEMSVILLAGE",
+    "PradaGalleria3DC",
+    "AGMobile-P"
+  ],
+  "note": "Add trusted network BSSIDs and SSIDs to reduce false positives. Added conference/venue SSIDs that were generating duplicate alerts."
+}

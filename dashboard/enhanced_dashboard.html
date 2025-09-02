@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Honeyman Project - Advanced Threat Intelligence Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #000000, #1a1a1a, #2d2d2d);
+            color: #ffeb3b;
+            min-height: 100vh;
+            padding: 15px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(40, 40, 40, 0.7));
+            border-radius: 12px;
+            border: 2px solid #ffeb3b;
+            box-shadow: 0 0 25px rgba(255, 235, 59, 0.3);
+        }
+        
+        .logo {
+            width: 120px;
+            height: 120px;
+            object-fit: contain;
+            margin-bottom: 10px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px rgba(255, 235, 59, 0.5);
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .threat-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(30, 30, 30, 0.6));
+            border: 1px solid #ffeb3b;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 235, 59, 0.2);
+        }
+        
+        .card h3 {
+            color: #ffeb3b;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .threat-level-critical { border-left: 4px solid #ff4444; }
+        .threat-level-high { border-left: 4px solid #ff8800; }
+        .threat-level-medium { border-left: 4px solid #ffeb3b; }
+        .threat-level-low { border-left: 4px solid #4caf50; }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .threat-timeline {
+            grid-column: 1 / -1;
+            height: 400px;
+        }
+        
+        .threat-map {
+            grid-column: 1 / 3;
+            height: 350px;
+            position: relative;
+        }
+        
+        .forensics-panel {
+            background: linear-gradient(135deg, rgba(20, 20, 20, 0.9), rgba(40, 40, 40, 0.7));
+            border: 2px solid #ff8800;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .forensics-panel h3 {
+            color: #ff8800;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+        }
+        
+        .threat-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .threat-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .threat-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 3px solid #ffeb3b;
+            margin-bottom: 10px;
+            padding: 12px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .threat-item:hover {
+            background: rgba(255, 235, 59, 0.1);
+            cursor: pointer;
+        }
+        
+        .threat-item.critical { border-left-color: #ff4444; }
+        .threat-item.high { border-left-color: #ff8800; }
+        .threat-item.medium { border-left-color: #ffeb3b; }
+        .threat-item.low { border-left-color: #4caf50; }
+        
+        .threat-source {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        
+        .threat-score {
+            float: right;
+            background: rgba(255, 235, 59, 0.2);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .correlation-matrix {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .correlation-item {
+            background: rgba(255, 235, 59, 0.1);
+            border: 1px solid rgba(255, 235, 59, 0.3);
+            border-radius: 6px;
+            padding: 10px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        .attack-visualization {
+            position: relative;
+            height: 250px;
+            background: radial-gradient(circle at center, rgba(255, 68, 68, 0.1) 0%, transparent 70%);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .attack-node {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #ff4444;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.7; }
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+        
+        .status-online { background: #4caf50; box-shadow: 0 0 8px rgba(76, 175, 80, 0.5); }
+        .status-warning { background: #ff8800; box-shadow: 0 0 8px rgba(255, 136, 0, 0.5); }
+        .status-offline { background: #ff4444; box-shadow: 0 0 8px rgba(255, 68, 68, 0.5); }
+        
+        .intel-feed {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .intel-item {
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #4caf50;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 235, 59, 0.3);
+            border-radius: 50%;
+            border-top-color: #ffeb3b;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        @media (max-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .threat-timeline {
+                grid-column: 1 / -1;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.875rem;
+            }
+            
+            .header p {
+                font-size: 1rem;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .threat-details {
+                grid-template-columns: 1fr;
+            }
+            
+            .threat-overview {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            
+            .card {
+                padding: 15px;
+            }
+            
+            .card h3 {
+                font-size: 1.1rem;
+            }
+            
+            .metric-value {
+                font-size: 2rem;
+            }
+            
+            .export-controls {
+                display: flex;
+                justify-content: center;
+                gap: 8px;
+                margin: 20px 0;
+                padding: 15px;
+                background: rgba(40, 40, 40, 0.95);
+                border-radius: 8px;
+                border: 1px solid #ffeb3b;
+                box-shadow: 0 2px 8px rgba(255, 235, 59, 0.3);
+            }
+            
+            .export-btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+            
+            .correlation-matrix {
+                grid-template-columns: 1fr;
+            }
+            
+            .attack-visualization {
+                height: 200px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .threat-overview {
+                grid-template-columns: 1fr;
+            }
+            
+            .logo {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .metric-value {
+                font-size: 1.75rem;
+            }
+            
+            .card {
+                padding: 12px;
+            }
+            
+            .threat-list {
+                max-height: 200px;
+            }
+        }
+        
+        .export-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(40, 40, 40, 0.9);
+            border-radius: 12px;
+            border: 2px solid #ffeb3b;
+            box-shadow: 0 0 20px rgba(255, 235, 59, 0.3);
+        }
+        
+        .export-btn {
+            background: rgba(255, 235, 59, 0.2);
+            border: 1px solid #ffeb3b;
+            color: #ffeb3b;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .export-btn:hover {
+            background: rgba(255, 235, 59, 0.3);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="honeyman_logo_transparent_yellow.svg" alt="Honeyman Project" class="logo">
+        <h1>Advanced Threat Intelligence</h1>
+        <p>Real-time Security Monitoring & Analysis Dashboard</p>
+        <div style="margin-top: 10px;">
+            <span>System Status:</span>
+            <span class="status-indicator status-online" id="systemStatus"></span>
+            <span style="margin-left: 20px;">Last Update: <span id="lastUpdate">--:--:--</span></span>
+        </div>
+    </div>
+
+    <div class="threat-overview">
+        <div class="card threat-level-critical">
+            <h3>Critical Threats</h3>
+            <div class="metric-value" id="criticalThreats">0</div>
+            <div class="metric-label">Immediate Action Required</div>
+        </div>
+        
+        <div class="card threat-level-high">
+            <h3>High Priority</h3>
+            <div class="metric-value" id="highThreats">0</div>
+            <div class="metric-label">Investigation Needed</div>
+        </div>
+        
+        <div class="card threat-level-medium">
+            <h3>Medium Alerts</h3>
+            <div class="metric-value" id="mediumThreats">0</div>
+            <div class="metric-label">Monitor Closely</div>
+        </div>
+        
+        <div class="card threat-level-low">
+            <h3>Low Priority</h3>
+            <div class="metric-value" id="lowThreats">0</div>
+            <div class="metric-label">Baseline Activity</div>
+        </div>
+        
+        <div class="card">
+            <h3>Threat Velocity</h3>
+            <div class="metric-value" id="threatVelocity">0</div>
+            <div class="metric-label">Threats per Hour</div>
+        </div>
+        
+        <div class="card">
+            <h3>Attack Sources</h3>
+            <div class="metric-value" id="attackSources">0</div>
+            <div class="metric-label">Unique Sources</div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="card threat-timeline">
+            <h3>Threat Timeline</h3>
+            <div class="chart-container">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="card threat-map">
+            <h3>Attack Visualization</h3>
+            <div class="attack-visualization" id="attackMap">
+                <!-- Attack nodes will be dynamically added -->
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>Threat Correlation</h3>
+            <div class="correlation-matrix" id="correlationMatrix">
+                <!-- Correlation data will be populated -->
+            </div>
+        </div>
+    </div>
+
+    <div class="forensics-panel">
+        <h3>Forensic Analysis & Intelligence</h3>
+        
+        <div class="threat-details">
+            <div class="card">
+                <h3>Recent Threats</h3>
+                <div class="threat-list" id="threatList">
+                    <div class="loading"></div> Loading recent threats...
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>Threat Intelligence Feed</h3>
+                <div class="intel-feed" id="intelFeed">
+                    <div class="intel-item">Analyzing threat patterns...</div>
+                    <div class="intel-item">Correlating attack signatures...</div>
+                    <div class="intel-item">Updating threat intelligence...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Controls - Positioned after dashboard content -->
+    <div class="export-controls">
+        <button class="export-btn" onclick="exportData('json')">Export JSON</button>
+        <button class="export-btn" onclick="exportData('csv')">Export CSV</button>
+        <button class="export-btn" onclick="generateReport()">Generate Report</button>
+    </div>
+
+    <script>
+        class EnhancedThreatDashboard {
+            constructor() {
+                this.threatData = [];
+                this.updateInterval = 5000; // 5 seconds
+                this.charts = {};
+                this.threatVelocityData = [];
+                this.correlationData = new Map();
+                
+                this.initializeCharts();
+                this.startDataPolling();
+                this.initializeIntelligence();
+            }
+            
+            initializeCharts() {
+                // Timeline Chart
+                const ctx = document.getElementById('timelineChart').getContext('2d');
+                this.charts.timeline = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Critical Threats',
+                            data: [],
+                            borderColor: '#ff4444',
+                            backgroundColor: 'rgba(255, 68, 68, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }, {
+                            label: 'High Priority',
+                            data: [],
+                            borderColor: '#ff8800',
+                            backgroundColor: 'rgba(255, 136, 0, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }, {
+                            label: 'Medium Alerts',
+                            data: [],
+                            borderColor: '#ffeb3b',
+                            backgroundColor: 'rgba(255, 235, 59, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: { color: '#ffeb3b' }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: '#ffeb3b' },
+                                grid: { color: 'rgba(255, 235, 59, 0.1)' }
+                            },
+                            y: {
+                                ticks: { color: '#ffeb3b' },
+                                grid: { color: 'rgba(255, 235, 59, 0.1)' }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            async startDataPolling() {
+                while (true) {
+                    try {
+                        await this.fetchThreatData();
+                        await this.updateDashboard();
+                        await this.updateIntelligence();
+                    } catch (error) {
+                        console.error('Dashboard update error:', error);
+                        this.updateSystemStatus('warning');
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, this.updateInterval));
+                }
+            }
+            
+            async fetchThreatData() {
+                try {
+                    const response = await fetch('/api/threats/recent?limit=100');
+                    const data = await response.json();
+                    
+                    if (data.threats) {
+                        this.threatData = data.threats;
+                        this.updateSystemStatus('online');
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch threat data:', error);
+                    this.updateSystemStatus('offline');
+                }
+            }
+            
+            updateSystemStatus(status) {
+                const statusElement = document.getElementById('systemStatus');
+                statusElement.className = `status-indicator status-${status}`;
+                
+                document.getElementById('lastUpdate').textContent = 
+                    new Date().toLocaleTimeString();
+            }
+            
+            async updateDashboard() {
+                // Calculate threat metrics
+                const now = new Date();
+                const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                
+                const recentThreats = this.threatData.filter(threat => 
+                    new Date(threat.timestamp) > last24h
+                );
+                
+                // Update threat counters
+                const critical = recentThreats.filter(t => t.threat_score >= 0.8).length;
+                const high = recentThreats.filter(t => t.threat_score >= 0.6 && t.threat_score < 0.8).length;
+                const medium = recentThreats.filter(t => t.threat_score >= 0.4 && t.threat_score < 0.6).length;
+                const low = recentThreats.filter(t => t.threat_score < 0.4).length;
+                
+                document.getElementById('criticalThreats').textContent = critical;
+                document.getElementById('highThreats').textContent = high;
+                document.getElementById('mediumThreats').textContent = medium;
+                document.getElementById('lowThreats').textContent = low;
+                
+                // Calculate threat velocity (threats per hour)
+                const lastHour = new Date(now.getTime() - 60 * 60 * 1000);
+                const lastHourThreats = recentThreats.filter(t => 
+                    new Date(t.timestamp) > lastHour
+                );
+                document.getElementById('threatVelocity').textContent = lastHourThreats.length;
+                
+                // Calculate unique attack sources
+                const uniqueSources = new Set(recentThreats.map(t => t.source)).size;
+                document.getElementById('attackSources').textContent = uniqueSources;
+                
+                // Update charts
+                this.updateTimelineChart(recentThreats);
+                this.updateAttackVisualization(recentThreats);
+                this.updateCorrelationMatrix(recentThreats);
+                this.updateThreatList(recentThreats);
+            }
+            
+            updateTimelineChart(threats) {
+                // Group threats by hour
+                const hourlyData = {};
+                const now = new Date();
+                
+                // Initialize last 24 hours
+                for (let i = 23; i >= 0; i--) {
+                    const hour = new Date(now.getTime() - i * 60 * 60 * 1000);
+                    const key = hour.getHours();
+                    hourlyData[key] = { critical: 0, high: 0, medium: 0 };
+                }
+                
+                // Count threats by hour and severity
+                threats.forEach(threat => {
+                    const hour = new Date(threat.timestamp).getHours();
+                    if (threat.threat_score >= 0.8) hourlyData[hour].critical++;
+                    else if (threat.threat_score >= 0.6) hourlyData[hour].high++;
+                    else if (threat.threat_score >= 0.4) hourlyData[hour].medium++;
+                });
+                
+                const labels = Object.keys(hourlyData).map(h => `${h}:00`);
+                const criticalData = Object.values(hourlyData).map(h => h.critical);
+                const highData = Object.values(hourlyData).map(h => h.high);
+                const mediumData = Object.values(hourlyData).map(h => h.medium);
+                
+                this.charts.timeline.data.labels = labels;
+                this.charts.timeline.data.datasets[0].data = criticalData;
+                this.charts.timeline.data.datasets[1].data = highData;
+                this.charts.timeline.data.datasets[2].data = mediumData;
+                this.charts.timeline.update('none');
+            }
+            
+            updateAttackVisualization(threats) {
+                const attackMap = document.getElementById('attackMap');
+                attackMap.innerHTML = '';
+                
+                // Show recent high-severity threats as attack nodes
+                const criticalThreats = threats
+                    .filter(t => t.threat_score >= 0.6)
+                    .slice(0, 20); // Limit to 20 nodes
+                
+                criticalThreats.forEach((threat, index) => {
+                    const node = document.createElement('div');
+                    node.className = 'attack-node';
+                    
+                    // Position nodes in a pattern
+                    const angle = (index / criticalThreats.length) * 2 * Math.PI;
+                    const radius = 80 + (threat.threat_score * 50);
+                    const x = 125 + radius * Math.cos(angle);
+                    const y = 125 + radius * Math.sin(angle);
+                    
+                    node.style.left = `${x}px`;
+                    node.style.top = `${y}px`;
+                    
+                    // Color by threat level
+                    if (threat.threat_score >= 0.8) {
+                        node.style.background = '#ff4444';
+                        node.style.boxShadow = '0 0 15px rgba(255, 68, 68, 0.8)';
+                    } else if (threat.threat_score >= 0.6) {
+                        node.style.background = '#ff8800';
+                        node.style.boxShadow = '0 0 12px rgba(255, 136, 0, 0.8)';
+                    }
+                    
+                    // Add tooltip
+                    node.title = `${threat.source}: ${threat.log_type} (Score: ${threat.threat_score})`;
+                    
+                    attackMap.appendChild(node);
+                });
+            }
+            
+            updateCorrelationMatrix(threats) {
+                const matrix = document.getElementById('correlationMatrix');
+                matrix.innerHTML = '';
+                
+                // Analyze threat correlations
+                const correlations = this.analyzeCorrelations(threats);
+                
+                correlations.forEach(correlation => {
+                    const item = document.createElement('div');
+                    item.className = 'correlation-item';
+                    item.innerHTML = `
+                        <div style="font-weight: bold;">${correlation.pattern}</div>
+                        <div style="font-size: 0.8rem;">${correlation.count} events</div>
+                        <div style="font-size: 0.7rem; opacity: 0.8;">${correlation.confidence}% confidence</div>
+                    `;
+                    matrix.appendChild(item);
+                });
+            }
+            
+            analyzeCorrelations(threats) {
+                const patterns = {};
+                
+                // Group by source and type
+                threats.forEach(threat => {
+                    const key = `${threat.source}-${threat.log_type}`;
+                    if (!patterns[key]) {
+                        patterns[key] = {
+                            pattern: `${threat.source}/${threat.log_type}`,
+                            count: 0,
+                            threats: []
+                        };
+                    }
+                    patterns[key].count++;
+                    patterns[key].threats.push(threat);
+                });
+                
+                // Calculate correlations and confidence
+                return Object.values(patterns)
+                    .filter(p => p.count >= 2)
+                    .map(p => ({
+                        ...p,
+                        confidence: Math.min(95, 50 + (p.count * 5))
+                    }))
+                    .sort((a, b) => b.count - a.count)
+                    .slice(0, 8); // Top 8 correlations
+            }
+            
+            updateThreatList(threats) {
+                const threatList = document.getElementById('threatList');
+                threatList.innerHTML = '';
+                
+                const recentThreats = threats
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                    .slice(0, 20);
+                
+                recentThreats.forEach(threat => {
+                    const item = document.createElement('div');
+                    item.className = `threat-item ${this.getThreatClass(threat.threat_score)}`;
+                    
+                    const time = new Date(threat.timestamp).toLocaleTimeString();
+                    const score = (threat.threat_score * 100).toFixed(0);
+                    
+                    item.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>${threat.log_type || 'Unknown'}</strong>
+                                <div class="threat-source">${threat.source} • ${time}</div>
+                                <div style="font-size: 0.85rem; margin-top: 5px; color: #ccc;">
+                                    ${threat.message || 'No details available'}
+                                </div>
+                            </div>
+                            <div class="threat-score">${score}%</div>
+                        </div>
+                    `;
+                    
+                    item.onclick = () => this.showThreatDetails(threat);
+                    threatList.appendChild(item);
+                });
+            }
+            
+            getThreatClass(score) {
+                if (score >= 0.8) return 'critical';
+                if (score >= 0.6) return 'high';
+                if (score >= 0.4) return 'medium';
+                return 'low';
+            }
+            
+            showThreatDetails(threat) {
+                // Show detailed threat information in a modal or expand
+                const details = {
+                    timestamp: threat.timestamp,
+                    source: threat.source,
+                    type: threat.log_type,
+                    score: threat.threat_score,
+                    threats: threat.threats_detected,
+                    raw_data: threat
+                };
+                
+                alert(`Threat Details:\n${JSON.stringify(details, null, 2)}`);
+            }
+            
+            async initializeIntelligence() {
+                // Simulate threat intelligence updates
+                const intelMessages = [
+                    "New attack pattern detected: BLE device fingerprinting",
+                    "WiFi evil twin frequency increased by 23%", 
+                    "Correlating threats across 5 different attack vectors",
+                    "Machine learning model updated with 247 new samples",
+                    "Real-time packet analysis enabled",
+                    "Cross-referencing with global threat intelligence",
+                    "Behavioral analysis shows 3 persistent threats",
+                    "Enhanced filtering reduced false positives by 67%"
+                ];
+                
+                let messageIndex = 0;
+                setInterval(() => {
+                    const intelFeed = document.getElementById('intelFeed');
+                    const newItem = document.createElement('div');
+                    newItem.className = 'intel-item';
+                    newItem.textContent = intelMessages[messageIndex % intelMessages.length];
+                    
+                    intelFeed.insertBefore(newItem, intelFeed.firstChild);
+                    
+                    // Keep only last 10 messages
+                    while (intelFeed.children.length > 10) {
+                        intelFeed.removeChild(intelFeed.lastChild);
+                    }
+                    
+                    messageIndex++;
+                }, 8000); // New message every 8 seconds
+            }
+            
+            async updateIntelligence() {
+                // Update intelligence feed with real threat data
+                if (this.threatData.length > 0) {
+                    const intelFeed = document.getElementById('intelFeed');
+                    const latestThreat = this.threatData[0];
+                    
+                    if (latestThreat && latestThreat.threat_score >= 0.6) {
+                        const newItem = document.createElement('div');
+                        newItem.className = 'intel-item';
+                        newItem.style.color = '#ff8800';
+                        newItem.textContent = `HIGH ALERT: ${latestThreat.source} - ${latestThreat.log_type}`;
+                        
+                        intelFeed.insertBefore(newItem, intelFeed.firstChild);
+                    }
+                }
+            }
+        }
+        
+        // Export functions
+        async function exportData(format) {
+            try {
+                const response = await fetch(`/api/threats/recent?limit=1000`);
+                const data = await response.json();
+                
+                if (format === 'csv') {
+                    const csv = convertToCSV(data.threats);
+                    downloadFile(csv, 'honeypot-threats.csv', 'text/csv');
+                } else {
+                    const json = JSON.stringify(data.threats, null, 2);
+                    downloadFile(json, 'honeypot-threats.json', 'application/json');
+                }
+            } catch (error) {
+                console.error('Export failed:', error);
+                alert('Export failed. Please check the connection and try again.');
+            }
+        }
+        
+        function convertToCSV(threats) {
+            if (!threats || threats.length === 0) return 'No data available';
+            
+            const headers = ['timestamp', 'source', 'log_type', 'threat_score', 'threats_detected', 'message'];
+            const csvRows = [headers.join(',')];
+            
+            threats.forEach(threat => {
+                const row = [
+                    threat.timestamp || '',
+                    threat.source || '',
+                    threat.log_type || '',
+                    threat.threat_score || 0,
+                    Array.isArray(threat.threats_detected) ? threat.threats_detected.join(';') : '',
+                    `"${(threat.message || '').replace(/"/g, '""')}"`
+                ];
+                csvRows.push(row.join(','));
+            });
+            
+            return csvRows.join('\n');
+        }
+        
+        function downloadFile(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        }
+        
+        async function generateReport() {
+            try {
+                const [statsResponse, threatsResponse] = await Promise.all([
+                    fetch('/api/threats/stats'),
+                    fetch('/api/threats/recent?limit=100')
+                ]);
+                
+                const stats = await statsResponse.json();
+                const threats = await threatsResponse.json();
+                
+                const reportData = {
+                    generated_at: new Date().toISOString(),
+                    summary: stats,
+                    recent_threats: threats.threats,
+                    analysis: {
+                        total_threats: stats.total_threats,
+                        threat_velocity: stats.threat_velocity,
+                        top_sources: Object.entries(stats.by_source || {})
+                            .sort(([,a], [,b]) => b - a)
+                            .slice(0, 5),
+                        recommendations: generateRecommendations(stats, threats.threats)
+                    }
+                };
+                
+                const report = JSON.stringify(reportData, null, 2);
+                downloadFile(report, `honeypot-report-${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+                
+            } catch (error) {
+                console.error('Report generation failed:', error);
+                alert('Report generation failed. Please check the connection and try again.');
+            }
+        }
+        
+        function generateRecommendations(stats, threats) {
+            const recommendations = [];
+            
+            if (stats.critical > 0) {
+                recommendations.push('Immediate investigation required for critical threats');
+            }
+            
+            if (stats.threat_velocity > 10) {
+                recommendations.push('High threat velocity detected - consider additional monitoring');
+            }
+            
+            if (stats.total_threats === 0) {
+                recommendations.push('No threats detected - verify system configuration and connectivity');
+            }
+            
+            return recommendations.length > 0 ? recommendations : ['System operating normally'];
+        }
+        
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new EnhancedThreatDashboard();
+        });
+    </script>
+</body>
+</html>

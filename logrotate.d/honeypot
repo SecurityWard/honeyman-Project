@@ -1,0 +1,28 @@
+/home/burner/honeypot-minimal/logs/*.log {
+    hourly
+    rotate 96
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 0644 burner burner
+    sharedscripts
+    postrotate
+        # Restart any detection services to reopen log files
+        /bin/true
+    endscript
+}
+
+/home/burner/honeypot-minimal/logs/*/*.log {
+    hourly
+    rotate 96
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 0644 burner burner
+    sharedscripts
+    postrotate
+        pkill -HUP -f "honeypot-minimal" 2>/dev/null || true
+    endscript
+}

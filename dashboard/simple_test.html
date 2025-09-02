@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Test</title>
+    <style>
+        body { background: #1a1a2e; color: white; font-family: Arial; padding: 20px; }
+        .card { background: rgba(255,255,255,0.1); padding: 20px; margin: 10px 0; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <h1>Dashboard Test</h1>
+    
+    <div class="card">
+        <h3>Critical Threats: <span id="critical">Loading...</span></h3>
+        <h3>Total Events: <span id="total">Loading...</span></h3>
+    </div>
+    
+    <div class="card">
+        <h3>Debug Log:</h3>
+        <div id="log" style="background: #000; padding: 10px; font-family: monospace; font-size: 12px;"></div>
+    </div>
+    
+    <script>
+        function log(msg) {
+            var logEl = document.getElementById('log');
+            logEl.innerHTML += new Date().toLocaleTimeString() + ': ' + msg + '<br>';
+            console.log(msg);
+        }
+        
+        log('Starting test...');
+        
+        // Test XHR
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/api/threats/stats', true);
+        
+        xhr.onreadystatechange = function() {
+            log('State: ' + xhr.readyState + ', Status: ' + xhr.status);
+            
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    log('Response: ' + xhr.responseText);
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        document.getElementById('critical').textContent = data.critical;
+                        document.getElementById('total').textContent = data.last_24h;
+                        log('SUCCESS: Data loaded!');
+                    } catch (e) {
+                        log('JSON Error: ' + e.message);
+                    }
+                } else {
+                    log('HTTP Error: ' + xhr.status + ' - ' + xhr.statusText);
+                    document.getElementById('critical').textContent = 'HTTP ' + xhr.status;
+                    document.getElementById('total').textContent = 'Error';
+                }
+            }
+        };
+        
+        xhr.onerror = function() {
+            log('Network Error');
+        };
+        
+        xhr.send();
+        log('Request sent');
+    </script>
+</body>
+</html>

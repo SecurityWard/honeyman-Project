@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Center - Secured Foundations LLC</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .documents-container {
+            background: white;
+            margin: 2rem auto;
+            padding: 3rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 10px 25px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+            max-width: 1000px;
+        }
+        
+        .document-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .document-category {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        
+        .document-category h3 {
+            color: #1f2937;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .document-list {
+            list-style: none;
+        }
+        
+        .document-item {
+            margin-bottom: 0.75rem;
+        }
+        
+        .document-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #374151;
+            transition: all 0.2s ease;
+        }
+        
+        .document-link:hover {
+            background: #f3f4f6;
+            border-color: #3b82f6;
+            color: #3b82f6;
+            transform: translateY(-1px);
+        }
+        
+        .document-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 0.75rem;
+            opacity: 0.7;
+        }
+        
+        .document-info {
+            flex: 1;
+        }
+        
+        .document-title {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        
+        .document-meta {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: #f9fafb;
+            margin-bottom: 1.5rem;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .access-notice {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .access-notice p {
+            color: #92400e;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <img src="logo.svg" alt="Secured Foundations LLC" width="180">
+            </div>
+            <nav class="nav">
+                <a href="index.html">Home</a>
+                <a href="#" class="active">Documents</a>
+                <a href="directory.html">Directory</a>
+                <a href="vpn.html">VPN Access</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="documents-container">
+            <h1>Document Center</h1>
+            <p>Access corporate documents, policies, and resources</p>
+            
+            <div class="access-notice">
+                <p><strong>Access Control:</strong> All document downloads are logged and monitored. Ensure you have proper authorization before accessing confidential materials.</p>
+            </div>
+            
+            <input type="text" class="search-box" id="searchBox" placeholder="Search documents by name or category...">
+            
+            <div class="document-grid">
+                <div class="document-category">
+                    <h3>Financial Reports</h3>
+                    <ul class="document-list">
+                        <li class="document-item">
+                            <a href="documents/Q4-2024-Financial-Report.pdf" class="document-link" onclick="logDocumentAccess('Q4-2024-Financial-Report.pdf', 'financial')">
+                                <svg class="document-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <div class="document-info">
+                                    <div class="document-title">Q4 2024 Financial Report</div>
+                                    <div class="document-meta">PDF • 2.4 MB • Updated Dec 15, 2024</div>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="document-item">
+                            <a href="documents/Budget-2025-Executive-Summary.xlsx" class="document-link" onclick="logDocumentAccess('Budget-2025-Executive-Summary.xlsx', 'financial')">
+                                <svg class="document-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                <div class="document-info">
+                                    <div class="document-title">2025 Budget Executive Summary</div>
+                                    <div class="document-meta">Excel • 1.8 MB • Updated Dec 10, 2024</div>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="document-item">
+                            <a href="documents/Revenue-Analysis-Q3-2024.pdf" class="document-link" onclick="logDocumentAccess('Revenue-Analysis-Q3-2024.pdf', 'financial')">
+                                <svg class="document-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <div class="document-info">
+                                    <div class="document-title">Q3 Revenue Analysis</div>
+                                    <div class="document-meta">PDF • 1.2 MB • Updated Oct 5, 2024</div>
+                                </div>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="document-category">
+                    <h3>HR Policies</h3>
+                    <ul class="document-list">
+                        <li class="document-item">
+                            <a href="documents/Employee-Handbook-2024.docx" class="document-link" onclick="logDocumentAccess('Employee-Handbook-2024.docx', 'hr')">
+                                <svg class="document-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                </svg>
+                                <div class="document-info">
+                                    <div class="document-title">Employee Handbook 2024</div>
+                                    <div class="document-meta">Word • 3.1 MB • Updated Jan 15, 2024</div>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="document-item">
+                            <a href="documents/Remote-Work-Policy.pdf" class="document-link" onclick="logDocumentAccess('Remote-Work-Policy.pdf', 'hr')">
+                                <svg class="document-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                                </svg>
+                                <div class="document-info">
+                                    <div class="document-title">Remote Work Policy</div>
+                                    <div class="document-meta">PDF • 856 KB • Updated Mar 20, 2024</div>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="document-item">
+                            <a href="documents/Benefits-Overview-2024.pdf" class="document-link" onclick="logDocumentAccess('Benefits-Overview-2024.pdf', 'hr')">
+                                <svg class="document-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                </svg>
+                                <div class="document-info">
+                                    <div class="document-title">Benefits Overview 2024</div>
+                                    <div class="document-meta">PDF • 1.4 MB • Updated Apr 1, 2024</div>
+                                </div>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="document-category">
+                    <h3>IT & Security</h3>
+                    <ul class="document-list">
+                        <li class="document-item">
+                            <a href="documents/Information-Security-Policy.pdf" class="document-link" onclick="logDocumentAccess('Information-Security-Policy.pdf', 'security')">
+                                <svg class="document-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                </svg>
+                                <div class="document-info">
+                                    <div class="document-title">Information Security Policy</div>
+                                    <div class="document-meta">PDF • 2.7 MB • Updated Nov 30, 2024</div>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="document-item">
+                            <a href="documents/Network-Access-Procedures.docx" class="document-link" onclick="logDocumentAccess('Network-Access-Procedures.docx', 'security')">
+                                <svg class="document-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"></path>
+                                </svg>
+                                <div class="document-info">
+                                    <div class="document-title">Network Access Procedures</div>
+                                    <div class="document-meta">Word • 1.9 MB • Updated Sep 15, 2024</div>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="document-item">
+                            <a href="documents/Incident-Response-Plan.pdf" class="document-link" onclick="logDocumentAccess('Incident-Response-Plan.pdf', 'security')">
+                                <svg class="document-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.866-.833-2.635 0L4.178 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                </svg>
+                                <div class="document-info">
+                                    <div class="document-title">Incident Response Plan</div>
+                                    <div class="document-meta">PDF • 1.6 MB • Updated Dec 1, 2024</div>
+                                </div>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="document-category">
+                    <h3>Executive Reports</h3>
+                    <ul class="document-list">
+                        <li class="document-item">
+                            <a href="documents/Strategic-Plan-2025-2027.pdf" class="document-link" onclick="logDocumentAccess('Strategic-Plan-2025-2027.pdf', 'executive')">
+                                <svg class="document-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <div class="document-info">
+                                    <div class="document-title">Strategic Plan 2025-2027</div>
+                                    <div class="document-meta">PDF • 4.2 MB • Updated Nov 15, 2024</div>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="document-item">
+                            <a href="documents/Board-Meeting-Minutes-Dec-2024.docx" class="document-link" onclick="logDocumentAccess('Board-Meeting-Minutes-Dec-2024.docx', 'executive')">
+                                <svg class="document-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <div class="document-info">
+                                    <div class="document-title">Board Meeting Minutes - December 2024</div>
+                                    <div class="document-meta">Word • 672 KB • Updated Dec 18, 2024</div>
+                                </div>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Secured Foundations LLC. All rights reserved. | <a href="privacy.html">Privacy Policy</a> | <a href="terms.html">Terms of Service</a></p>
+            <p>Document access is monitored and logged for security purposes.</p>
+        </div>
+    </footer>
+    
+    <script>
+        function logDocumentAccess(filename, category) {
+            // Log document access attempt
+            fetch('/api/document-access', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    timestamp: new Date().toISOString(),
+                    document: filename,
+                    category: category,
+                    user_agent: navigator.userAgent,
+                    referrer: document.referrer,
+                    page: 'document_center'
+                })
+            }).catch(() => {});
+            
+            // Simulate download (honeypot - no actual file)
+            setTimeout(() => {
+                alert('Document access requires additional verification. Please contact IT support.');
+            }, 1000);
+            
+            return false; // Prevent actual navigation
+        }
+        
+        // Search functionality
+        document.getElementById('searchBox').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const documentItems = document.querySelectorAll('.document-item');
+            
+            documentItems.forEach(item => {
+                const title = item.querySelector('.document-title').textContent.toLowerCase();
+                const meta = item.querySelector('.document-meta').textContent.toLowerCase();
+                
+                if (title.includes(searchTerm) || meta.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

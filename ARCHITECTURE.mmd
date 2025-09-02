@@ -1,0 +1,242 @@
+graph TB
+    %% Physical Detection Layer - Hardware Interfaces
+    subgraph "Physical Detection Layer"
+        subgraph "USB Threat Detection"
+            USBMaster[USB Advanced Threat System<br/>Master Coordinator]
+            USBKeylog[HID Keystroke Monitor<br/>• BadUSB Detection<br/>• Timing Analysis<br/>• Human vs Bot Detection]
+            USBFile[Deep File Inspector<br/>• Magic Number Spoofing<br/>• Entropy Analysis<br/>• PE Structure Analysis<br/>• Malware Strings]
+            USBDesc[Hardware Descriptor Analyzer<br/>• VID/PID Analysis<br/>• Interface Spoofing<br/>• Vendor Validation]
+            USBBehavior[Behavioral Monitor<br/>• Process Spawning<br/>• Network Connections<br/>• File System Changes]
+            USBFilesys[Filesystem Monitor<br/>• Autorun Detection<br/>• Malicious Extensions<br/>• BadUSB Payloads]
+        end
+        
+        subgraph "Wireless Detection Systems"
+            WiFi[WiFi Enhanced Detector<br/>• Evil Twin Detection<br/>• Beacon Flood Analysis<br/>• Suspicious SSID Matching<br/>• Proximity Attack Detection<br/>• WEP/WPS Analysis<br/>• Signal Strength Monitoring]
+            
+            BLE[BLE Enhanced Detector<br/>• Flipper Zero Signatures<br/>• Device Fingerprinting<br/>• Apple Continuity Abuse<br/>• GATT Enumeration<br/>• Advertisement Analysis<br/>• MAC Randomization Detection]
+            
+            AirDrop[AirDrop Threat Detector<br/>• Service Discovery Monitoring<br/>• Suspicious Name Detection<br/>• TXT Record Analysis<br/>• Rapid Announcement Detection<br/>• Evil Twin Identification<br/>• Port Validation]
+        end
+    end
+
+    %% Network Honeypot Services Layer
+    subgraph "Network Honeypot Services"
+        subgraph "Core Network Services"
+            SSH[SSH Honeypot<br/>Port 22<br/>Ubuntu 20.04 Banner<br/>Brute Force Detection]
+            HTTP[HTTP Honeypot<br/>Port 80<br/>Apache NAS Login<br/>Credential Harvesting]
+            FTP[FTP Honeypot<br/>Port 21<br/>Custom Banner<br/>File Transfer Monitoring]
+            SMB[SMB Honeypot<br/>Port 445<br/>Windows File Sharing<br/>Share Enumeration]
+        end
+        
+        subgraph "Database Services"
+            MySQL[MySQL Honeypot<br/>Port 3306<br/>Database Server<br/>Query Monitoring]
+            Redis[Redis Honeypot<br/>Port 6379<br/>NoSQL Database<br/>Command Logging]
+            MSSQL[MSSQL Honeypot<br/>Port 1433<br/>Microsoft SQL Server<br/>Authentication Attempts]
+        end
+        
+        subgraph "Remote Access Services"
+            VNC[VNC Honeypot<br/>Port 5900<br/>Remote Desktop<br/>Connection Attempts]
+            Telnet[Telnet Honeypot<br/>Port 23<br/>Cisco IOS Simulation<br/>Command Logging]
+        end
+        
+        subgraph "Infrastructure Services"
+            SNMP[SNMP Honeypot<br/>Port 161<br/>Network Management<br/>OID Enumeration]
+            SIP[SIP Honeypot<br/>Port 5060<br/>VoIP Protocol<br/>Registration Attempts]
+            TFTP[TFTP Honeypot<br/>Port 69<br/>File Transfer<br/>Boot Image Requests]
+            NFS[NFS Honeypot<br/>Port 2049<br/>Network Filesystem<br/>Mount Attempts]
+        end
+        
+        Web[Web Honeypot Portal<br/>Port 8080<br/>• Corporate Directory<br/>• Payroll System<br/>• Document Repository<br/>• VPN Portal<br/>• Canary Documents]
+    end
+
+    %% Intelligence Processing Layer
+    subgraph "Threat Intelligence & Processing"
+        subgraph "Correlation Engines"
+            MultiVector[Multi-Vector Correlator<br/>• Cross-Protocol Analysis<br/>• Temporal Correlation<br/>• Attack Session Tracking<br/>• Behavioral Profiling<br/>• Geographic Analysis]
+            
+            Filter[Intelligent Filter Engine<br/>• Threat Deduplication (5min)<br/>• Rate Limiting by Type<br/>• Score Thresholds (>0.3)<br/>• Noise Reduction (99%)<br/>• Whitelist Support]
+            
+            Analyzer[Threat Analysis Engine<br/>• Pattern Recognition<br/>• IOC Extraction<br/>• Attribution Analysis<br/>• Campaign Tracking<br/>• Predictive Modeling]
+        end
+        
+        subgraph "Data Processing"
+            Forwarder[Data Forwarder<br/>• API Rate Limiting (2/min)<br/>• Batch Processing (50 items)<br/>• Compression (>1KB)<br/>• Hash Deduplication<br/>• Exponential Backoff]
+            
+            LogManager[Log Manager<br/>• Rotation & Compression<br/>• Cleanup Automation<br/>• Performance Monitoring<br/>• Resource Management]
+        end
+    end
+
+    %% Data Storage & Analytics Layer
+    subgraph "Data Storage & Analytics"
+        subgraph "Local Storage"
+            ES[(Elasticsearch 8.8.0<br/>• Structured Logging<br/>• Time-based Indexing<br/>• Advanced Querying<br/>• 768MB Memory Limit<br/>• Single Node Cluster)]
+            
+            Kibana[Kibana Dashboard<br/>• Real-time Visualization<br/>• Threat Analytics<br/>• Custom Dashboards<br/>• Alert Configuration<br/>• 384MB Memory Limit]
+            
+            LogFiles[Log Files<br/>• /logs/ Directory<br/>• Component-specific Logs<br/>• PID Tracking<br/>• Rotation Policies]
+        end
+        
+        subgraph "Local Analysis"
+            LocalDash[Local Analytics<br/>• Performance Metrics<br/>• System Health<br/>• Resource Usage<br/>• Service Status]
+        end
+    end
+
+    %% External Infrastructure & Management
+    subgraph "External Infrastructure (VPS)"
+        subgraph "Dashboard Services"
+            VPS[VPS Dashboard Server<br/>http://72.60.25.24:8080<br/>• Enhanced Dashboard<br/>• Real-time Threat Intel<br/>• Geographic Visualization<br/>• Threat Correlation Display]
+            
+            VPSAPI[Dashboard API Server<br/>Node.js + Express<br/>• RESTful Endpoints<br/>• Authentication<br/>• Rate Limiting<br/>• CORS Support]
+        end
+        
+        subgraph "API Endpoints"
+            StatsAPI[/api/threats/stats<br/>• Threat Statistics<br/>• Performance Metrics<br/>• Detection Rates]
+            RecentAPI[/api/threats/recent<br/>• Latest Threats<br/>• Real-time Feed<br/>• Severity Filtering]
+            CorrelAPI[/api/threats/correlations<br/>• Cross-Vector Analysis<br/>• Attack Patterns<br/>• Campaign Tracking]
+            IntelAPI[/api/threats/intelligence<br/>• IOC Feed<br/>• Threat Attribution<br/>• Signature Updates]
+            DataAPI[/api/honeypot/data<br/>• Data Ingestion<br/>• Bulk Upload<br/>• Validation]
+        end
+        
+        subgraph "Intelligence Services"
+            ThreatIntel[Threat Intelligence<br/>• IOC Database<br/>• Attribution Data<br/>• Campaign Analysis<br/>• Predictive Analytics]
+            
+            GeoIntel[Geographic Intelligence<br/>• Attack Source Mapping<br/>• Regional Analysis<br/>• ISP Intelligence<br/>• Location Correlation]
+        end
+    end
+
+    %% System Orchestration & Management
+    subgraph "System Orchestration & Management"
+        subgraph "Container Management"
+            Docker[Docker Compose<br/>• Service Orchestration<br/>• Dependency Management<br/>• Resource Limits<br/>• Network Isolation<br/>• Health Checks]
+            
+            Containers[Container Services<br/>• elasticsearch:8.8.0<br/>• kibana:8.8.0<br/>• nginx:alpine<br/>• thinkst/opencanary]
+        end
+        
+        subgraph "System Services"
+            Systemd[Systemd Service Manager<br/>• Service Lifecycle<br/>• Dependency Resolution<br/>• Auto-restart Policies<br/>• Resource Management<br/>• Logging Integration]
+            
+            Services[Systemd Services<br/>• honeypot-usb-advanced<br/>• honeypot-wifi-detector<br/>• honeypot-multi-vector<br/>• honeypot-forwarder<br/>• honeypot-elasticsearch<br/>• honeypot-opencanary<br/>• honeypot-airdrop]
+            
+            Target[honeypot.target<br/>• Service Coordination<br/>• Boot Integration<br/>• Dependency Management<br/>• Graceful Shutdown]
+        end
+        
+        subgraph "Management Scripts"
+            InstallScript[install-systemd-services.sh<br/>• Service Installation<br/>• Dependency Setup<br/>• Configuration Validation]
+            
+            ControlScripts[Control Scripts<br/>• honeypot-manager.sh<br/>• control-enhanced-usb.sh<br/>• Service Management<br/>• Status Monitoring]
+        end
+    end
+
+    %% Configuration & Monitoring
+    subgraph "Configuration & Monitoring"
+        subgraph "Configuration Files"
+            OpenCanaryConf[opencanary.conf<br/>• Service Configuration<br/>• Port Definitions<br/>• Logging Settings]
+            
+            LogConfig[log_config.json<br/>• Filtering Rules<br/>• Rate Limits<br/>• Noise Reduction<br/>• Thresholds]
+            
+            WiFiWhitelist[wifi_whitelist.json<br/>• Trusted Networks<br/>• BSSID Whitelist<br/>• False Positive Reduction]
+        end
+        
+        subgraph "Monitoring Systems"
+            HealthCheck[System Health Monitor<br/>• Service Status<br/>• Resource Usage<br/>• Performance Metrics<br/>• Alert Generation]
+            
+            Metrics[Performance Metrics<br/>• Detection Rates<br/>• False Positive Rates<br/>• Response Times<br/>• System Load]
+        end
+    end
+
+    %% Data Flow Connections - Physical to Processing
+    USBMaster --> MultiVector
+    USBKeylog --> USBMaster
+    USBFile --> USBMaster  
+    USBDesc --> USBMaster
+    USBBehavior --> USBMaster
+    USBFilesys --> USBMaster
+    
+    WiFi --> MultiVector
+    BLE --> MultiVector
+    AirDrop --> MultiVector
+
+    %% Network Services to Storage
+    SSH --> ES
+    HTTP --> ES
+    FTP --> ES
+    SMB --> ES
+    MySQL --> ES
+    VNC --> ES
+    Redis --> ES
+    MSSQL --> ES
+    SNMP --> ES
+    SIP --> ES
+    TFTP --> ES
+    NFS --> ES
+    Telnet --> ES
+    Web --> ES
+
+    %% Processing Flow
+    MultiVector --> Filter
+    Filter --> Analyzer
+    Analyzer --> ES
+    Filter --> Forwarder
+    ES --> LogManager
+
+    %% Local Analytics
+    ES --> Kibana
+    ES --> LocalDash
+    LogFiles --> LogManager
+
+    %% External Communication
+    Forwarder --> VPSAPI
+    VPSAPI --> VPS
+    VPSAPI --> StatsAPI
+    VPSAPI --> RecentAPI
+    VPSAPI --> CorrelAPI
+    VPSAPI --> IntelAPI
+    VPSAPI --> DataAPI
+
+    %% Intelligence Flow
+    Analyzer --> ThreatIntel
+    ThreatIntel --> IntelAPI
+    GeoIntel --> VPS
+
+    %% System Management
+    Target --> Services
+    Services --> Systemd
+    Systemd --> Docker
+    Docker --> Containers
+    Containers --> ES
+    Containers --> SSH
+    Containers --> HTTP
+    Containers --> Web
+
+    %% Configuration Management
+    OpenCanaryConf --> SSH
+    OpenCanaryConf --> HTTP
+    OpenCanaryConf --> FTP
+    OpenCanaryConf --> SMB
+    LogConfig --> Filter
+    WiFiWhitelist --> WiFi
+
+    %% Monitoring
+    HealthCheck --> Services
+    Metrics --> LocalDash
+    Metrics --> VPS
+
+    %% Styling
+    classDef physical fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#000
+    classDef wireless fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px,color:#000
+    classDef network fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
+    classDef processing fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000
+    classDef storage fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px,color:#000
+    classDef external fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
+    classDef orchestration fill:#f1f8e9,stroke:#558b2f,stroke-width:2px,color:#000
+    classDef config fill:#fff8e1,stroke:#f57f17,stroke-width:2px,color:#000
+
+    %% Apply Styles
+    class USBMaster,USBKeylog,USBFile,USBDesc,USBBehavior,USBFilesys physical
+    class WiFi,BLE,AirDrop wireless
+    class SSH,HTTP,FTP,SMB,MySQL,VNC,Redis,MSSQL,SNMP,SIP,TFTP,NFS,Telnet,Web network
+    class MultiVector,Filter,Analyzer,Forwarder,LogManager processing
+    class ES,Kibana,LogFiles,LocalDash storage
+    class VPS,VPSAPI,StatsAPI,RecentAPI,CorrelAPI,IntelAPI,DataAPI,ThreatIntel,GeoIntel external
+    class Docker,Containers,Systemd,Services,Target,InstallScript,ControlScripts orchestration
+    class OpenCanaryConf,LogConfig,WiFiWhitelist,HealthCheck,Metrics config

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Debug</title>
+</head>
+<body>
+    <h1>Honeyman Dashboard Debug</h1>
+    <div id="debug-output"></div>
+    
+    <script>
+        const debugOutput = document.getElementById('debug-output');
+        
+        function log(message) {
+            debugOutput.innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+        
+        async function testAPI() {
+            try {
+                log('Testing API endpoints...');
+                
+                // Test stats endpoint
+                log('Fetching stats...');
+                const statsResponse = await fetch('/api/threats/stats');
+                log('Stats response status: ' + statsResponse.status);
+                
+                if (statsResponse.ok) {
+                    const stats = await statsResponse.json();
+                    log('Stats data: ' + JSON.stringify(stats));
+                } else {
+                    log('Stats error: ' + statsResponse.statusText);
+                }
+                
+                // Test recent threats endpoint
+                log('Fetching recent threats...');
+                const threatsResponse = await fetch('/api/threats/recent?limit=3');
+                log('Threats response status: ' + threatsResponse.status);
+                
+                if (threatsResponse.ok) {
+                    const threatsData = await threatsResponse.json();
+                    log('Threats count: ' + threatsData.threats.length);
+                    log('First threat: ' + JSON.stringify(threatsData.threats[0]));
+                } else {
+                    log('Threats error: ' + threatsResponse.statusText);
+                }
+                
+                // Test status endpoint
+                log('Fetching status...');
+                const statusResponse = await fetch('/api/status');
+                log('Status response status: ' + statusResponse.status);
+                
+                if (statusResponse.ok) {
+                    const status = await statusResponse.json();
+                    log('Status data: ' + JSON.stringify(status));
+                } else {
+                    log('Status error: ' + statusResponse.statusText);
+                }
+                
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+        
+        // Run test when page loads
+        testAPI();
+    </script>
+</body>
+</html>

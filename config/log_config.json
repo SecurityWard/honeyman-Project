@@ -1,0 +1,39 @@
+{
+  "max_log_size_mb": 50,
+  "max_log_files": 5,
+  "compression_enabled": true,
+  "log_levels": {
+    "wifi_threat": "INFO",
+    "usb_threat": "INFO",
+    "ble_threat": "INFO",
+    "multi_vector": "INFO",
+    "advanced_wireless": "INFO"
+  },
+  "noise_filters": {
+    "duplicate_threshold_seconds": 900,
+    "min_threat_score": 0.3,
+    "exclude_patterns": [
+      "RequestsDependencyWarning",
+      "urllib3.*doesn't match",
+      "charset_normalizer",
+      "Starting.*Detection System"
+    ],
+    "whitelist_ssids": [
+      "eduroam",
+      "Guest Network",
+      "Visitor",
+      "VenetianLasVegas",
+      ".VenetianLasVegas",
+      "VLV",
+      "DefCon",
+      "DefCon-Open",
+      "DefCon-WPA3"
+    ],
+    "rate_limit_per_hour": {
+      "weak_security": 5,
+      "hidden_ssid": 3,
+      "suspicious_ssid": 10,
+      "evil_twin_same_ssid": 5
+    }
+  }
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Honeyman Project - Dashboard Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: black;
+            color: #ffeb3b;
+            padding: 20px;
+        }
+        .logo {
+            width: 150px;
+            height: 150px;
+            object-fit: contain;
+        }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Dashboard Test</h1>
+    
+    <div>
+        <h2>Logo Test:</h2>
+        <img src="honeyman2_clean.png" alt="Logo" class="logo" onload="logSuccess('Logo loaded')" onerror="logError('Logo failed to load')">
+    </div>
+    
+    <div>
+        <h2>API Tests:</h2>
+        <div id="api-results"></div>
+    </div>
+    
+    <div>
+        <h2>Console Log:</h2>
+        <div id="console-log"></div>
+    </div>
+    
+    <script>
+        function logSuccess(msg) {
+            const log = document.getElementById('console-log');
+            log.innerHTML += '<div class="success">' + new Date().toLocaleTimeString() + ': ' + msg + '</div>';
+        }
+        
+        function logError(msg) {
+            const log = document.getElementById('console-log');
+            log.innerHTML += '<div class="error">' + new Date().toLocaleTimeString() + ': ' + msg + '</div>';
+        }
+        
+        // Test APIs
+        function testAPI(endpoint, name) {
+            fetch('/api/' + endpoint)
+                .then(response => {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    logSuccess(name + ' API: ' + JSON.stringify(data).substring(0, 100) + '...');
+                    document.getElementById('api-results').innerHTML += 
+                        '<div><strong>' + name + ':</strong> ' + JSON.stringify(data, null, 2) + '</div>';
+                })
+                .catch(error => {
+                    logError(name + ' API failed: ' + error.message);
+                });
+        }
+        
+        // Run tests
+        window.onload = function() {
+            logSuccess('Page loaded');
+            testAPI('threats/stats', 'Stats');
+            testAPI('threats/recent?limit=2', 'Recent Threats');
+        };
+    </script>
+</body>
+</html>
