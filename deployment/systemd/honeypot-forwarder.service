@@ -12,7 +12,7 @@ WorkingDirectory=/home/burner/honeypot-minimal
 Environment="PATH=/usr/local/bin:/usr/bin:/bin"
 EnvironmentFile=/home/burner/honeypot-minimal/.env
 ExecStartPre=/bin/bash -c 'until curl -s http://localhost:9200/_cluster/health > /dev/null 2>&1; do echo "Waiting for Elasticsearch..."; sleep 10; done'
-ExecStart=/usr/bin/python3 /home/burner/honeypot-minimal/hostinger_data_forwarder.py
+ExecStart=/usr/bin/python3 /home/burner/honeypot-minimal/src/forwarders/hostinger_data_forwarder.py
 StandardOutput=append:/home/burner/honeypot-minimal/logs/hostinger_forwarder.log
 StandardError=append:/home/burner/honeypot-minimal/logs/hostinger_forwarder.log
 

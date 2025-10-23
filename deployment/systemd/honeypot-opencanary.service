@@ -8,8 +8,8 @@ Type=simple
 Restart=always
 RestartSec=10
 WorkingDirectory=/home/burner/honeypot-minimal
-ExecStart=/usr/bin/docker compose up opencanary
-ExecStop=/usr/bin/docker compose stop opencanary
+ExecStart=/usr/bin/docker-compose up opencanary
+ExecStop=/usr/bin/docker-compose stop opencanary
 StandardOutput=append:/home/burner/honeypot-minimal/logs/opencanary.log
 StandardError=append:/home/burner/honeypot-minimal/logs/opencanary.log
 

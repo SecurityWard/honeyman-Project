@@ -402,6 +402,16 @@
             <span>System Status:</span>
             <span class="status-indicator status-online" id="systemStatus"></span>
             <span style="margin-left: 20px;">Last Update: <span id="lastUpdate">--:--:--</span></span>
+            <span style="margin-left: 30px;">
+                <label for="timeRangeSelector" style="margin-right: 10px;">Time Range:</label>
+                <select id="timeRangeSelector" style="background: #1a1a1a; color: #ffeb3b; border: 1px solid #ffeb3b; padding: 5px; border-radius: 4px;">
+                    <option value="24h">Last 24 Hours</option>
+                    <option value="7d">Last 7 Days</option>
+                    <option value="30d">Last 30 Days</option>
+                    <option value="defcon">DEFCON Period (Aug 7-10)</option>
+                    <option value="all">All Time</option>
+                </select>
+            </span>
         </div>
     </div>
 
@@ -507,6 +517,19 @@
                 this.initializeCharts();
                 this.startDataPolling();
                 this.initializeIntelligence();
+                this.initializeTimeRangeSelector();
+            }
+            
+            initializeTimeRangeSelector() {
+                const selector = document.getElementById('timeRangeSelector');
+                if (selector) {
+                    selector.addEventListener('change', () => {
+                        this.updateDashboard();
+                        this.updateTimelineChart(this.threatData.filter(threat => 
+                            new Date(threat.timestamp) > this.calculateTimeRange()
+                        ));
+                    });
+                }
             }
             
             initializeCharts() {
@@ -578,7 +601,9 @@
             
             async fetchThreatData() {
                 try {
-                    const response = await fetch('/api/threats/recent?limit=100');
+                    const timeRange = document.getElementById('timeRangeSelector')?.value || '24h';
+                    const limit = timeRange === 'all' ? 1000 : (timeRange === 'defcon' ? 500 : 100);
+                    const response = await fetch(`/api/threats/recent?limit=${limit}&timeRange=${timeRange}`);
                     const data = await response.json();
                     
                     if (data.threats) {
@@ -599,13 +624,34 @@
                     new Date().toLocaleTimeString();
             }
             
-            async updateDashboard() {
-                // Calculate threat metrics
+            calculateTimeRange() {
+                const selector = document.getElementById('timeRangeSelector');
+                const value = selector ? selector.value : '24h';
                 const now = new Date();
-                const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                
+                switch(value) {
+                    case '24h':
+                        return new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                    case '7d':
+                        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    case '30d':
+                        return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                    case 'defcon':
+                        return new Date('2025-08-07T00:00:00');
+                    case 'all':
+                        return new Date('2020-01-01T00:00:00');
+                    default:
+                        return new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                }
+            }
+
+            async updateDashboard() {
+                // Calculate threat metrics with dynamic time range
+                const now = new Date();
+                const timeRangeStart = this.calculateTimeRange();
                 
                 const recentThreats = this.threatData.filter(threat => 
-                    new Date(threat.timestamp) > last24h
+                    new Date(threat.timestamp) > timeRangeStart
                 );
                 
                 // Update threat counters

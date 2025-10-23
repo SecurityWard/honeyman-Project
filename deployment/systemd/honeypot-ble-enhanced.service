@@ -1,0 +1,18 @@
+[Unit]
+Description=Honeypot Enhanced BLE Threat Detector
+After=network.target bluetooth.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=30
+User=burner
+WorkingDirectory=/home/burner/honeypot-minimal
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/home/burner/honeypot-minimal/.env
+ExecStart=/usr/bin/python3 /home/burner/honeypot-minimal/src/detectors/ble_enhanced_detector.py
+StandardOutput=append:/home/burner/honeypot-minimal/logs/ble_enhanced.log
+StandardError=append:/home/burner/honeypot-minimal/logs/ble_enhanced.log
+
+[Install]
+WantedBy=honeypot.target

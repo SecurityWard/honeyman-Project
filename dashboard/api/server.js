@@ -107,9 +107,9 @@ app.post('/api/honeypot/data', authenticateApiKey, (req, res) => {
             
             threatData.push(...newThreats);
             
-            // Keep only last 1000 threats
-            if (threatData.length > 1000) {
-                threatData = threatData.slice(-1000);
+            // Keep only last 50000 threats
+            if (threatData.length > 50000) {
+                threatData = threatData.slice(-50000);
             }
             
             // Broadcast to connected clients
@@ -145,11 +145,34 @@ app.post('/api/honeypot/data', authenticateApiKey, (req, res) => {
 app.get('/api/threats/stats', (req, res) => {
     try {
         const now = new Date();
+        const timeRange = req.query.timeRange || '24h';
+        let timeRangeStart;
+        
+        switch(timeRange) {
+            case '24h':
+                timeRangeStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                break;
+            case '7d':
+                timeRangeStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                break;
+            case '30d':
+                timeRangeStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                break;
+            case 'defcon':
+                timeRangeStart = new Date('2025-08-07T00:00:00');
+                break;
+            case 'all':
+                timeRangeStart = new Date('2020-01-01T00:00:00');
+                break;
+            default:
+                timeRangeStart = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        }
+        
         const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         const lastHour = new Date(now.getTime() - 60 * 60 * 1000);
         
         const recentThreats = threatData.filter(threat => 
-            new Date(threat.timestamp) > last24h
+            new Date(threat.timestamp) > timeRangeStart
         );
         
         const lastHourThreats = threatData.filter(threat =>
@@ -548,11 +571,12 @@ app.use((error, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+// Start server  
+const PORT = process.env.PORT || 80;
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`🍯 Honeyman Dashboard Server running on port ${PORT}`);
     console.log(`📊 Dashboard: http://localhost:${PORT}`);
+    console.log(`🌐 Public Access: http://honeymanproject.com`);
     console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
 });
 

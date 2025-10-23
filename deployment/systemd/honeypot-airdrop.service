@@ -10,7 +10,7 @@ Restart=always
 RestartSec=10
 User=root
 WorkingDirectory=/home/burner/honeypot-minimal
-ExecStart=/usr/bin/python3 /home/burner/honeypot-minimal/airdrop_threat_detector.py
+ExecStart=/usr/bin/python3 /home/burner/honeypot-minimal/src/detectors/airdrop_threat_detector.py
 StandardOutput=append:/home/burner/honeypot-minimal/logs/airdrop_threats.log
 StandardError=append:/home/burner/honeypot-minimal/logs/airdrop_threats.log
 

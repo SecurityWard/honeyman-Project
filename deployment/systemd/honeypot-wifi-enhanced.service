@@ -1,0 +1,18 @@
+[Unit]
+Description=Honeypot Enhanced WiFi Threat Detector
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=30
+User=burner
+WorkingDirectory=/home/burner/honeypot-minimal
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/home/burner/honeypot-minimal/.env
+ExecStart=/usr/bin/python3 /home/burner/honeypot-minimal/src/detectors/wifi_enhanced_detector.py
+StandardOutput=append:/home/burner/honeypot-minimal/logs/wifi_enhanced.log
+StandardError=append:/home/burner/honeypot-minimal/logs/wifi_enhanced.log
+
+[Install]
+WantedBy=honeypot.target

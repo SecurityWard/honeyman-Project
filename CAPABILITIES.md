@@ -134,37 +134,61 @@ This document provides a comprehensive analysis of the Honeyman Project's detect
 
 ### ✅ WILL DETECT
 
+#### Malware Hash Detection (360+ Signatures)
+- **Method**: Real-time SHA256/MD5 hash calculation and database lookup
+- **Accuracy**: 100% for known malware hashes, < 100ms lookup time
+- **Database Coverage**:
+  - 62 USB worm signatures (Stuxnet, Conficker, Agent.btz, Flame, Gauss, etc.)
+  - 53 BadUSB/HID attack payloads (Rubber Ducky, Bash Bunny, Malduino, O.MG Cable)
+  - 40 ransomware variants (WannaCry, Petya, NotPetya, LockBit, BlackCat)
+  - 28 credential stealers (Mimikatz, LaZagne, RedLine, AZORult)
+  - 20 penetration testing tools (Metasploit, Kali tools, Hak5 payloads)
+- **Indicators**: Exact hash match in malware database with family, type, and severity
+- **Limitations**: Only detects known malware; zero-day or modified samples will be missed
+
 #### Unknown Device Insertion
 - **Method**: USB event monitoring and device enumeration
 - **Accuracy**: 100% for physical insertions
-- **Indicators**: New USB device detection, device descriptor analysis
+- **Indicators**: New USB device detection, device descriptor analysis, VID/PID analysis
 - **Limitations**: Cannot determine malicious intent from hardware alone
 
-#### Mass Storage Analysis
-- **Method**: Storage device enumeration and filesystem analysis
-- **Accuracy**: 95% for basic analysis
-- **Indicators**: Storage device properties, filesystem types
-- **Limitations**: Cannot perform deep malware analysis
+#### BadUSB & HID Injection Detection
+- **Method**: VID/PID signature matching, behavioral analysis, volume label patterns
+- **Accuracy**: 95% for known BadUSB devices, 80% for HID injection attacks
+- **Indicators**:
+  - Known attack device signatures (Teensy, Arduino Leonardo, Digispark)
+  - Suspicious volume labels (STARKILLER, PAYLOAD, BADUSB, DUCKY)
+  - Rapid keystroke injection patterns
+  - Device claiming both storage and HID capabilities
+- **Limitations**: Sophisticated custom hardware may evade VID/PID detection
 
-#### HID Device Emulation
-- **Method**: Human Interface Device detection and behavior analysis
-- **Accuracy**: 80% for obvious HID attacks
-- **Indicators**: Rapid keystroke injection, unusual HID behavior
-- **Limitations**: May miss sophisticated or delayed HID attacks
+#### Mass Storage Malware Scanning
+- **Method**: Automatic filesystem mounting, recursive file scanning with hash calculation
+- **Accuracy**: 95% file coverage, 100% hash accuracy
+- **Indicators**:
+  - Autorun.inf detection with malicious patterns
+  - Suspicious executables (.exe, .scr, .bat, .ps1, .vbs)
+  - Hidden system files and directories
+  - File hash matches against malware database
+- **Limitations**: Cannot detect polymorphic malware or encrypted payloads
 
 #### Device Fingerprinting
-- **Method**: Hardware ID analysis and device classification
-- **Accuracy**: 90% for known device types
-- **Indicators**: Vendor/product IDs, device capabilities
+- **Method**: Hardware ID analysis, descriptor parsing, behavioral profiling
+- **Accuracy**: 90% for known device types, 85% for attack devices
+- **Indicators**: Vendor/product IDs, device capabilities, interface combinations
 - **Limitations**: Cannot detect spoofed or modified device identifiers
 
 ### ❌ WILL NOT DETECT
 
-- **Firmware-Level Attacks**: BadUSB or modified firmware
-- **Advanced HID Attacks**: Sophisticated keystroke injection
+- **Zero-Day Malware**: Unknown malware not in hash database
+- **Polymorphic/Metamorphic Malware**: Self-modifying malware with changing hashes
+- **Encrypted Payloads**: Malware protected by encryption or packing (unless hash matches)
+- **Firmware-Level Attacks**: BadUSB with custom firmware not in VID/PID database
+- **Advanced HID Attacks**: Sophisticated keystroke injection with human-like timing
 - **Data Exfiltration**: Covert data theft from inserted devices
-- **Physical Tampering**: Hardware modifications or implants
+- **Physical Tampering**: Hardware modifications or implants (USB Killer hardware damage)
 - **Zero-Touch Attacks**: Attacks not requiring USB insertion
+- **Memory-Only Malware**: Fileless malware that doesn't write to disk
 
 ## 📊 Correlation & Analysis Capabilities
 

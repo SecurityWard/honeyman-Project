@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Enhanced BLE Threat Detection System - Phase 3
-Advanced device fingerprinting and behavior analysis
+Enhanced BLE Threat Detection System
+Focus on accurate Flipper Zero, BLE attacks, and hacking tool detection
 """
 import subprocess
 import time
@@ -498,8 +498,8 @@ class EnhancedBLEThreatDetector:
             doc = {
                 'timestamp': detection_data['timestamp'],
                 'honeypot_id': 'honeyman-01',
-                'source': 'enhanced_ble_detector',
-                'log_type': 'enhanced_ble_threat',
+                'source': 'ble_enhanced_detector',
+                'log_type': 'ble_threat_detection',
                 'device_mac': detection_data['device']['mac_address'],
                 'device_name': detection_data['device']['name'],
                 'threat_score': detection_data['threat_score'],
@@ -518,7 +518,7 @@ class EnhancedBLEThreatDetector:
             )
             
             if response.status_code in [200, 201]:
-                print(f"✅ Enhanced BLE threat logged")
+                print(f"✅ BLE threat logged to Elasticsearch")
             else:
                 print(f"❌ Failed to log BLE threat: {response.status_code}")
                 
@@ -540,7 +540,8 @@ class EnhancedBLEThreatDetector:
     
     def monitor_enhanced_ble_threats(self):
         """Main enhanced BLE threat monitoring loop"""
-        print("📱 Starting Enhanced BLE Threat Detection...")
+        print("🚀 Starting Enhanced BLE Detector")
+        print("🎯 Focus: Flipper Zero, BLE attacks, hacker tools")
         print("🔍 Advanced device fingerprinting and behavior analysis enabled")
         print("🧠 Machine learning-based threat correlation active")
         print("🛑 Press Ctrl+C to stop")
@@ -549,7 +550,7 @@ class EnhancedBLEThreatDetector:
             scan_count = 0
             while True:
                 scan_count += 1
-                print(f"\n📱 Enhanced BLE scan... ({datetime.now().strftime('%H:%M:%S')}) [#{scan_count}]")
+                print(f"\n📱 Scanning BLE devices... ({datetime.now().strftime('%H:%M:%S')}) [Scan #{scan_count}]")
                 
                 # Perform enhanced scan
                 devices = self.scan_ble_devices()
@@ -606,7 +607,7 @@ class EnhancedBLEThreatDetector:
                 time.sleep(45)  # Increased interval to avoid adapter issues
                 
         except KeyboardInterrupt:
-            print("\n🛑 Enhanced BLE threat monitoring stopped")
+            print("\n🛑 Enhanced BLE detector stopped")
             print(f"📊 Total scans performed: {scan_count}")
     
     def detect_manufacturer_spoofing(self, device):

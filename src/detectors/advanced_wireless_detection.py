@@ -10,18 +10,16 @@ import signal
 
 # Import all detection modules
 sys.path.append('.')
-from usb_monitor import USBThreatMonitor
-from usb_filesystem_monitor import USBFilesystemMonitor
-from wifi_threat_detector import WiFiThreatDetector
-from ble_threat_detector import BLEThreatDetector
+from usb_enhanced_detector import EnhancedUSBDetector
+from wifi_enhanced_detector import EnhancedWiFiDetector  
+from ble_enhanced_detector import EnhancedBLEThreatDetector
 from airdrop_threat_detector import AirDropThreatDetector
 
 class AdvancedWirelessDetection:
     def __init__(self):
-        self.usb_device_monitor = USBThreatMonitor()
-        self.usb_filesystem_monitor = USBFilesystemMonitor()
-        self.wifi_monitor = WiFiThreatDetector()
-        self.ble_monitor = BLEThreatDetector()
+        self.usb_monitor = EnhancedUSBDetector()
+        self.wifi_monitor = EnhancedWiFiDetector()
+        self.ble_monitor = EnhancedBLEThreatDetector()
         self.airdrop_monitor = AirDropThreatDetector()
         self.running = False
         
@@ -32,7 +30,7 @@ class AdvancedWirelessDetection:
         
     def start_all_monitoring(self):
         """Start all threat detection components"""
-        print("🌐 Starting Advanced Wireless Detection System - Phase 3B")
+        print("🌐 Starting Enhanced Advanced Wireless Detection System")
         print("=" * 65)
         
         # Set up signal handlers
@@ -42,45 +40,35 @@ class AdvancedWirelessDetection:
         self.running = True
         threads = []
         
-        # Start USB device monitoring
-        usb_device_thread = threading.Thread(
-            target=self.usb_device_monitor.start_monitoring,
-            name='USB-Device-Monitor',
+        # Start enhanced USB monitoring
+        usb_thread = threading.Thread(
+            target=self.usb_monitor.run_continuous_monitoring,
+            name='Enhanced-USB-Monitor',
             daemon=True
         )
-        usb_device_thread.start()
-        threads.append(usb_device_thread)
-        print("✅ USB device monitoring started")
+        usb_thread.start()
+        threads.append(usb_thread)
+        print("✅ Enhanced USB threat monitoring started")
         
-        # Start USB filesystem monitoring
-        usb_fs_thread = threading.Thread(
-            target=self.usb_filesystem_monitor.monitor_mounts,
-            name='USB-Filesystem-Monitor',
-            daemon=True
-        )
-        usb_fs_thread.start()
-        threads.append(usb_fs_thread)
-        print("✅ USB filesystem monitoring started")
-        
-        # Start WiFi monitoring
+        # Start enhanced WiFi monitoring
         wifi_thread = threading.Thread(
             target=self.wifi_monitor.monitor_wifi_threats,
-            name='WiFi-Threat-Monitor',
+            name='Enhanced-WiFi-Monitor',
             daemon=True
         )
         wifi_thread.start()
         threads.append(wifi_thread)
-        print("✅ WiFi threat monitoring started")
+        print("✅ Enhanced WiFi threat monitoring started")
         
-        # Start BLE monitoring
+        # Start enhanced BLE monitoring
         ble_thread = threading.Thread(
-            target=self.ble_monitor.monitor_ble_threats,
-            name='BLE-Threat-Monitor',
+            target=self.ble_monitor.monitor_enhanced_ble_threats,
+            name='Enhanced-BLE-Monitor',
             daemon=True
         )
         ble_thread.start()
         threads.append(ble_thread)
-        print("✅ BLE threat monitoring started")
+        print("✅ Enhanced BLE threat monitoring started")
         
         # Start AirDrop monitoring
         airdrop_thread = threading.Thread(
@@ -92,22 +80,23 @@ class AdvancedWirelessDetection:
         threads.append(airdrop_thread)
         print("✅ AirDrop threat monitoring started")
         
-        print(f"\n🌐 Advanced Wireless Detection Active! ({len(threads)} components)")
-        print("📋 Detection Capabilities:")
-        print("   🔌 USB device and filesystem threats")
-        print("   📡 WiFi network attacks (Evil twin, beacon flooding)")
-        print("   📱 BLE threats (Flipper Zero, ESP32 attacks)")
+        print(f"\n🌐 Enhanced Wireless Detection Active! ({len(threads)} components)")
+        print("📋 Enhanced Detection Capabilities:")
+        print("   🔌 Enhanced USB threats (BadUSB, Rubber Ducky, malicious devices)")
+        print("   📡 Enhanced WiFi attacks (Evil twin with reduced false positives, hacking tools)")
+        print("   📱 Enhanced BLE threats (Flipper Zero, custom firmware, Apple spoofing)")
         print("   📤 AirDrop abuse and proximity attacks")
         print("   🔗 Cross-vector attack correlation")
+        print("   🧠 Advanced behavioral analysis and threat scoring")
         print("")
-        print("💡 Comprehensive wireless attack surface monitoring")
+        print("💡 Comprehensive wireless attack surface monitoring with intelligent filtering")
         print("🛑 Press Ctrl+C to stop all monitoring")
         
         try:
             while self.running:
                 time.sleep(1)
         except KeyboardInterrupt:
-            print("\n🛑 Advanced wireless detection stopped")
+            print("\n🛑 Enhanced wireless detection stopped")
             self.running = False
 
 if __name__ == "__main__":

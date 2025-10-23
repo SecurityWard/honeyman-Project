@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # Network Honeypot - PROVEN to work
+  opencanary:
+    image: thinkst/opencanary:latest
+    container_name: honeypot-opencanary
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./opencanary.conf:/root/.opencanary.conf:ro
+      - ./logs:/var/log/opencanary
+    environment:
+      - TZ=America/New_York
+
+  # Simple Web Honeypot
+  nginx:
+    image: nginx:alpine
+    container_name: honeypot-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+
+  # Log Analysis - LIGHTWEIGHT
+  elasticsearch:
+    image: elasticsearch:8.8.0
+    container_name: honeypot-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms256m -Xmx512m"
+      - bootstrap.memory_lock=true
+    ports:
+      - "9200:9200"
+    mem_limit: 768m
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+  kibana:
+    image: kibana:8.8.0
+    container_name: honeypot-kibana
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    mem_limit: 384m
+
+  # Log shipping

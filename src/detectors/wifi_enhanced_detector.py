@@ -1,50 +1,216 @@
 #!/usr/bin/env python3
 """
-WiFi Threat Detection System - Phase 3A (Noise Reduced)
-Detects wireless attacks and suspicious activity with intelligent filtering
+Enhanced WiFi Threat Detection System
+Accurate evil twin, deauth, and WiFi attack detection with advanced filtering
 """
 import subprocess
 import time
 import json
-import requests
 import re
+import logging
 import hashlib
 from datetime import datetime, timedelta
 from collections import defaultdict, deque
+from elasticsearch import Elasticsearch
 
-class WiFiThreatDetector:
-    def __init__(self, interface=None):
-        self.interface = interface or self.detect_wifi_interface()
-        self.known_networks = {}
-        self.beacon_rates = defaultdict(deque)
-        self.probe_requests = defaultdict(list)
-        self.deauth_counts = defaultdict(int)
+# Configure logging  
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('/home/burner/honeypot-minimal/logs/wifi_enhanced.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+class EnhancedWiFiDetector:
+    def __init__(self):
+        # Elasticsearch connection
+        self.es = Elasticsearch(['http://localhost:9200'])
         
-        # Threat deduplication and rate limiting
+        # Network tracking with enhanced behavior analysis
+        self.known_networks = {}
+        self.network_history = defaultdict(lambda: {
+            'bssids': set(),
+            'channels': set(),
+            'encryptions': set(),
+            'signal_history': deque(maxlen=50),
+            'first_seen': None,
+            'last_seen': None,
+            'beacon_count': 0,
+            'client_count': 0
+        })
+        
+        # Enhanced deduplication and rate limiting
         self.recent_threats = {}  # hash -> timestamp
         self.threat_cooldown = 300  # 5 minutes between duplicate alerts
         self.network_whitelist = set()  # Trusted network BSSIDs
         self.ssid_whitelist = set()    # Trusted SSIDs
         
-        # Suspicious patterns
-        self.suspicious_ssids = [
-            'free wifi', 'free_wifi', 'freewifi', 'public',
-            'guest', 'hotel', 'airport', 'starbucks',
-            'mcdonalds', 'attwifi', 'xfinitywifi'
-            # Removed common router names as they're often legitimate
-        ]
-        
-        # Load whitelists from config if exists
+        # Load whitelist configuration
         self.load_whitelist_config()
         
+        # Enhanced evil twin detection patterns (from fixed logic)
+        self.evil_twin_patterns = {
+            'same_ssid_different_bssid': {
+                'description': 'Multiple BSSIDs for same SSID - Sophisticated filtering applied to reduce false positives',
+                'score': 0.8
+            },
+            'same_ssid_different_encryption': {
+                'description': 'Same SSID with different encryption - Security downgrade attack detected',
+                'score': 0.9
+            },
+            'open_version_of_secure': {
+                'description': 'Open network mimicking secure network - Classic evil twin tactic',
+                'score': 0.95
+            },
+            'signal_anomaly': {
+                'description': 'Suspicious signal strength for known network - Possible proximity attack',
+                'score': 0.7
+            },
+            'channel_hopping': {
+                'description': 'Network changing channels rapidly - Evasion technique',
+                'score': 0.75
+            },
+            'karma_attack': {
+                'description': 'Access point responding to all probe requests - KARMA/Jasager attack',
+                'score': 0.85
+            }
+        }
+        
+        # WiFi attack signatures (from BSides detector)
+        self.wifi_attacks = {
+            'deauth_flood': {
+                'patterns': ['deauthentication', 'deauth flood', 'disassociation'],
+                'threshold': 10,  # deauths per minute
+                'description': 'Deauthentication flood attack - Forces clients to disconnect and potentially connect to rogue AP',
+                'score': 0.9
+            },
+            'beacon_flood': {
+                'patterns': ['beacon flood', 'ssid flood', 'spam'],
+                'threshold': 50,  # new SSIDs per scan
+                'description': 'Beacon flooding attack - Overwhelming wireless environment with fake access points',
+                'score': 0.8
+            },
+            'pmkid_attack': {
+                'patterns': ['pmkid', 'clientless', 'hashcat'],
+                'indicators': ['no_clients', 'wpa2', 'targeted'],
+                'description': 'PMKID attack - Capturing WPA2 handshakes without clients for offline cracking',
+                'score': 0.85
+            },
+            'krack_attack': {
+                'patterns': ['key reinstallation', 'krack', 'wpa2 vulnerability'],
+                'indicators': ['replay_counter', 'nonce_reuse'],
+                'description': 'KRACK attack - Key reinstallation attack against WPA2 protocol',
+                'score': 0.9
+            },
+            'fragmentation_attack': {
+                'patterns': ['frag attack', 'fragmentation', 'aggregation'],
+                'description': 'FragAttacks - Exploiting frame aggregation and fragmentation vulnerabilities',
+                'score': 0.85
+            },
+            'wps_pixie': {
+                'patterns': ['wps', 'pixie dust', 'pin attack'],
+                'indicators': ['wps_enabled', 'rapid_attempts'],
+                'description': 'WPS Pixie Dust attack - Exploiting weak random number generation in WPS',
+                'score': 0.8
+            }
+        }
+        
+        # Hacking tool signatures (from BSides detector)
+        self.hacking_tools = {
+            'pineapple': {
+                'ssids': ['Pineapple', 'PineAP', 'MANA', 'Karma'],
+                'oui': ['00:13:37', '00:C0:CA'],  # Pineapple MACs
+                'behaviors': ['karma_responses', 'portal_cloning'],
+                'description': 'WiFi Pineapple - Professional penetration testing access point',
+                'score': 0.95
+            },
+            'flipper_wifi': {
+                'ssids': ['Flipper', 'FlipperZero', 'Marauder'],
+                'behaviors': ['deauth_capability', 'packet_injection'],
+                'description': 'Flipper Zero WiFi module - Multi-tool device with WiFi attack capabilities',
+                'score': 0.9
+            },
+            'esp8266_deauther': {
+                'ssids': ['pwned', 'deauther', 'esp8266'],
+                'oui': ['5C:CF:7F', 'EC:FA:BC', '2C:3A:E8'],  # ESP OUIs
+                'behaviors': ['continuous_deauth', 'beacon_spam'],
+                'description': 'ESP8266 Deauther - DIY WiFi attack tool based on ESP8266 microcontroller',
+                'score': 0.85
+            },
+            'esp32_marauder': {
+                'ssids': ['Marauder', 'ESP32', 'WiFiMarauder'],
+                'behaviors': ['packet_monitor', 'deauth', 'evil_portal'],
+                'description': 'ESP32 Marauder - Advanced WiFi testing tool with multiple attack vectors',
+                'score': 0.85
+            },
+            'aircrack_suite': {
+                'indicators': ['mon0', 'wlan0mon', 'airodump'],
+                'behaviors': ['channel_hopping', 'packet_injection'],
+                'description': 'Aircrack-ng suite - Professional WiFi security auditing tools',
+                'score': 0.8
+            }
+        }
+        
+        # Suspicious SSID patterns (from BSides detector)
+        self.suspicious_ssids = {
+            'setup_pages': [
+                r'.*[Ss]etup.*',
+                r'.*[Cc]onfig.*',
+                r'.*[Aa]dmin.*',
+                r'DIRECT-.*',
+                r'.*_nomap'
+            ],
+            'honeypots': [
+                r'Free.*WiFi',
+                r'Open.*WiFi',
+                r'Public.*WiFi',
+                r'.*_Free',
+                r'.*Guest.*',
+                r'.*Complimentary.*'
+            ],
+            'default_passwords': [
+                r'NETGEAR\d+',
+                r'Linksys\d+',
+                r'dlink-.*',
+                r'TP-LINK_.*',
+                r'ASUS.*'
+            ],
+            'pranks': [
+                r'.*[Pp]orn.*',
+                r'.*FBI.*',
+                r'.*NSA.*',
+                r'.*Surveillance.*',
+                r'.*Virus.*',
+                r'.*[Hh]ack.*'
+            ],
+            'attack_tools': [
+                r'.*[Pp]wn.*',
+                r'.*[Hh]ack.*',
+                r'.*[Ee]xploit.*',
+                r'.*[Cc]rack.*'
+            ]
+        }
+        
+        # Attack correlation tracking
+        self.deauth_tracker = defaultdict(lambda: deque(maxlen=100))
+        self.beacon_tracker = defaultdict(int)
+        self.client_tracker = defaultdict(set)
+        
+        # Interface management
+        self.interface = None
+        self.monitor_mode = False
+        
     def load_whitelist_config(self):
-        """Load whitelist configuration from file"""
+        """Load whitelist configuration from file (compatible with existing logic)"""
         try:
             with open('/home/burner/honeypot-minimal/wifi_whitelist.json', 'r') as f:
                 config = json.load(f)
                 self.network_whitelist.update(config.get('bssid_whitelist', []))
                 self.ssid_whitelist.update(config.get('ssid_whitelist', []))
-                print(f"📋 Loaded {len(self.network_whitelist)} whitelisted BSSIDs and {len(self.ssid_whitelist)} SSIDs")
+                logger.info(f"📋 Loaded {len(self.network_whitelist)} whitelisted BSSIDs and {len(self.ssid_whitelist)} SSIDs")
         except FileNotFoundError:
             # Create default whitelist config
             default_config = {
@@ -58,9 +224,9 @@ class WiFiThreatDetector:
             }
             with open('/home/burner/honeypot-minimal/wifi_whitelist.json', 'w') as f:
                 json.dump(default_config, f, indent=2)
-            print("📋 Created default whitelist config at wifi_whitelist.json")
+            logger.info("📋 Created default whitelist config at wifi_whitelist.json")
         except Exception as e:
-            print(f"⚠️ Error loading whitelist: {e}")
+            logger.warning(f"⚠️ Error loading whitelist: {e}")
     
     def detect_wifi_interface(self):
         """Auto-detect available WiFi interface"""
@@ -73,11 +239,14 @@ class WiFiThreatDetector:
         except:
             pass
         return None
-        
+    
     def scan_networks(self):
         """Scan for WiFi networks using iwlist"""
         networks = []
         
+        if not self.interface:
+            self.interface = self.detect_wifi_interface()
+            
         if not self.interface:
             return networks
             
@@ -137,9 +306,9 @@ class WiFiThreatDetector:
                 networks.append(current_network)
                 
         except subprocess.TimeoutExpired:
-            print("⚠️ WiFi scan timeout")
+            logger.warning("⚠️ WiFi scan timeout")
         except Exception as e:
-            print(f"❌ WiFi scan error: {e}")
+            logger.error(f"❌ WiFi scan error: {e}")
             
         return networks
     
@@ -275,10 +444,7 @@ class WiFiThreatDetector:
                 if not self._is_common_oui_pairing(current_oui, known_oui):
                     confidence_factors.append(0.3)
                     result['reasons'].append("vendor_oui_mismatch_suspicious")
-            
-            # Factor 4: Timing analysis - simultaneous appearance/disappearance
-            # (This would require time-series data, simplified here)
-            
+        
         # Calculate final confidence score
         if confidence_factors:
             # Use weighted average, cap at 0.9 to avoid overconfidence
@@ -359,8 +525,61 @@ class WiFiThreatDetector:
         
         return False
     
+    def check_hacking_tools(self, network):
+        """Check for known WiFi hacking tools and attack devices"""
+        threats = []
+        total_score = 0.0
+        
+        ssid = network.get('ssid', '').lower()
+        bssid = network.get('bssid', '').lower()
+        
+        for tool_name, tool_info in self.hacking_tools.items():
+            tool_detected = False
+            
+            # Check SSID patterns
+            for pattern in tool_info.get('ssids', []):
+                if pattern.lower() in ssid:
+                    tool_detected = True
+                    break
+            
+            # Check OUI patterns
+            for oui in tool_info.get('oui', []):
+                if bssid.startswith(oui.lower().replace(':', '')):
+                    tool_detected = True
+                    break
+            
+            if tool_detected:
+                threats.append({
+                    'type': f'hacking_tool_{tool_name}',
+                    'confidence': tool_info['score'],
+                    'details': tool_info['description']
+                })
+                total_score = max(total_score, tool_info['score'])
+        
+        return threats, total_score
+    
+    def check_suspicious_ssids(self, network):
+        """Check for suspicious SSID patterns"""
+        threats = []
+        total_score = 0.0
+        
+        ssid = network.get('ssid', '')
+        
+        for category, patterns in self.suspicious_ssids.items():
+            for pattern in patterns:
+                if re.search(pattern, ssid, re.IGNORECASE):
+                    threats.append({
+                        'type': f'suspicious_ssid_{category}',
+                        'confidence': 0.6,
+                        'details': f"SSID '{ssid}' matches suspicious pattern for {category} - Possible social engineering or attack tool"
+                    })
+                    total_score = max(total_score, 0.6)
+                    break
+        
+        return threats, total_score
+    
     def analyze_network_threats(self, network):
-        """Analyze individual network for threats with reduced false positives"""
+        """Comprehensive network threat analysis with enhanced explanations"""
         threats = []
         threat_score = 0.0
         
@@ -368,56 +587,72 @@ class WiFiThreatDetector:
         if self.is_whitelisted(network):
             return threats, threat_score
         
-        ssid = network.get('ssid', '').lower()
+        ssid = network.get('ssid', '')
         bssid = network.get('bssid', '')
         security = network.get('security', [])
         
-        # Check for suspicious SSID names (more selective)
-        for suspicious in self.suspicious_ssids:
-            if suspicious in ssid and len(ssid) < 20:  # Avoid matching partial legitimate names
-                threat_type = f"suspicious_ssid_{suspicious.replace(' ', '_')}"
-                threat_hash = self.create_threat_hash(network, threat_type)
-                
-                if not self.is_threat_duplicate(threat_hash):
-                    threats.append(threat_type)
-                    threat_score += 0.4
-                
-        # Check for evil twin with advanced filtering to reduce false positives
-        if network['ssid'] and len(network['ssid']) > 2:  # Only for non-empty, meaningful SSIDs
+        # Enhanced evil twin detection with fixed logic
+        if ssid and len(ssid) > 2:  # Only for non-empty, meaningful SSIDs
             evil_twin_result = self.detect_evil_twin_advanced(network, bssid)
             if evil_twin_result['is_evil_twin']:
                 threat_hash = self.create_threat_hash(network, "evil_twin_detected")
                 if not self.is_threat_duplicate(threat_hash):
-                    threats.append("evil_twin_detected")
-                    threat_score += evil_twin_result['confidence_score']
-                
+                    threats.append({
+                        'type': 'evil_twin_detected',
+                        'confidence': evil_twin_result['confidence_score'],
+                        'details': evil_twin_result['explanation']
+                    })
+                    threat_score = max(threat_score, evil_twin_result['confidence_score'])
+        
+        # Check for hacking tools
+        tool_threats, tool_score = self.check_hacking_tools(network)
+        threats.extend(tool_threats)
+        threat_score = max(threat_score, tool_score)
+        
+        # Check suspicious SSIDs
+        ssid_threats, ssid_score = self.check_suspicious_ssids(network)
+        threats.extend(ssid_threats)
+        threat_score = max(threat_score, ssid_score)
+        
         # Check for weak security (but less aggressive)
         if 'WEP' in security:  # Only WEP is truly weak, open networks are often legitimate
             threat_hash = self.create_threat_hash(network, "weak_encryption_wep")
             if not self.is_threat_duplicate(threat_hash):
-                threats.append("weak_encryption_wep")
-                threat_score += 0.3
-            
+                threats.append({
+                    'type': 'weak_encryption_wep',
+                    'confidence': 0.3,
+                    'details': f"Network '{ssid}' uses WEP encryption - Easily crackable within minutes, presents significant security risk"
+                })
+                threat_score = max(threat_score, 0.3)
+        
         # Check for unusual signal strength patterns (suspicious proximity)
         try:
             signal = float(network.get('signal', 0))
             if signal > -10:  # Very strong signal (likely very close/malicious)
                 threat_hash = self.create_threat_hash(network, "suspicious_proximity")
                 if not self.is_threat_duplicate(threat_hash):
-                    threats.append("suspicious_proximity")
-                    threat_score += 0.3
+                    threats.append({
+                        'type': 'suspicious_proximity',
+                        'confidence': 0.3,
+                        'details': f"Network '{ssid}' has unusually strong signal ({signal}dBm) - Possible rogue AP in close proximity for man-in-the-middle attacks"
+                    })
+                    threat_score = max(threat_score, 0.3)
         except:
             pass
-            
+        
         # Only flag hidden SSIDs if they have other suspicious characteristics
         if not ssid and len(security) == 0:  # Hidden AND open = suspicious
             threat_hash = self.create_threat_hash(network, "hidden_open_network")
             if not self.is_threat_duplicate(threat_hash):
-                threats.append("hidden_open_network")
-                threat_score += 0.2
-                
-        return threats, min(threat_score, 1.0)
+                threats.append({
+                    'type': 'hidden_open_network',
+                    'confidence': 0.2,
+                    'details': f"Hidden SSID with no security - Unusual combination that may indicate surveillance or attack infrastructure"
+                })
+                threat_score = max(threat_score, 0.2)
         
+        return threats, min(threat_score, 1.0)
+    
     def detect_beacon_flooding(self, networks):
         """Detect beacon flooding attacks with improved thresholds"""
         current_time = time.time()
@@ -426,57 +661,55 @@ class WiFiThreatDetector:
         for network in networks:
             bssid = network['bssid']
             
-            # Track beacon timestamps
-            self.beacon_rates[bssid].append(current_time)
+            # Track beacon timestamps (simplified for iwlist)
+            self.beacon_tracker[bssid] += 1
             
-            # Remove old timestamps (>60 seconds)
-            while (self.beacon_rates[bssid] and 
-                   current_time - self.beacon_rates[bssid][0] > 60):
-                self.beacon_rates[bssid].popleft()
-                
-            # Check for flooding (>100 beacons per minute - increased threshold)
-            if len(self.beacon_rates[bssid]) > 100:
+            # Reset counter every minute
+            if not hasattr(self, 'last_reset') or current_time - self.last_reset > 60:
+                self.beacon_tracker.clear()
+                self.last_reset = current_time
+            
+            # Check for flooding (>20 appearances per scan indicates rapid beaconing)
+            if self.beacon_tracker[bssid] > 20:
                 threat_hash = self.create_threat_hash(network, "beacon_flooding")
                 if not self.is_threat_duplicate(threat_hash):
                     flooding_networks.append({
                         'bssid': bssid,
                         'ssid': network.get('ssid', 'Hidden'),
-                        'beacon_rate': len(self.beacon_rates[bssid]),
-                        'threat_type': 'beacon_flooding'
+                        'beacon_rate': self.beacon_tracker[bssid],
+                        'threat_type': 'beacon_flooding',
+                        'description': f"Beacon flooding attack detected - {self.beacon_tracker[bssid]} rapid beacon transmissions overwhelming wireless environment"
                     })
-                
-        return flooding_networks
         
+        return flooding_networks
+    
     def send_to_elasticsearch(self, detection_data):
-        """Send WiFi threat detection to Elasticsearch"""
+        """Send WiFi threat detection to Elasticsearch with enhanced logging"""
         try:
             doc = {
                 'timestamp': detection_data['timestamp'],
                 'honeypot_id': 'honeyman-01',
-                'source': 'wifi_threat_detector',
+                'source': 'wifi_enhanced_detector',
                 'log_type': 'wifi_threat_detection',
                 'interface': self.interface,
                 'detection_type': detection_data['type'],
                 'threat_score': detection_data['threat_score'],
                 'threats_detected': detection_data['threats'],
                 'network_info': detection_data['network_info'],
-                'message': detection_data['message']
+                'message': detection_data['message'],
+                'explanation': detection_data.get('explanation', '')
             }
             
-            response = requests.post(
-                'http://localhost:9200/honeypot-logs-new/_doc',
-                json=doc,
-                timeout=5
-            )
+            response = self.es.index(index='honeypot-logs-new', document=doc)
             
-            if response.status_code in [200, 201]:
-                print(f"✅ WiFi threat logged to Elasticsearch")
+            if response.get('result') in ['created', 'updated']:
+                logger.info(f"✅ WiFi threat logged to Elasticsearch")
             else:
-                print(f"❌ Failed to log WiFi threat: {response.status_code}")
+                logger.warning(f"❌ Failed to log WiFi threat: {response}")
                 
         except Exception as e:
-            print(f"❌ Elasticsearch error: {e}")
-            
+            logger.error(f"❌ Elasticsearch error: {e}")
+    
     def get_threat_level(self, score):
         """Get threat level indicator"""
         if score >= 0.8:
@@ -501,35 +734,39 @@ class WiFiThreatDetector:
         
         for threat_hash in to_remove:
             del self.recent_threats[threat_hash]
-            
+    
     def monitor_wifi_threats(self):
-        """Main WiFi threat monitoring loop with noise reduction"""
-        print(f"📡 Starting WiFi Threat Detection (Noise Reduced)...")
+        """Main WiFi threat monitoring loop with enhanced detection"""
+        logger.info("🚀 Starting Enhanced WiFi Detector")
+        logger.info("🎯 Focus: Evil twins, WiFi attacks, hacking tools")
         
         if not self.interface:
-            print("❌ No WiFi interface available")
+            self.interface = self.detect_wifi_interface()
+            
+        if not self.interface:
+            logger.error("❌ No WiFi interface available")
             return
             
-        print(f"🔍 Monitoring interface: {self.interface}")
-        print(f"⏱️ Threat cooldown: {self.threat_cooldown}s")
-        print(f"📋 Whitelisted: {len(self.network_whitelist)} BSSIDs, {len(self.ssid_whitelist)} SSIDs")
-        print("💡 Scanning for wireless threats...")
-        print("🛑 Press Ctrl+C to stop")
+        logger.info(f"🔍 Monitoring interface: {self.interface}")
+        logger.info(f"⏱️ Threat cooldown: {self.threat_cooldown}s")
+        logger.info(f"📋 Whitelisted: {len(self.network_whitelist)} BSSIDs, {len(self.ssid_whitelist)} SSIDs")
+        logger.info("💡 Scanning for wireless threats with enhanced filtering...")
+        logger.info("🛑 Press Ctrl+C to stop")
         
         scan_count = 0
         try:
             while True:
                 scan_count += 1
-                print(f"\n📡 Scanning networks... ({datetime.now().strftime('%H:%M:%S')}) [Scan #{scan_count}]")
+                logger.info(f"\n📡 Scanning networks... ({datetime.now().strftime('%H:%M:%S')}) [Scan #{scan_count}]")
                 
                 # Clean up old data every 10 scans
                 if scan_count % 10 == 0:
                     self.cleanup_old_threats()
-                    print(f"🧹 Cleaned {len(self.recent_threats)} tracked threats")
+                    logger.info(f"🧹 Cleaned {len(self.recent_threats)} tracked threats")
                 
                 # Scan for networks
                 networks = self.scan_networks()
-                print(f"🔍 Found {len(networks)} networks")
+                logger.info(f"🔍 Found {len(networks)} networks")
                 
                 threats_found = 0
                 # Analyze each network for threats
@@ -542,34 +779,33 @@ class WiFiThreatDetector:
                         ssid = network.get('ssid', 'Hidden')
                         bssid = network.get('bssid', 'Unknown')
                         
-                        print(f"  {threat_level} {ssid} ({bssid})")
-                        print(f"    Threats: {', '.join(threats)}")
+                        logger.info(f"  {threat_level} {ssid} ({bssid})")
                         
-                        # Get detailed explanation for evil twin detections
-                        explanation = ""
-                        if 'evil_twin_detected' in threats:
-                            evil_twin_result = self.detect_evil_twin_advanced(network, network['bssid'])
-                            explanation = evil_twin_result['explanation']
-                            print(f"    Evil Twin Analysis: {explanation}")
+                        # Log details for each threat
+                        for threat in threats:
+                            logger.info(f"    {threat['type']}: {threat.get('details', 'No details')}")
                         
-                        # Log to Elasticsearch
+                        # Enhanced logging with detailed explanations
+                        explanation = ' | '.join([t.get('details', '') for t in threats])
+                        
                         detection_data = {
                             'timestamp': datetime.utcnow().isoformat(),
                             'type': 'suspicious_network',
                             'threat_score': threat_score,
-                            'threats': threats,
+                            'threats': [t['type'] for t in threats],
                             'network_info': network,
-                            'message': f"Suspicious WiFi network detected: {ssid} - {', '.join(threats)}",
+                            'message': f"Enhanced WiFi threat detected: {ssid} - {', '.join([t['type'] for t in threats])}",
                             'explanation': explanation
                         }
                         
                         self.send_to_elasticsearch(detection_data)
-                        
+                
                 # Check for beacon flooding
                 flooding = self.detect_beacon_flooding(networks)
                 for flood_network in flooding:
                     threats_found += 1
-                    print(f"  🚨 CRITICAL Beacon flooding: {flood_network['ssid']} ({flood_network['beacon_rate']} beacons/min)")
+                    logger.warning(f"  🚨 CRITICAL Beacon flooding: {flood_network['ssid']} ({flood_network['beacon_rate']} rapid beacons)")
+                    logger.info(f"    Details: {flood_network['description']}")
                     
                     detection_data = {
                         'timestamp': datetime.utcnow().isoformat(),
@@ -577,35 +813,25 @@ class WiFiThreatDetector:
                         'threat_score': 0.9,
                         'threats': ['beacon_flooding'],
                         'network_info': flood_network,
-                        'message': f"Beacon flooding attack detected: {flood_network['beacon_rate']} beacons/min"
+                        'message': f"Beacon flooding attack detected: {flood_network['beacon_rate']} rapid beacons",
+                        'explanation': flood_network['description']
                     }
                     
                     self.send_to_elasticsearch(detection_data)
-                    
-                print(f"⚡ {threats_found} new threats detected in this scan")
-                    
+                
+                logger.info(f"⚡ {threats_found} threats detected in this scan")
+                
                 # Update known networks
                 for network in networks:
                     self.known_networks[network['bssid']] = network
-                    
-                # Wait before next scan (reduced frequency)
-                time.sleep(15)  # Increased from default to reduce log volume
+                
+                # Wait before next scan
+                time.sleep(15)
                 
         except KeyboardInterrupt:
-            print("\n🛑 WiFi threat monitoring stopped")
-            print(f"📊 Total scans performed: {scan_count}")
-            
-    def monitor_network_only(self):
-        """Fallback monitoring when no WiFi interface available"""
-        print("🔍 Monitoring network connections...")
-        try:
-            while True:
-                # Monitor network connections, ARP tables, etc.
-                time.sleep(30)
-                print("📊 Network monitoring active...")
-        except KeyboardInterrupt:
-            print("\n🛑 Network monitoring stopped")
+            logger.info("\n🛑 Enhanced WiFi detector stopped")
+            logger.info(f"📊 Total scans performed: {scan_count}")
 
 if __name__ == "__main__":
-    detector = WiFiThreatDetector()
+    detector = EnhancedWiFiDetector()
     detector.monitor_wifi_threats()

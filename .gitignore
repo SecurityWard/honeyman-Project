@@ -61,9 +61,15 @@ reminder*
 *.json
 !config/*.json
 !dashboard/package.json
+!config/wifi_whitelist.json
 *.csv
 *.db
+!data/malware_hashes.db
 *.sqlite
+
+# Cache and threat feeds
+cache/
+.cache/
 
 # Archives
 *.zip
