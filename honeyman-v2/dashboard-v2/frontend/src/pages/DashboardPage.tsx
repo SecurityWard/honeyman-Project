@@ -6,7 +6,7 @@ import TopThreatsChart from '../components/analytics/TopThreatsChart';
 import TopSensorsChart from '../components/analytics/TopSensorsChart';
 import { useDashboardOverview, useThreatTrends, useTopThreats, useTopSensors, useGeoMap } from '../hooks/useAnalytics';
 import { useThreats } from '../hooks/useThreats';
-import { Threat } from '../types';
+import type { Threat } from '../types';
 import websocketService from '../services/websocket';
 import './DashboardPage.css';
 

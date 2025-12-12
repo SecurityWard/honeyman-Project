@@ -1,4 +1,4 @@
-import { WebSocketMessage, Threat } from '../types';
+import type { WebSocketMessage, Threat } from '../types';
 
 type MessageHandler = (message: WebSocketMessage) => void;
 type ThreatHandler = (threat: Threat) => void;

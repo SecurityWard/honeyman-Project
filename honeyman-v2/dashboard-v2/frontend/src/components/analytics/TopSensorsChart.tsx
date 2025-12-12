@@ -1,5 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { TopSensor } from '../../types';
+import type { TopSensor } from '../../types';
 
 interface TopSensorsChartProps {
   data: TopSensor[];
@@ -25,12 +25,12 @@ export default function TopSensorsChart({ data, height = 300 }: TopSensorsChartP
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={({ name, percentage }) => `${name}: ${percentage.toFixed(1)}%`}
+            label={(props: any) => `${props.name}: ${props.percentage.toFixed(1)}%`}
             outerRadius={80}
             fill="#8884d8"
             dataKey="value"
           >
-            {chartData.map((entry, index) => (
+            {chartData.map((_entry, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
@@ -41,7 +41,7 @@ export default function TopSensorsChart({ data, height = 300 }: TopSensorsChartP
               borderRadius: '8px',
               boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
             }}
-            formatter={(value: number, name: string, props: any) => [
+            formatter={(value: number, _name: string, props: any) => [
               `${value} (${props.payload.percentage.toFixed(1)}%)`,
               'Threats'
             ]}

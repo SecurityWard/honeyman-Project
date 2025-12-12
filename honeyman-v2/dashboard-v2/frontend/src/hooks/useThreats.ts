@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
-import { Threat, PaginatedResponse, ThreatQueryParams } from '../types';
+import type { Threat, PaginatedResponse, ThreatQueryParams } from '../types';
 
 export function useThreats(params: ThreatQueryParams = {}) {
   return useQuery({

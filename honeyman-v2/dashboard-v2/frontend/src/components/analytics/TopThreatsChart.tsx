@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { TopThreat } from '../../types';
+import type { TopThreat } from '../../types';
 
 interface TopThreatsChartProps {
   data: TopThreat[];
@@ -34,13 +34,13 @@ export default function TopThreatsChart({ data, height = 300 }: TopThreatsChartP
               borderRadius: '8px',
               boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
             }}
-            formatter={(value: number, name: string, props: any) => [
+            formatter={(value: number, _name: string, props: any) => [
               `${value} (${props.payload.percentage.toFixed(1)}%)`,
               'Count'
             ]}
           />
           <Bar dataKey="count" radius={[8, 8, 0, 0]}>
-            {data.map((entry, index) => (
+            {data.map((_entry, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Bar>

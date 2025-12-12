@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
-import { Sensor, PaginatedResponse } from '../types';
+import type { Sensor, PaginatedResponse } from '../types';
 
 export function useSensors(page: number = 1, pageSize: number = 50) {
   return useQuery({

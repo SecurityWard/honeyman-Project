@@ -1,4 +1,4 @@
-import { DashboardOverview as DashboardOverviewType } from '../../types';
+import type { DashboardOverview as DashboardOverviewType } from '../../types';
 import './DashboardOverview.css';
 
 interface DashboardOverviewProps {

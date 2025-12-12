@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sensor } from '../../types';
+import type { Sensor } from '../../types';
 import { format } from 'date-fns';
 import './SensorList.css';
 

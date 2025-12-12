@@ -1,5 +1,5 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ThreatTrend } from '../../types';
+import type { ThreatTrend } from '../../types';
 import { format } from 'date-fns';
 
 interface ThreatTrendsChartProps {

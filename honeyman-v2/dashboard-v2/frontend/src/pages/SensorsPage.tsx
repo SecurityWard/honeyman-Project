@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import SensorList from '../components/sensors/SensorList';
 import { useSensors, useDeleteSensor } from '../hooks/useSensors';
-import { Sensor } from '../types';
+import type { Sensor } from '../types';
 import './SensorsPage.css';
 
 export default function SensorsPage() {

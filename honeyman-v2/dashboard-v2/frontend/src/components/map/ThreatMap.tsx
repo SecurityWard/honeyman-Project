@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, CircleMarker } from 'react-leaflet';
-import { LatLngExpression } from 'leaflet';
-import { GeoThreat, Threat } from '../../types';
+import { useState } from 'react';
+import { MapContainer, TileLayer, Popup, CircleMarker } from 'react-leaflet';
+import type { LatLngExpression } from 'leaflet';
+import type { GeoThreat, Threat } from '../../types';
 import 'leaflet/dist/leaflet.css';
 import './ThreatMap.css';
 
