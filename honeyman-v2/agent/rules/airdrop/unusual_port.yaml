@@ -1,0 +1,44 @@
+rule_id: airdrop_unusual_port_001
+name: "Unusual AirDrop Port Detection"
+version: 2.0
+enabled: true
+severity: low
+threat_type: airdrop_unusual_port
+category: airdrop
+
+# Detect non-standard port usage
+conditions:
+  operator: OR
+  clauses:
+    # Low privileged ports (unusual for AirDrop)
+    - type: device
+      field: port
+      operator: less_than
+      value: 1024
+
+    # Very high ports (suspicious)
+    - type: device
+      field: port
+      operator: greater_than
+      value: 65000
+
+actions:
+  - type: alert_dashboard
+    priority: low
+
+  - type: local_log
+    severity: low
+
+metadata:
+  mitre_attack:
+    - T1571  # Non-Standard Port
+  tags:
+    - airdrop
+    - unusual_port
+    - evasion
+  description: "Detects AirDrop services using unusual port numbers"
+  confidence: 0.40
+
+tuning:
+  max_alerts_per_hour: 50
+  false_positive_prone: true

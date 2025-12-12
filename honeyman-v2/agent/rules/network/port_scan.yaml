@@ -1,0 +1,53 @@
+rule_id: network_port_scan_001
+name: "Port Scan Detection"
+version: 2.0
+enabled: true
+severity: medium
+threat_type: port_scan
+category: network
+
+# Detect port scanning activity
+conditions:
+  operator: OR
+  clauses:
+    # OpenCanary port scan detection
+    - type: network
+      field: logtype
+      operator: equals
+      value: "portscan.portscan"
+
+    # Multiple port connections from same source
+    - type: behavioral
+      metric: port_connection_count
+      operator: threshold
+      threshold: 5
+
+    # Rapid sequential port access
+    - type: behavioral
+      metric: port_scan_rate
+      operator: anomaly
+      threshold: 3.0
+
+actions:
+  - type: alert_dashboard
+    priority: medium
+
+  - type: local_log
+    severity: medium
+
+metadata:
+  mitre_attack:
+    - T1046  # Network Service Discovery
+    - T1595.001  # Active Scanning: Scanning IP Blocks
+  tags:
+    - reconnaissance
+    - port_scan
+    - network_discovery
+    - honeypot
+  description: "Detects port scanning and network reconnaissance activity"
+  confidence: 0.75
+
+tuning:
+  max_alerts_per_hour: 100
+  cooldown_seconds: 30
+  false_positive_prone: true  # Network scanners common

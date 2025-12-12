@@ -1,0 +1,56 @@
+# Honeyman Agent V2 - Example Configuration
+
+sensor_id: sensor_001
+sensor_name: "RPI5-DefCon-Portable"
+
+# Detection rules directory
+rules_dir: /etc/honeyman/rules
+
+# Heartbeat interval (seconds)
+heartbeat_interval: 60
+
+# Transport configuration
+transport:
+  protocol: mqtt  # Primary: mqtt, Fallback: http
+  fallback: http
+
+  mqtt:
+    broker: mqtt.honeyman.com
+    port: 8883
+    username: sensor_001
+    password: YOUR_PASSWORD_HERE
+    use_tls: true
+    qos: 1
+
+  http:
+    base_url: https://api.honeyman.com
+    api_key: YOUR_API_KEY_HERE
+    timeout: 30
+    verify_ssl: true
+
+# Detector modules
+detectors:
+  usb: true
+  wifi: false  # Requires monitor mode adapter
+  bluetooth: false  # Requires BLE hardware
+  network: true
+  airdrop: false  # Requires macOS or specific WiFi chipset
+
+# USB detector settings
+usb:
+  hash_database_path: /etc/honeyman/data/malware_hashes.db
+  scan_storage_devices: true
+  max_file_size_mb: 100
+
+# Location service
+location:
+  enabled: true
+  gps_enabled: false  # Requires GPS hardware
+  google_geolocation_api_key: null  # Optional: for WiFi positioning
+
+# Logging
+logging:
+  level: INFO  # DEBUG, INFO, WARNING, ERROR
+  file: /var/log/honeyman/agent.log
+  max_bytes: 10485760  # 10MB
+  backup_count: 5

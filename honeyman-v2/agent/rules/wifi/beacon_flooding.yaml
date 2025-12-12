@@ -1,0 +1,46 @@
+rule_id: wifi_beacon_flood_001
+name: "Beacon Flooding Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: beacon_flood
+category: wifi
+
+# Detect beacon flooding attacks
+conditions:
+  operator: OR
+  clauses:
+    # Excessive unique SSIDs in short time
+    - type: network_evaluator
+      field: unique_ssids_per_scan
+      operator: greater_than
+      value: 50
+
+    # Rapid SSID appearance
+    - type: behavioral
+      metric: new_ssid_rate
+      operator: anomaly
+      threshold: 30.0
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1499  # Endpoint Denial of Service
+  tags:
+    - beacon_flood
+    - ssid_spam
+    - wifi_attack
+    - dos
+  description: "Detects beacon flooding attacks that spam fake access points"
+  confidence: 0.80
+
+tuning:
+  threshold_ssids: 50
+  scan_window_seconds: 60
+  max_alerts_per_hour: 20

@@ -1,0 +1,51 @@
+rule_id: ble_flipper_001
+name: "Flipper Zero BLE Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: flipper_zero
+category: ble
+
+# Detect Flipper Zero device
+conditions:
+  operator: OR
+  clauses:
+    # Flipper Zero firmware signatures
+    - type: file_pattern
+      field: device_name
+      operator: regex
+      pattern: ".*(flipper|momentum|unleashed|roguemaster|\\bRM\\b|\\bFZ\\b).*"
+
+    # Suspicious BLE service UUIDs
+    - type: service_name
+      field: service_uuid
+      operator: in
+      values:
+        - "0000"  # Generic service
+        - "fff0"  # Common Flipper service
+
+    # Rapid device name changes
+    - type: behavioral
+      metric: name_change_rate
+      operator: anomaly
+      threshold: 5.0  # Changes per minute
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  references:
+    - https://github.com/flipperdevices/flipperzero-firmware
+  tags:
+    - flipper_zero
+    - ble
+    - bluetooth_spam
+  description: "Detects Flipper Zero devices via firmware signatures and behavioral patterns"
+
+tuning:
+  confidence_threshold: 0.90
+  max_alerts_per_hour: 15

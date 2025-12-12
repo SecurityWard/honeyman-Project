@@ -1,0 +1,183 @@
+.threat-map-container {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.threat-popup h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.threat-popup p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.threat-popup strong {
+  color: #1f2937;
+}
+
+.severity-critical {
+  color: #dc2626;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.severity-high {
+  color: #ea580c;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.severity-medium {
+  color: #f59e0b;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.severity-low {
+  color: #3b82f6;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.severity-info {
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.map-legend {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  z-index: 1000;
+}
+
+.map-legend h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin: 4px 0;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-right: 8px;
+  border: 2px solid white;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+}
+
+.legend-label {
+  font-size: 12px;
+  color: #4b5563;
+  text-transform: capitalize;
+}
+
+.threat-stats-overlay {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  z-index: 1000;
+  min-width: 250px;
+}
+
+.threat-stats-overlay h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.threat-stats-overlay .stat {
+  margin: 8px 0;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.threat-stats-overlay .stat:last-child {
+  border-bottom: none;
+}
+
+.stat-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  color: #dc2626;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.close-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* Leaflet marker animations */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.leaflet-marker-icon {
+  animation: pulse 2s infinite;
+}

@@ -1,0 +1,56 @@
+rule_id: usb_bash_bunny_001
+name: "Bash Bunny Detection"
+version: 2.0
+enabled: true
+severity: critical
+threat_type: bash_bunny
+category: usb
+
+# Detect Hak5 Bash Bunny attack device
+conditions:
+  operator: OR
+  clauses:
+    # Bash Bunny primary mode
+    - type: device_vendor
+      field: vid_pid
+      operator: equals
+      value: "f000:ff00"
+
+    # Bash Bunny storage mode
+    - type: device_vendor
+      field: vid_pid
+      operator: equals
+      value: "f000:ff01"
+
+    # Bash Bunny network mode
+    - type: device_vendor
+      field: vid_pid
+      operator: equals
+      value: "f000:ff02"
+
+actions:
+  - type: alert_dashboard
+    priority: critical
+
+  - type: local_log
+    severity: critical
+
+metadata:
+  mitre_attack:
+    - T1200  # Hardware Additions
+    - T1557  # Adversary-in-the-Middle
+  vendor: "Hak5"
+  product: "Bash Bunny"
+  references:
+    - https://shop.hak5.org/products/bash-bunny
+  tags:
+    - bash_bunny
+    - hak5
+    - multi_function_attack
+    - mode_switching
+  description: "Detects Hak5 Bash Bunny multi-function attack device"
+  confidence: 0.98
+
+tuning:
+  max_alerts_per_hour: 5
+  cooldown_seconds: 600

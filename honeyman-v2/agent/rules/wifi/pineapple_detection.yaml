@@ -1,0 +1,55 @@
+rule_id: wifi_pineapple_001
+name: "WiFi Pineapple Detection"
+version: 2.0
+enabled: true
+severity: critical
+threat_type: wifi_pineapple
+category: wifi
+
+# Detect Hak5 WiFi Pineapple
+conditions:
+  operator: OR
+  clauses:
+    # Pineapple SSID patterns
+    - type: ssid_match
+      field: ssid
+      operator: regex
+      pattern: ".*(Pineapple|PineAP|MANA|Karma).*"
+
+    # Pineapple MAC OUI
+    - type: mac_address
+      field: bssid
+      operator: regex
+      pattern: "^(00:13:37|00:C0:CA):.*"
+
+    # KARMA attack behavior
+    - type: behavioral
+      metric: karma_responses
+      operator: anomaly
+      threshold: 5.0
+
+actions:
+  - type: alert_dashboard
+    priority: critical
+
+  - type: local_log
+    severity: critical
+
+metadata:
+  mitre_attack:
+    - T1200  # Hardware Additions
+    - T1557  # Adversary-in-the-Middle
+  vendor: "Hak5"
+  product: "WiFi Pineapple"
+  tags:
+    - pineapple
+    - hak5
+    - karma_attack
+    - evil_portal
+    - rogue_ap
+  description: "Detects Hak5 WiFi Pineapple penetration testing device"
+  confidence: 0.95
+
+tuning:
+  max_alerts_per_hour: 5
+  cooldown_seconds: 600

@@ -1,0 +1,52 @@
+rule_id: network_ssh_bruteforce_001
+name: "SSH Brute Force Attack Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: ssh_brute_force
+category: network
+
+# Detect SSH brute force login attempts
+conditions:
+  operator: OR
+  clauses:
+    # OpenCanary SSH login attempt
+    - type: network
+      field: logtype
+      operator: equals
+      value: "ssh.login_attempt"
+
+    # Multiple failed attempts from same source
+    - type: behavioral
+      metric: ssh_failed_attempts
+      operator: threshold
+      threshold: 3
+
+    # Common attack usernames
+    - type: pattern
+      field: username
+      operator: regex
+      pattern: ".*(admin|root|administrator|user|test|oracle|postgres|jenkins|ubuntu).*"
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1110.001  # Brute Force: Password Guessing
+    - T1078  # Valid Accounts
+  tags:
+    - ssh
+    - brute_force
+    - credential_attack
+    - honeypot
+  description: "Detects SSH brute force login attempts via honeypot"
+  confidence: 0.85
+
+tuning:
+  max_alerts_per_hour: 50
+  cooldown_seconds: 60

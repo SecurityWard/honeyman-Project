@@ -1,0 +1,47 @@
+rule_id: wifi_deauth_001
+name: "Deauthentication Attack Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: deauth_attack
+category: wifi
+
+# Detect deauthentication flood attacks
+conditions:
+  operator: OR
+  clauses:
+    # High rate of deauth frames
+    - type: network_evaluator
+      field: deauth_count_per_minute
+      operator: greater_than
+      value: 10
+
+    # Deauth targeting specific client
+    - type: behavioral
+      metric: deauth_rate
+      operator: anomaly
+      threshold: 5.0
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1557.002  # Adversary-in-the-Middle
+    - T1565  # Data Manipulation
+  tags:
+    - deauth
+    - wifi_attack
+    - dos
+    - mitm_prep
+  description: "Detects deauthentication flood attacks used to disconnect clients"
+  confidence: 0.90
+
+tuning:
+  threshold_per_minute: 10
+  cooldown_seconds: 120
+  max_alerts_per_hour: 30

@@ -1,0 +1,58 @@
+rule_id: ble_flipper_unleashed_001
+name: "Flipper Zero Unleashed/Custom Firmware Detection"
+version: 2.0
+enabled: true
+severity: critical
+threat_type: flipper_zero_unleashed
+category: ble
+
+# Detect Flipper Zero with custom firmware (Unleashed, Xtreme, RogueMaster)
+conditions:
+  operator: OR
+  clauses:
+    # Custom firmware in device name
+    - type: file_pattern
+      field: device_name
+      operator: regex
+      pattern: ".*(unleashed|xtreme|rogue.*master|momentum|RM|FZ_).*"
+
+    # Flipper with Nordic UART service
+    - type: service_name
+      field: service_uuid
+      operator: equals
+      value: "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
+
+    # Rapid service changes (behavioral)
+    - type: behavioral
+      metric: service_change_rate
+      operator: anomaly
+      threshold: 5.0
+
+actions:
+  - type: alert_dashboard
+    priority: critical
+
+  - type: local_log
+    severity: critical
+
+metadata:
+  mitre_attack:
+    - T1200  # Hardware Additions
+    - T1040  # Network Sniffing
+  product: "Flipper Zero (Custom Firmware)"
+  firmware_variants:
+    - Unleashed
+    - Xtreme
+    - RogueMaster
+    - Momentum
+  tags:
+    - flipper_zero
+    - custom_firmware
+    - ble_attack
+    - badble
+  description: "Detects Flipper Zero with custom firmware via BLE signatures"
+  confidence: 0.98
+
+tuning:
+  max_alerts_per_hour: 10
+  cooldown_seconds: 300

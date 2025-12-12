@@ -1,0 +1,161 @@
+.dashboard-page {
+  padding: 30px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 24px;
+  color: #6b7280;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.dashboard-section {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.dashboard-section.full-width {
+  grid-column: 1 / -1;
+}
+
+.chart-container h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.real-time-feed {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.real-time-feed h3 {
+  margin: 0 0 16px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.threat-feed {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.no-threats {
+  text-align: center;
+  padding: 40px;
+  color: #9ca3af;
+  font-size: 16px;
+}
+
+.threat-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-left: 4px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 6px;
+  transition: background 0.2s;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.threat-item:hover {
+  background: #f3f4f6;
+}
+
+.threat-item.severity-critical {
+  border-left-color: #dc2626;
+  background: #fef2f2;
+}
+
+.threat-item.severity-high {
+  border-left-color: #ea580c;
+  background: #fff7ed;
+}
+
+.threat-item.severity-medium {
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.threat-item.severity-low {
+  border-left-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.threat-time {
+  font-size: 12px;
+  color: #6b7280;
+  font-family: monospace;
+  min-width: 80px;
+}
+
+.threat-details {
+  flex: 1;
+  font-size: 14px;
+  color: #111827;
+}
+
+.threat-sensor {
+  font-size: 12px;
+  color: #6b7280;
+  font-family: monospace;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-page {
+    padding: 20px;
+  }
+}
+
+/* Scrollbar styling */
+.threat-feed::-webkit-scrollbar {
+  width: 8px;
+}
+
+.threat-feed::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.threat-feed::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.threat-feed::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

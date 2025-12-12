@@ -1,0 +1,54 @@
+rule_id: ble_apple_continuity_001
+name: "Apple Continuity Protocol Abuse Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: apple_continuity_abuse
+category: ble
+
+# Detect abuse of Apple Continuity protocol
+conditions:
+  operator: AND
+  clauses:
+    # Apple Continuity service UUID
+    - type: service_name
+      field: service_uuid
+      operator: equals
+      value: "89d3502b-0f36-433a-8ef4-c502ad55f8dc"
+
+    # Apple manufacturer prefix
+    - type: file_pattern
+      field: manufacturer_data
+      operator: regex
+      pattern: "^4c00.*"
+
+    # Rapid advertisement changes
+    - type: behavioral
+      metric: advertisement_manipulation
+      operator: anomaly
+      threshold: 5.0
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1557  # Adversary-in-the-Middle
+    - T1036  # Masquerading
+  cve:
+    - CVE-2019-8600  # AirDrop info disclosure
+  tags:
+    - apple_continuity
+    - airdrop_abuse
+    - handoff_attack
+    - proximity_pairing
+  description: "Detects abuse of Apple Continuity protocol (AirDrop, Handoff)"
+  confidence: 0.80
+
+tuning:
+  max_alerts_per_hour: 15
+  cooldown_seconds: 180

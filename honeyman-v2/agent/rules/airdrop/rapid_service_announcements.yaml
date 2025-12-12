@@ -1,0 +1,46 @@
+rule_id: airdrop_rapid_announce_001
+name: "Rapid AirDrop Service Announcement Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: airdrop_rapid_announcements
+category: airdrop
+
+# Detect rapid service announcements (attack pattern)
+conditions:
+  operator: OR
+  clauses:
+    # Frequent appearance/disappearance
+    - type: behavioral
+      metric: service_announcement_rate
+      operator: threshold
+      threshold: 3
+
+    # Service churn (appearing/disappearing)
+    - type: behavioral
+      metric: service_churn
+      operator: anomaly
+      threshold: 2.5
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1498  # Network Denial of Service
+    - T1036  # Masquerading
+  tags:
+    - airdrop
+    - service_flooding
+    - dos
+    - proximity_attack
+  description: "Detects rapid AirDrop service announcements (attack or scanning tool)"
+  confidence: 0.75
+
+tuning:
+  max_alerts_per_hour: 15
+  cooldown_seconds: 300

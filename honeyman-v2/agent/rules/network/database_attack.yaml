@@ -1,0 +1,61 @@
+rule_id: network_database_attack_001
+name: "Database Attack Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: database_attack
+category: network
+
+# Detect database attacks (MySQL, MSSQL, Redis)
+conditions:
+  operator: OR
+  clauses:
+    # MySQL login attempts
+    - type: network
+      field: logtype
+      operator: equals
+      value: "mysql.login_attempt"
+
+    # MSSQL login attempts
+    - type: network
+      field: logtype
+      operator: equals
+      value: "mssql.login_attempt"
+
+    # Redis command execution
+    - type: network
+      field: logtype
+      operator: equals
+      value: "redis.command"
+
+    # Common database attack usernames
+    - type: pattern
+      field: username
+      operator: regex
+      pattern: ".*(root|admin|sa|dba|mysql|postgres|oracle).*"
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1190  # Exploit Public-Facing Application
+    - T1110  # Brute Force
+    - T1552.001  # Credentials In Files
+  tags:
+    - database
+    - mysql
+    - mssql
+    - redis
+    - credential_attack
+    - honeypot
+  description: "Detects attacks against database honeypots (MySQL, MSSQL, Redis)"
+  confidence: 0.80
+
+tuning:
+  max_alerts_per_hour: 30
+  cooldown_seconds: 120

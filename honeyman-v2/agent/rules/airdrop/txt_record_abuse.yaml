@@ -1,0 +1,52 @@
+rule_id: airdrop_txt_abuse_001
+name: "AirDrop TXT Record Abuse Detection"
+version: 2.0
+enabled: true
+severity: medium
+threat_type: airdrop_txt_abuse
+category: airdrop
+
+# Detect suspicious content in TXT records
+conditions:
+  operator: OR
+  clauses:
+    # Attack tool indicators in TXT
+    - type: pattern
+      field: txt_records
+      operator: regex
+      pattern: ".*(exploit|payload|shell|hack|pwn|test).*"
+
+    # Encoded/obfuscated content
+    - type: pattern
+      field: txt_records
+      operator: regex
+      pattern: ".*(base64|eval|exec|system|cmd).*"
+
+    # Scripting indicators
+    - type: pattern
+      field: txt_records
+      operator: regex
+      pattern: ".*(javascript|python|powershell|bash|sh).*"
+
+actions:
+  - type: alert_dashboard
+    priority: medium
+
+  - type: local_log
+    severity: medium
+
+metadata:
+  mitre_attack:
+    - T1027  # Obfuscated Files or Information
+    - T1059  # Command and Scripting Interpreter
+  tags:
+    - airdrop
+    - txt_record
+    - obfuscation
+    - payload_delivery
+  description: "Detects suspicious content in AirDrop TXT records"
+  confidence: 0.70
+
+tuning:
+  max_alerts_per_hour: 25
+  cooldown_seconds: 120

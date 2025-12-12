@@ -1,0 +1,45 @@
+rule_id: airdrop_device_spoof_001
+name: "Generic Device Name Spoofing Detection"
+version: 2.0
+enabled: true
+severity: medium
+threat_type: airdrop_device_spoofing
+category: airdrop
+
+# Detect generic/spoofed device names
+conditions:
+  operator: AND
+  clauses:
+    # Generic Apple device names
+    - type: pattern
+      field: service_name
+      operator: regex
+      pattern: "^(iPhone|iPad|MacBook|iMac|Mac)$"
+
+    # No additional identifying information
+    - type: pattern
+      field: service_name
+      operator: not_regex
+      pattern: ".*(\\d|'s|Pro|Air|Mini).*"
+
+actions:
+  - type: alert_dashboard
+    priority: medium
+
+  - type: local_log
+    severity: medium
+
+metadata:
+  mitre_attack:
+    - T1036  # Masquerading
+    - T1598.003  # Phishing for Information: Spearphishing via Service
+  tags:
+    - airdrop
+    - device_spoofing
+    - social_engineering
+  description: "Detects generic device names often used for spoofing/phishing"
+  confidence: 0.60
+
+tuning:
+  max_alerts_per_hour: 30
+  false_positive_prone: true  # Some users do use generic names

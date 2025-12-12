@@ -1,0 +1,50 @@
+rule_id: usb_volume_label_001
+name: "Suspicious Volume Label Detection"
+version: 2.0
+enabled: true
+severity: medium
+threat_type: suspicious_volume
+category: usb
+
+# Detect suspicious volume labels indicating attack tools
+conditions:
+  operator: OR
+  clauses:
+    # Attack tool names in volume label
+    - type: file_pattern
+      field: volume_label
+      operator: regex
+      pattern: ".*([Ss]tark.*[Kk]iller|STARKILLER|[Pp]ayload|[Bb]ad[Uu][Ss][Bb]|[Dd]ucky|[Rr]ubber).*"
+
+    # Penetration testing tool names
+    - type: file_pattern
+      field: volume_label
+      operator: regex
+      pattern: ".*([Pp]wn|[Hh]ack|[Ee]xploit|[Mm]alware|[Bb]ackdoor|[Rr]ootkit).*"
+
+    # Specific attack device names
+    - type: file_pattern
+      field: volume_label
+      operator: regex
+      pattern: ".*([Pp]oisontap|[Bb]ash.*[Bb]unny|[Nn]inja|O\\.?M\\.?G).*"
+
+actions:
+  - type: alert_dashboard
+    priority: medium
+
+  - type: local_log
+    severity: medium
+
+metadata:
+  mitre_attack:
+    - T1200  # Hardware Additions
+  tags:
+    - volume_label
+    - indicator
+    - pentesting_tool
+  description: "Detects suspicious USB volume labels indicating attack tools or malware"
+  confidence: 0.60
+
+tuning:
+  max_alerts_per_hour: 30
+  false_positive_prone: true

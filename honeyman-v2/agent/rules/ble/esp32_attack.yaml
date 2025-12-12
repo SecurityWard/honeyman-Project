@@ -1,0 +1,51 @@
+rule_id: ble_esp32_attack_001
+name: "ESP32 BLE Attack Board Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: esp32_attack
+category: ble
+
+# Detect ESP32-based BLE attack tools
+conditions:
+  operator: OR
+  clauses:
+    # ESP32 in device name
+    - type: file_pattern
+      field: device_name
+      operator: regex
+      pattern: ".*(esp32|espressif|arduino).*"
+
+    # Espressif manufacturer
+    - type: file_pattern
+      field: manufacturer
+      operator: regex
+      pattern: ".*(espressif).*"
+
+    # Nordic UART service (common in attack tools)
+    - type: service_name
+      field: service_uuid
+      operator: equals
+      value: "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1200  # Hardware Additions
+  tags:
+    - esp32
+    - espressif
+    - ble_attack_tool
+    - diy_board
+  description: "Detects ESP32-based BLE attack tools and development boards"
+  confidence: 0.70
+
+tuning:
+  max_alerts_per_hour: 20
+  false_positive_prone: true  # ESP32 common in legitimate devices

@@ -1,0 +1,45 @@
+rule_id: ble_mac_random_001
+name: "Suspicious MAC Address Randomization Detection"
+version: 2.0
+enabled: true
+severity: low
+threat_type: mac_randomization
+category: ble
+
+# Detect suspicious MAC address randomization patterns
+conditions:
+  operator: OR
+  clauses:
+    # Random MAC indicator (bit 1 of first octet)
+    - type: mac_address
+      field: mac_address
+      operator: regex
+      pattern: "^[0-9A-F][26AE]:.*"  # Local bit set
+
+    # Behavioral: rapid MAC changes
+    - type: behavioral
+      metric: mac_change_rate
+      operator: anomaly
+      threshold: 3.0
+
+actions:
+  - type: alert_dashboard
+    priority: low
+
+  - type: local_log
+    severity: low
+
+metadata:
+  mitre_attack:
+    - T1562  # Impair Defenses
+  tags:
+    - mac_randomization
+    - privacy_feature
+    - tracking_evasion
+  description: "Detects MAC address randomization (legitimate privacy feature or evasion)"
+  confidence: 0.30
+
+tuning:
+  max_alerts_per_hour: 100
+  false_positive_prone: true  # Common legitimate feature
+  note: "Many modern devices use MAC randomization for privacy"

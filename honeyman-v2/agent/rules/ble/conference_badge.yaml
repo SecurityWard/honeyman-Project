@@ -1,0 +1,45 @@
+rule_id: ble_conference_badge_001
+name: "Conference Badge Spoofing Detection"
+version: 2.0
+enabled: true
+severity: medium
+threat_type: conference_badge_spoofing
+category: ble
+
+# Detect spoofed conference badges (DEF CON, Black Hat, etc.)
+conditions:
+  operator: AND
+  clauses:
+    # Conference-related names
+    - type: file_pattern
+      field: device_name
+      operator: regex
+      pattern: ".*(defcon|dc29|dc30|dc31|dc32|badge|conference|blackhat|bsides).*"
+
+    # Nordic UART service (common in badges)
+    - type: service_name
+      field: service_uuid
+      operator: equals
+      value: "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
+
+actions:
+  - type: alert_dashboard
+    priority: medium
+
+  - type: local_log
+    severity: medium
+
+metadata:
+  mitre_attack:
+    - T1036  # Masquerading
+  tags:
+    - conference_badge
+    - defcon
+    - badge_spoofing
+    - social_engineering
+  description: "Detects spoofed conference badges or badge-based attacks"
+  confidence: 0.60
+
+tuning:
+  max_alerts_per_hour: 30
+  context_sensitive: true  # Lower score if actually at conference

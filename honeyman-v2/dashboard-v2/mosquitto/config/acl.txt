@@ -1,0 +1,10 @@
+# Honeyman MQTT ACL (Access Control List)
+
+# Dashboard user - full access
+user dashboard
+topic readwrite #
+
+# Sensor pattern - can only publish to their own topics
+pattern read honeyman/sensors/%u/#
+pattern write honeyman/sensors/%u/#
+pattern read honeyman/control/%u

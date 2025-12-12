@@ -1,0 +1,56 @@
+rule_id: network_smb_attack_001
+name: "SMB/CIFS Attack Detection"
+version: 2.0
+enabled: true
+severity: critical
+threat_type: smb_attack
+category: network
+
+# Detect SMB/CIFS attacks (ransomware, lateral movement)
+conditions:
+  operator: OR
+  clauses:
+    # OpenCanary SMB interaction
+    - type: network
+      field: logtype
+      operator: equals
+      value: "smb.request"
+
+    # Named pipe access (common in ransomware)
+    - type: pattern
+      field: request_path
+      operator: regex
+      pattern: ".*\\\\pipe\\\\.*"
+
+    # IPC$ share access (lateral movement)
+    - type: pattern
+      field: share
+      operator: equals
+      value: "IPC$"
+
+actions:
+  - type: alert_dashboard
+    priority: critical
+
+  - type: local_log
+    severity: critical
+
+metadata:
+  mitre_attack:
+    - T1021.002  # SMB/Windows Admin Shares
+    - T1486  # Data Encrypted for Impact (Ransomware)
+    - T1570  # Lateral Tool Transfer
+  cve:
+    - CVE-2017-0144  # EternalBlue
+  tags:
+    - smb
+    - ransomware
+    - lateral_movement
+    - honeypot
+    - eternalblue
+  description: "Detects SMB-based attacks including ransomware and lateral movement"
+  confidence: 0.90
+
+tuning:
+  max_alerts_per_hour: 20
+  cooldown_seconds: 300

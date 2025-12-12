@@ -1,0 +1,47 @@
+rule_id: wifi_wps_attack_001
+name: "WPS Attack Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: wps_attack
+category: wifi
+
+# Detect WPS Pixie Dust and PIN attacks
+conditions:
+  operator: AND
+  clauses:
+    # WPS enabled
+    - type: network_evaluator
+      field: wps_enabled
+      operator: equals
+      value: true
+
+    # Rapid WPS attempts
+    - type: behavioral
+      metric: wps_attempt_rate
+      operator: anomaly
+      threshold: 5.0
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1110  # Brute Force
+  cve:
+    - CVE-2011-5053  # WPS PIN brute force
+  tags:
+    - wps
+    - pixie_dust
+    - pin_attack
+    - brute_force
+  description: "Detects WPS Pixie Dust and PIN brute force attacks"
+  confidence: 0.80
+
+tuning:
+  max_alerts_per_hour: 15
+  cooldown_seconds: 240

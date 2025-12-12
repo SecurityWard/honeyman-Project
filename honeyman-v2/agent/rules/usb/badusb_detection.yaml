@@ -1,0 +1,63 @@
+rule_id: usb_badusb_001
+name: "BadUSB / Rubber Ducky Detection"
+version: 2.0
+enabled: true
+severity: critical
+threat_type: badusb
+category: usb
+
+# Detect BadUSB and Rubber Ducky attacks
+conditions:
+  operator: OR
+  clauses:
+    # Suspicious vendor IDs
+    - type: device_vendor
+      field: vid
+      operator: in
+      values:
+        - "0x1337"
+        - "0xdead"
+        - "0xbeef"
+        - "0x0001"
+        - "0xffff"
+
+    # Suspicious device names
+    - type: file_pattern
+      field: product_name
+      operator: regex
+      pattern: ".*(badusb|rubber.*ducky|flipper|malduino|digispark|teensy).*"
+
+    # Suspicious manufacturer
+    - type: file_pattern
+      field: manufacturer
+      operator: regex
+      pattern: ".*(hak5|malduino|digispark).*"
+
+    # HID device with rapid enumeration
+    - type: device_vendor
+      field: device_class
+      operator: equals
+      value: "hid"
+
+actions:
+  - type: alert_dashboard
+    priority: critical
+
+  - type: local_log
+    severity: critical
+
+metadata:
+  mitre_attack:
+    - T1091  # Replication Through Removable Media
+    - T1092  # Communication Through Removable Media
+  references:
+    - https://attack.mitre.org/techniques/T1091/
+  tags:
+    - badusb
+    - hid_injection
+    - rubber_ducky
+  description: "Detects BadUSB, Rubber Ducky, and similar HID injection attacks"
+
+tuning:
+  confidence_threshold: 0.9
+  max_alerts_per_hour: 10
