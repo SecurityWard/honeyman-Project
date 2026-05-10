@@ -1,96 +1,61 @@
 """
-API dependencies - authentication, database, etc.
+API dependencies — V2 uses per-sensor API keys for writes; reads are public.
 """
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, Header, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from ..core.config import settings
-from ..core.security import decode_token
+from ..core.api_key import hash_api_key, extract_bearer_token
 from ..db.base import get_db
-from ..models.user import User, UserRole
-
-# HTTP Bearer token scheme
-security = HTTPBearer()
+from ..models.sensor import Sensor
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db)
-) -> User:
-    """Get current authenticated user from JWT token"""
+async def authenticated_sensor(
+    authorization: str | None = Header(default=None),
+    sensor_id: str | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> Sensor:
+    """
+    Resolve the calling sensor from its Authorization: Bearer <api_key> header.
 
-    token = credentials.credentials
-    payload = decode_token(token)
+    If the path includes a `sensor_id` (e.g. /sensors/{sensor_id}/heartbeat),
+    we additionally verify that the key belongs to that sensor — preventing
+    one compromised sensor from impersonating another.
 
-    if not payload or payload.get("type") != "access":
+    Returns the Sensor row. Raises 401 on missing/invalid key, 403 on mismatch.
+    """
+    api_key = extract_bearer_token(authorization)
+    if not api_key:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Missing or malformed Authorization header. Expected: Bearer <api_key>",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    username = payload.get("sub")
-    if not username:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload",
-        )
-
-    # Query user from database
+    key_hash = hash_api_key(api_key)
     result = await db.execute(
-        select(User).where(User.username == username)
+        select(Sensor).where(Sensor.api_key_hash == key_hash)
     )
-    user = result.scalar_one_or_none()
+    sensor = result.scalar_one_or_none()
 
-    if not user:
+    if sensor is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
+            detail="Invalid API key",
         )
 
-    if not user.is_active:
+    if not sensor.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive",
+            detail="Sensor is deactivated",
         )
 
-    return user
-
-
-async def get_current_active_user(
-    current_user: User = Depends(get_current_user)
-) -> User:
-    """Get current active user"""
-    if not current_user.is_active:
+    # Path-bound sensor_id check (when present)
+    if sensor_id is not None and sensor.sensor_id != sensor_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user"
+            detail="API key does not belong to this sensor",
         )
-    return current_user
 
-
-async def require_admin(
-    current_user: User = Depends(get_current_user)
-) -> User:
-    """Require admin role"""
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    return current_user
-
-
-async def require_analyst_or_admin(
-    current_user: User = Depends(get_current_user)
-) -> User:
-    """Require analyst or admin role"""
-    if current_user.role not in [UserRole.ADMIN, UserRole.ANALYST]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Analyst or admin access required"
-        )
-    return current_user
+    return sensor

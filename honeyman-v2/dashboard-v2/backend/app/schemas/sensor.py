@@ -28,18 +28,6 @@ class SensorCreate(SensorBase):
     agent_version: Optional[str] = None
 
 
-class SensorUpdate(BaseModel):
-    """Schema for updating a sensor"""
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    description: Optional[str] = Field(None, max_length=500)
-    is_active: Optional[bool] = None
-    latitude: Optional[float] = Field(None, ge=-90, le=90)
-    longitude: Optional[float] = Field(None, ge=-180, le=180)
-    city: Optional[str] = None
-    country: Optional[str] = None
-    enabled_detectors: Optional[List[str]] = None
-
-
 class SensorResponse(SensorBase):
     """Schema for sensor response"""
     id: UUID

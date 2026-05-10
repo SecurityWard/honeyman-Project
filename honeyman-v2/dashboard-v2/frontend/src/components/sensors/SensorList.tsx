@@ -3,19 +3,14 @@ import type { Sensor } from '../../types';
 import { format } from 'date-fns';
 import './SensorList.css';
 
+// V2: read-only — no edit/delete buttons.
+
 interface SensorListProps {
   sensors: Sensor[];
   onSelectSensor?: (sensor: Sensor) => void;
-  onDeleteSensor?: (sensorId: string) => void;
-  onUpdateSensor?: (sensor: Sensor) => void;
 }
 
-export default function SensorList({
-  sensors,
-  onSelectSensor,
-  onDeleteSensor,
-  onUpdateSensor,
-}: SensorListProps) {
+export default function SensorList({ sensors, onSelectSensor }: SensorListProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -125,29 +120,6 @@ export default function SensorList({
                     </span>
                   </div>
                 )}
-              </div>
-
-              <div className="sensor-card-footer">
-                <button
-                  className="btn-secondary"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onUpdateSensor?.(sensor);
-                  }}
-                >
-                  Edit
-                </button>
-                <button
-                  className="btn-danger"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm(`Delete sensor ${sensor.name}?`)) {
-                      onDeleteSensor?.(sensor.id);
-                    }
-                  }}
-                >
-                  Delete
-                </button>
               </div>
             </div>
           ))

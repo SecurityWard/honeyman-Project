@@ -1,6 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import type { Threat, PaginatedResponse, ThreatQueryParams } from '../types';
+
+// V2: dashboard is read-only. No acknowledge or delete mutations.
 
 export function useThreats(params: ThreatQueryParams = {}) {
   return useQuery({
@@ -20,32 +22,5 @@ export function useThreat(threatId: string) {
       return response.data;
     },
     enabled: !!threatId,
-  });
-}
-
-export function useAcknowledgeThreat() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (threatId: string) => {
-      const response = await api.put<Threat>(`/threats/${threatId}/acknowledge`);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['threats'] });
-    },
-  });
-}
-
-export function useDeleteThreat() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (threatId: string) => {
-      await api.delete(`/threats/${threatId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['threats'] });
-    },
   });
 }

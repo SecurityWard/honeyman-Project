@@ -1,3 +1,8 @@
+> **Archived 2026-05-09** — this file is no longer maintained.
+> The canonical V2 plan, status, and roadmap are now in
+> [`../HONEYMAN-V2-PLAN.md`](../HONEYMAN-V2-PLAN.md). Content below is
+> preserved for historical reference only.
+
 # Honeyman V2 - Current Status Report
 
 **Date:** December 22, 2025

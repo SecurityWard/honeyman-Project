@@ -67,10 +67,7 @@ class Threat(Base):
     mitre_tactics = Column(JSON, default=list, nullable=True)
     mitre_techniques = Column(JSON, default=list, nullable=True)
 
-    # Status
-    is_acknowledged = Column(String(20), default=False, nullable=False)
-    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
-    acknowledged_by = Column(String(100), nullable=True)
+    # V2: no acknowledge/dismiss fields. The dashboard is view-only.
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

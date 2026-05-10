@@ -20,12 +20,8 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     WORKERS: int = 4
-
-    # Security
-    SECRET_KEY: str
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+    PUBLIC_API_BASE_URL: str = "https://api.honeyman.io"
+    # Used in onboarding response so the sensor knows where to POST after registration
 
     # CORS
     CORS_ORIGINS: List[str] = [
@@ -45,11 +41,14 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     REDIS_CACHE_TTL: int = 300  # 5 minutes
 
-    # MQTT Broker
-    MQTT_BROKER_HOST: str
+    # MQTT Broker (V2: optional — HTTPS is the default sensor transport)
+    MQTT_OFFERED: bool = False
+    # When False, the onboarding response omits MQTT details and the
+    # MQTT subscriber is skipped at startup.
+    MQTT_BROKER_HOST: Optional[str] = None
     MQTT_BROKER_PORT: int = 8883
-    MQTT_BROKER_USERNAME: str
-    MQTT_BROKER_PASSWORD: str
+    MQTT_BROKER_USERNAME: Optional[str] = None
+    MQTT_BROKER_PASSWORD: Optional[str] = None
     MQTT_USE_TLS: bool = True
     MQTT_CA_CERT: Optional[str] = None
 

@@ -1,3 +1,8 @@
+> **⚠️ Partially out of date 2026-05-09** — V2 has no user accounts.
+> Ignore the "Create Admin User" step and any references to JWT/RBAC roles.
+> The canonical V2 plan is in [`../../HONEYMAN-V2-PLAN.md`](../../HONEYMAN-V2-PLAN.md);
+> backend setup is in [`backend/README.md`](backend/README.md).
+
 # Honeyman V2 Dashboard - Deployment Guide
 
 Complete deployment guide for Honeyman V2 Dashboard Backend.

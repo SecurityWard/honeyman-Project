@@ -1,3 +1,8 @@
+// V2 type definitions
+//
+// No User / Login types — V2 has no accounts.
+// No acknowledged fields on Threat — V2 dashboard is read-only.
+
 // Sensor types
 export interface Sensor {
   id: string;
@@ -33,9 +38,6 @@ export interface Threat {
   latitude?: number;
   longitude?: number;
   metadata?: Record<string, any>;
-  acknowledged: boolean;
-  acknowledged_at?: string;
-  acknowledged_by?: string;
 }
 
 // Analytics types
@@ -90,29 +92,6 @@ export interface VelocityMetrics {
   trend: 'increasing' | 'decreasing' | 'stable';
 }
 
-// User types
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  full_name?: string;
-  role: 'admin' | 'analyst' | 'viewer';
-  is_active: boolean;
-  created_at: string;
-}
-
-export interface LoginRequest {
-  username: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  user: User;
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-}
-
 // WebSocket message types
 export interface WebSocketMessage {
   type: 'threat' | 'heartbeat' | 'welcome' | 'echo';
@@ -137,7 +116,6 @@ export interface ThreatQueryParams {
   severity?: string;
   start_time?: string;
   end_time?: string;
-  acknowledged?: boolean;
   page?: number;
   page_size?: number;
 }

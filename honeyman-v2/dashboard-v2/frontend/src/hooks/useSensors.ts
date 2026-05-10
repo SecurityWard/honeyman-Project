@@ -1,6 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import type { Sensor, PaginatedResponse } from '../types';
+
+// V2: dashboard is read-only. There are no update/delete mutations.
+// Sensors are managed via SSH on the device, not from the public UI.
 
 export function useSensors(page: number = 1, pageSize: number = 50) {
   return useQuery({
@@ -22,33 +25,6 @@ export function useSensor(sensorId: string) {
       return response.data;
     },
     enabled: !!sensorId,
-  });
-}
-
-export function useUpdateSensor() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Sensor> }) => {
-      const response = await api.put<Sensor>(`/sensors/${id}`, data);
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sensors'] });
-    },
-  });
-}
-
-export function useDeleteSensor() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (sensorId: string) => {
-      await api.delete(`/sensors/${sensorId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sensors'] });
-    },
   });
 }
 

@@ -1,17 +1,15 @@
 # Honeyman V2 Dashboard Backend
 
-FastAPI-based REST API for Honeyman threat detection platform.
+FastAPI-based REST API for the Honeyman threat detection platform.
 
 ## Features
 
-- **FastAPI** - Modern async Python web framework
-- **PostgreSQL + TimescaleDB** - Time-series threat data storage
-- **JWT Authentication** - Secure API access with role-based permissions
-- **RESTful API** - Complete CRUD operations for sensors and threats
-- **Real-time Analytics** - Threat trends, velocity, and geographic distribution
-- **MQTT Integration** - Receive sensor data via MQTT broker
-- **WebSocket** - Real-time threat feed for dashboard
-- **Onboarding Flow** - One-time tokens for sensor registration
+- **FastAPI** — async Python web framework
+- **PostgreSQL + TimescaleDB** — time-series threat storage with 90-day retention and 7-day compression
+- **Per-sensor API keys** — sensors authenticate writes with `Authorization: Bearer <key>`. The dashboard read endpoints are **public** (no login).
+- **Self-register onboarding** — `POST /sensors/register` returns a one-time API key the sensor stores and uses thereafter
+- **MQTT integration (optional)** — receive sensor data via MQTT broker when `MQTT_OFFERED=true`. Default transport is HTTPS.
+- **WebSocket** — public real-time threat feed for the dashboard
 
 ## Installation
 
@@ -20,235 +18,139 @@ FastAPI-based REST API for Honeyman threat detection platform.
 - Python 3.11+
 - PostgreSQL 15+ with TimescaleDB 2.13+
 - Redis 7+
-- MQTT Broker (Mosquitto recommended)
+- Mosquitto (only if you opt into MQTT transport)
 
 ### Setup
 
 ```bash
-# Clone repository
 cd honeyman-v2/dashboard-v2/backend
 
-# Create virtual environment
 python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# Install dependencies
 pip install -r requirements.txt
 
-# Setup environment
 cp .env.example .env
-vim .env  # Edit configuration
+$EDITOR .env
 
-# Run database migrations
 alembic upgrade head
-
-# Create initial admin user (Python shell)
-python3
->>> from app.db.base import AsyncSessionLocal
->>> from app.models.user import User, UserRole
->>> from app.core.security import get_password_hash
->>> import asyncio
->>>
->>> async def create_admin():
-...     async with AsyncSessionLocal() as db:
-...         admin = User(
-...             username="admin",
-...             email="admin@honeyman.io",
-...             password_hash=get_password_hash("your-secure-password"),
-...             full_name="Admin User",
-...             role=UserRole.ADMIN,
-...             is_active=True,
-...             is_verified=True
-...         )
-...         db.add(admin)
-...         await db.commit()
-...         print("Admin user created")
->>>
->>> asyncio.run(create_admin())
 ```
+
+There is no admin-user step in V2 — the system has no users.
 
 ## Running
 
 ### Development
 
 ```bash
-# Start development server with auto-reload
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# API documentation
-open http://localhost:8000/api/v2/docs
+# Swagger UI: http://localhost:8000/api/v2/docs
 ```
 
 ### Production
 
 ```bash
-# Using uvicorn with multiple workers
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
-
-# Or using gunicorn
-gunicorn app.main:app \
-    -w 4 \
-    -k uvicorn.workers.UvicornWorker \
-    --bind 0.0.0.0:8000 \
-    --access-logfile - \
-    --error-logfile -
+# or via gunicorn
+gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
 ```
 
 ## API Endpoints
 
-### Authentication
-- `POST /api/v2/auth/login` - User login
-- `POST /api/v2/auth/refresh` - Refresh access token
-- `POST /api/v2/auth/logout` - Logout
-- `GET /api/v2/auth/me` - Get current user
+**Public (no auth):**
+- `GET  /api/v2/sensors` — list sensors
+- `GET  /api/v2/sensors/{sensor_id}` — sensor details
+- `GET  /api/v2/sensors/{sensor_id}/stats` — sensor statistics
+- `GET  /api/v2/threats` — query threats with filters
+- `GET  /api/v2/threats/{threat_id}` — threat details
+- `GET  /api/v2/analytics/overview` — dashboard overview
+- `GET  /api/v2/analytics/trends` — time-series trends
+- `GET  /api/v2/analytics/top-threats` — top threat types
+- `GET  /api/v2/analytics/top-sensors` — most active sensors
+- `GET  /api/v2/analytics/map` — geographic threat distribution
+- `GET  /api/v2/analytics/velocity` — threat rate metrics
+- `WS   /api/v2/ws` — live threat feed
 
-### Sensors
-- `GET /api/v2/sensors` - List sensors
-- `GET /api/v2/sensors/{sensor_id}` - Get sensor
-- `PUT /api/v2/sensors/{sensor_id}` - Update sensor
-- `DELETE /api/v2/sensors/{sensor_id}` - Delete sensor
-- `GET /api/v2/sensors/{sensor_id}/stats` - Sensor statistics
-- `POST /api/v2/sensors/{sensor_id}/heartbeat` - Receive heartbeat
+**Sensor-authenticated (Authorization: Bearer <api_key>):**
+- `POST /api/v2/sensors/register` — self-register, returns one-time API key (anyone can call this; it's how a sensor gets its key)
+- `POST /api/v2/sensors/{sensor_id}/heartbeat` — health/location ping (key must match {sensor_id})
+- `POST /api/v2/threats` — push a detected threat (key must match `sensor_id` in payload)
 
-### Threats
-- `GET /api/v2/threats` - Query threats
-- `GET /api/v2/threats/{threat_id}` - Get threat
-- `POST /api/v2/threats` - Create threat
-- `PUT /api/v2/threats/{threat_id}/acknowledge` - Acknowledge threat
-- `DELETE /api/v2/threats/{threat_id}` - Delete threat
-
-### Analytics
-- `GET /api/v2/analytics/overview` - Dashboard overview
-- `GET /api/v2/analytics/trends` - Threat trends
-- `GET /api/v2/analytics/top-threats` - Top threat types
-- `GET /api/v2/analytics/top-sensors` - Top sensors
-- `GET /api/v2/analytics/map` - Geographic distribution
-- `GET /api/v2/analytics/velocity` - Threat velocity
-
-### Onboarding
-- `POST /api/v2/onboarding/tokens` - Generate onboarding token
-- `POST /api/v2/onboarding/register` - Register sensor
-- `GET /api/v2/onboarding/qrcode/{token}` - Get QR code
+There are no acknowledge/delete/update endpoints in V2. The dashboard is a viewing surface; sensors are managed via SSH.
 
 ## Database Migrations
 
 ```bash
-# Create a new migration
 alembic revision --autogenerate -m "description"
-
-# Apply migrations
 alembic upgrade head
-
-# Rollback one migration
 alembic downgrade -1
-
-# Show current version
 alembic current
 ```
 
 ## Testing
 
 ```bash
-# Run tests
 pytest
-
-# Run with coverage
 pytest --cov=app tests/
-
-# Run specific test file
-pytest tests/test_api_sensors.py
 ```
 
-## Architecture
+## Source layout
 
 ```
 app/
-├── main.py                  # FastAPI application
+├── main.py                  FastAPI app + startup/shutdown
 ├── core/
-│   ├── config.py           # Settings management
-│   └── security.py         # JWT & password hashing
+│   ├── config.py            Pydantic settings (env-driven)
+│   └── api_key.py           API key generate / hash / verify
 ├── api/
-│   ├── deps.py             # API dependencies (auth, db)
-│   ├── auth.py             # Authentication endpoints
-│   ├── sensors.py          # Sensor endpoints
-│   ├── threats.py          # Threat endpoints
-│   ├── analytics.py        # Analytics endpoints
-│   └── onboarding.py       # Onboarding endpoints
+│   ├── deps.py              authenticated_sensor dependency
+│   ├── sensors.py           sensor list/get/stats + heartbeat
+│   ├── threats.py           threat list/get + ingest
+│   ├── analytics.py         analytics endpoints (public)
+│   ├── onboarding.py        self-register flow
+│   └── websocket.py         live feed (public)
 ├── models/
-│   ├── sensor.py           # Sensor database model
-│   ├── threat.py           # Threat database model
-│   └── user.py             # User database model
-├── schemas/
-│   ├── sensor.py           # Sensor Pydantic schemas
-│   ├── threat.py           # Threat Pydantic schemas
-│   ├── user.py             # User Pydantic schemas
-│   ├── analytics.py        # Analytics Pydantic schemas
-│   └── onboarding.py       # Onboarding Pydantic schemas
-├── db/
-│   └── base.py             # Database session
-├── mqtt/
-│   └── subscriber.py       # MQTT subscriber service
+│   ├── sensor.py            Sensor SQLAlchemy model (incl. api_key_hash)
+│   └── threat.py            Threat hypertable model
+├── schemas/                 Pydantic request/response schemas
+├── db/base.py               Async session factory
+├── mqtt/subscriber.py       MQTT subscriber (only started if MQTT_OFFERED=true)
 └── services/
-    └── websocket.py        # WebSocket service
+    ├── redis_client.py      Redis pub/sub + cache
+    └── websocket.py         WebSocket connection manager
 ```
 
 ## TimescaleDB Features
 
-### Hypertable
-Threats table is converted to a TimescaleDB hypertable for optimized time-series storage:
-- 1-day chunks
-- Automatic compression after 7 days (10-20x compression)
-- Automatic retention (90-day cleanup)
+- **Hypertable**: `threats` is partitioned by `timestamp` into 1-day chunks
+- **Compression**: chunks older than 7 days are compressed (10–20x reduction)
+- **Retention**: chunks older than 90 days are dropped automatically
+- **Continuous aggregate**: `threat_stats_hourly` materialized view for fast dashboard queries
 
-### Continuous Aggregates
-Pre-computed hourly statistics for fast queries:
-- Threat counts by sensor/detector/severity
-- Average threat scores
-- Auto-refresh every hour
-
-### Querying
 ```sql
 -- Query using time_bucket
-SELECT
-    time_bucket('1 hour', timestamp) AS bucket,
-    COUNT(*) as count
+SELECT time_bucket('1 hour', timestamp) AS bucket, COUNT(*) AS n
 FROM threats
 WHERE timestamp > NOW() - INTERVAL '24 hours'
 GROUP BY bucket;
 
--- Use continuous aggregate
+-- Or use the continuous aggregate
 SELECT * FROM threat_stats_hourly
 WHERE bucket > NOW() - INTERVAL '7 days';
 ```
 
-## Security
+## Security model
 
-### Authentication
-- JWT tokens with configurable expiration
-- Refresh token rotation
-- Role-based access control (Admin, Analyst, Viewer)
-
-### RBAC Permissions
-- **Admin**: Full access to all endpoints
-- **Analyst**: Read/write threats, read sensors
-- **Viewer**: Read-only access
-
-### API Security
-- HTTPS required in production
-- CORS configuration
-- Rate limiting
-- Input validation with Pydantic
+- **Read endpoints** are public. The dashboard is intentionally an open viewing surface.
+- **Write endpoints** require a per-sensor API key issued at registration. Only the SHA256 hash is stored on the sensor row; plaintext is returned exactly once.
+- **CORS** is whitelisted via `CORS_ORIGINS` in env
+- **Rate limiting** is enabled by default (60 req/min)
+- **HTTPS** is required in production — terminate TLS at nginx in front of the FastAPI app
 
 ## Environment Variables
 
-See [.env.example](.env.example) for all available configuration options.
+See [`.env.example`](.env.example) for all available options.
 
 ## License
 
-Proprietary - Secured Foundations LLC
-
-## Support
-
-For issues and questions:
-- GitHub: https://github.com/yourusername/honeyman
-- Email: support@honeyman.io
+MIT — see the repository root [`LICENSE`](../../../LICENSE).

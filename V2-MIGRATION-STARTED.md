@@ -1,3 +1,5 @@
+> **Archived 2026-05-09** — superseded by [`HONEYMAN-V2-PLAN.md`](HONEYMAN-V2-PLAN.md).
+
 # HONEYMAN V2 MIGRATION - PHASE 1 COMPLETE
 
 **Date:** 2025-11-29

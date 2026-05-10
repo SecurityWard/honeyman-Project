@@ -1,3 +1,5 @@
+> **Archived 2026-05-09** — superseded by [`HONEYMAN-V2-PLAN.md`](HONEYMAN-V2-PLAN.md).
+
 # Honeyman Project Version 2.0 - Overview
 
 **Vision:** Transform Honeyman from a manually-deployed detection system into a scalable, cloud-native platform that anyone can deploy in minutes.

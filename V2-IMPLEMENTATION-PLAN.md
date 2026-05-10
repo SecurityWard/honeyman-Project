@@ -1,3 +1,5 @@
+> **Archived 2026-05-09** — superseded by [`HONEYMAN-V2-PLAN.md`](HONEYMAN-V2-PLAN.md).
+
 # HONEYMAN V2 - IMPLEMENTATION PLAN
 
 **Version:** 1.0

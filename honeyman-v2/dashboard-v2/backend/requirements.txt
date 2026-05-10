@@ -19,11 +19,9 @@ paho-mqtt==1.6.1
 redis==5.0.1
 hiredis==2.2.3
 
-# Authentication & Security
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.6
-bcrypt==4.1.1
+# Authentication: V2 uses per-sensor API keys hashed with hashlib.sha256
+# (stdlib). No JWT, no bcrypt, no password hashing required.
+python-multipart==0.0.6  # still useful for file uploads if added later
 
 # WebSocket
 websockets==12.0

@@ -1,399 +1,188 @@
-# Honeyman Project - Advanced Multi-Vector Threat Detection System
+# Honeyman
 
-![Honeyman Project Logo](honeyman.jpeg)
+Mobile, multi-vector threat collection for physical events.
 
-A comprehensive honeypot and threat detection system designed for real-time monitoring of wireless, network, and web-based attacks. Built for deployment on resource-constrained environments like Raspberry Pi while maintaining enterprise-grade threat intelligence capabilities.
+Honeyman puts a Raspberry Pi-class sensor in a backpack, on a hotel-room desk, or in a conference hall — and reports malicious USB, WiFi, BLE, and AirDrop activity in real time to a public map. When the sensor is on a network, it can also expose SSH and HTTP honeypots and report intrusion attempts as events.
 
-## 🎯 Project Overview
+V1 launched at DefCon. V2 (this branch) is a redesign: simpler to deploy, public read-only dashboard, no user accounts, central YAML rules that update without reflashing sensors.
 
-The Honeyman Project is an advanced cybersecurity monitoring platform that combines multiple detection vectors to identify, analyze, and correlate cyber threats in real-time. The system integrates honeypot services, wireless protocol monitoring, and behavioral analysis to provide comprehensive threat intelligence.
-
-### Key Features
-
-- **Multi-Vector Threat Detection**: WiFi, Bluetooth LE, AirDrop, USB, and web-based attack monitoring
-- **Advanced Correlation**: Cross-protocol threat correlation and behavioral analysis
-- **Real-time Dashboard**: Professional web-based threat visualization and analytics
-- **Resource Optimized**: Designed for Raspberry Pi deployment with intelligent resource management
-- **Enterprise Integration**: APIs for SIEM integration and threat intelligence sharing
-- **Noise Reduction**: Advanced filtering achieving 99% false positive reduction
-
-## 🏗️ Architecture
-
-```mermaid
-graph TB
-    subgraph "Detection Layer"
-        BLE[BLE Enhanced Detector]
-        WiFi[WiFi Enhanced Detector] 
-        AirDrop[AirDrop Threat Detector]
-        USB[USB Detection System]
-        Web[OpenCanary Honeypots]
-    end
-    
-    subgraph "Processing Layer"
-        Multi[Multi-Vector Correlator]
-        Filter[Noise Filter & Aggregator]
-        Forwarder[Data Forwarder]
-    end
-    
-    subgraph "Storage Layer"
-        ES[Elasticsearch]
-        Kibana[Kibana Dashboard]
-    end
-    
-    subgraph "VPS Infrastructure"
-        API[Dashboard API Server]
-        Dashboard[Enhanced Dashboard]
-        Intel[Threat Intelligence]
-    end
-    
-    subgraph "Services Layer"
-        SSH[SSH Honeypot]
-        FTP[FTP Honeypot]
-        SMB[SMB Honeypot]
-        Portal[Corporate Web Portal]
-        Canary[Canary Documents]
-    end
-    
-    BLE --> Multi
-    WiFi --> Multi
-    AirDrop --> Multi
-    USB --> Multi
-    Web --> Multi
-    
-    Multi --> Filter
-    Filter --> Forwarder
-    Filter --> ES
-    
-    ES --> Kibana
-    Forwarder --> API
-    API --> Dashboard
-    API --> Intel
-    
-    SSH --> ES
-    FTP --> ES
-    SMB --> ES
-    Portal --> ES
-    Canary --> ES
-    
-    style BLE fill:#e1f5fe
-    style WiFi fill:#e1f5fe
-    style AirDrop fill:#e1f5fe
-    style USB fill:#e1f5fe
-    style Web fill:#e1f5fe
-    style Dashboard fill:#f3e5f5
-    style API fill:#f3e5f5
-```
-
-## 📦 Installation
-
-### Prerequisites
-
-- Raspberry Pi 4 (8GB RAM recommended) or compatible Linux system
-- Docker and Docker Compose
-- Python 3.8+
-- Node.js 16+
-- WiFi adapter with monitor mode support
-- Bluetooth adapter
-
-### Quick Start
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd honeypot-minimal
-   ```
-
-2. **Install dependencies**
-   ```bash
-   sudo apt update
-   sudo apt install -y python3-pip docker.io docker-compose nodejs npm
-   pip3 install -r requirements.txt
-   ```
-
-3. **Start core services**
-   ```bash
-   docker-compose up -d
-   ```
-
-4. **Deploy detection systems**
-   ```bash
-   ./honeypot-manager.sh start-all
-   ```
-
-5. **Configure systemd services**
-   ```bash
-   ./install-systemd-services.sh
-   sudo systemctl enable honeypot.target
-   sudo systemctl start honeypot.target
-   ```
-
-### VPS Dashboard Deployment
-
-1. **Configure VPS environment**
-   ```bash
-   # On your VPS
-   git clone <repository-url>
-   cd honeypot-minimal/dashboard
-   npm install
-   ```
-
-2. **Set environment variables**
-   ```bash
-   export HOSTINGER_API_KEY="your-api-key"
-   export DASHBOARD_URL="https://your-domain.com"
-   ```
-
-3. **Start dashboard server**
-   ```bash
-   node api/server.js
-   ```
-
-## 🔧 Configuration
-
-### Core Configuration Files
-
-- `opencanary.conf` - Honeypot service configuration
-- `log_config.json` - Logging and filtering configuration
-- `wifi_whitelist.json` - Trusted network whitelist
-- `docker-compose.yml` - Container orchestration
-
-### Detection System Configuration
-
-Each detection system can be configured through its respective configuration file:
-
-```json
-{
-  "max_log_size_mb": 50,
-  "max_log_files": 5,
-  "compression_enabled": true,
-  "noise_filters": {
-    "duplicate_threshold_seconds": 300,
-    "min_threat_score": 0.3,
-    "rate_limit_per_hour": {
-      "weak_security": 5,
-      "hidden_ssid": 3,
-      "suspicious_ssid": 10
-    }
-  }
-}
-```
-
-### Malware Hash Database
-
-The system includes a comprehensive malware hash database for USB threat detection:
-
-- **Location**: `data/malware_hashes.db`
-- **Signatures**: 360+ malware families and variants
-- **Hash Types**: SHA256 (primary) and MD5 (fallback)
-- **Coverage**:
-  - 62 USB worm signatures (Stuxnet, Conficker, Agent.btz, etc.)
-  - 53 BadUSB/HID attack payloads (Rubber Ducky, Bash Bunny, O.MG Cable)
-  - 40 ransomware variants (WannaCry, Petya, LockBit, BlackCat)
-  - 28 credential stealers (Mimikatz, LaZagne, RedLine)
-  - 20 penetration testing tools
-
-**Adding New Hashes**:
-```bash
-python3 data/add_malware_hashes.py
-```
-
-The database automatically updates on system restart and provides < 100ms lookup times for real-time USB scanning.
-
-## 🚀 Usage
-
-### Starting the System
-
-```bash
-# Start all detection systems
-sudo systemctl start honeypot.target
-
-# Check system status
-sudo systemctl status honeypot.target
-
-# View real-time logs
-sudo journalctl -f -u honeypot-*
-```
-
-### Accessing Dashboards
-
-- **Local Kibana**: http://localhost:5601
-- **VPS Dashboard**: https://your-domain.com/enhanced_dashboard.html
-- **Corporate Portal**: http://localhost:8080 (honeypot)
-
-### API Endpoints
-
-- `GET /api/threats/stats` - Threat statistics
-- `GET /api/threats/recent` - Recent threats
-- `GET /api/threats/correlations` - Threat correlations
-- `GET /api/threats/intelligence` - Threat intelligence feed
-- `POST /api/honeypot/data` - Submit threat data
-
-## 📊 Monitoring & Analytics
-
-### Real-time Metrics
-
-The system tracks comprehensive metrics including:
-
-- **Threat Velocity**: Threats detected per hour
-- **Attack Sources**: Unique attacking entities
-- **Threat Severity Distribution**: Critical, High, Medium, Low
-- **Protocol Analysis**: Attack vectors by protocol type
-- **Geographic Analysis**: Attack source estimation
-
-### Correlation Analysis
-
-Advanced correlation features include:
-
-- **Cross-Protocol Correlation**: Linking attacks across WiFi, BLE, and web vectors
-- **Temporal Analysis**: Time-based attack pattern recognition
-- **Behavioral Profiling**: Device and network behavior analysis
-- **Threat Intelligence**: IOC extraction and threat actor identification
-
-## 🔍 Detection Capabilities
-
-### What the System WILL Detect
-
-#### WiFi Threats
-- Evil twin access points
-- Beacon flooding attacks
-- Deauthentication attacks
-- WEP/WPS vulnerabilities
-- Suspicious SSID patterns
-- Signal manipulation attacks
-
-#### Bluetooth LE Threats
-- Flipper Zero and similar devices
-- Suspicious BLE beaconing patterns
-- Device fingerprint spoofing
-- Proximity-based attacks
-- Service enumeration attempts
-- MAC address randomization abuse
-
-#### AirDrop Threats
-- Suspicious AirDrop service names
-- Generic device name spoofing
-- TXT record manipulation
-- Rapid service announcements (attack patterns)
-- Unusual port usage detection
-- Evil twin AirDrop services
-
-#### Web & Network Threats
-- Credential harvesting attempts
-- Port scanning activities
-- Service enumeration
-- Directory traversal attempts
-- Canary document access
-- SSH/FTP/SMB brute force
-
-#### USB Threats
-- **360+ Malware Hash Detection**: Known malware and USB-delivered payload identification
-  - Stuxnet, Conficker, Agent.btz variants
-  - Rubber Ducky, Bash Bunny, Malduino payloads
-  - Ransomware delivery (WannaCry, Petya, LockBit, BlackCat)
-  - Credential stealers (Mimikatz, LaZagne, RedLine)
-  - Penetration testing tools (Metasploit, Kali tools, Hak5)
-- BadUSB and HID injection attack detection
-- Mass storage malware scanning with SHA256/MD5 hashing
-- Device fingerprint analysis and behavioral monitoring
-- Volume label threat pattern detection (e.g., "STARKILLER")
-- Autorun.inf and suspicious file detection
-
-### What the System WON'T Detect
-
-- **Advanced Persistent Threats (APTs)**: Complex, multi-stage attacks
-- **Zero-day Exploits**: Unknown vulnerabilities and exploits
-- **Encrypted Traffic Analysis**: Deep packet inspection of encrypted data
-- **Social Engineering**: Human-based attack vectors
-- **Physical Security Bypasses**: Physical access control circumvention
-- **Memory-based Attacks**: Rootkits, memory corruption exploits
-- **Application-layer Vulnerabilities**: Specific software vulnerabilities
-
-## 📈 Performance & Resource Usage
-
-### Resource Requirements
-
-- **Minimum**: 4GB RAM, 32GB storage, 1GB/month bandwidth
-- **Recommended**: 8GB RAM, 100GB storage, 5GB/month bandwidth
-- **CPU Usage**: ~15-25% average on Raspberry Pi 4
-- **Memory Usage**: ~3-4GB active, ~1-2GB cached
-- **Network Usage**: ~100MB/day logging, ~500MB/day with packet capture
-
-### Optimization Features
-
-- **Intelligent Filtering**: 99% noise reduction
-- **Resource Management**: Dynamic memory allocation
-- **Compression**: Log compression and rotation
-- **Rate Limiting**: API and processing rate controls
-- **Efficient Storage**: Elasticsearch optimization
-
-## 🔒 Security Considerations
-
-### Deployment Security
-
-1. **Network Isolation**: Deploy in isolated network segment
-2. **Access Control**: Restrict API access with authentication
-3. **Encryption**: Use TLS for all external communications
-4. **Monitoring**: Monitor the monitoring system itself
-5. **Updates**: Regular system and dependency updates
-
-### Data Privacy
-
-- No personal data collection beyond attack metadata
-- Configurable data retention policies
-- Anonymization of non-essential identifying information
-- Compliance with local data protection regulations
-
-## 🛣️ Roadmap
-
-### Phase 1: Core Enhancement (Completed)
-- ✅ Multi-vector detection integration
-- ✅ Advanced correlation engine
-- ✅ Professional dashboard interface
-- ✅ Noise reduction optimization
-
-### Phase 2: Intelligence Integration (Completed ✅)
-- ✅ Malware hash database (360+ signatures)
-- ✅ Threat intelligence feed integration
-- ✅ Automated IOC generation
-- ✅ Advanced behavioral analysis
-- ✅ Real-time file hash scanning (SHA256/MD5)
-- 🔄 Machine learning threat classification (In Progress)
-
-### Phase 3: Enterprise Features (Planned)
-- 📋 SIEM integration modules
-- 📋 Automated incident response
-- 📋 Threat hunting capabilities
-- 📋 Multi-sensor deployment management
-
-### Phase 4: Advanced Analytics (Future)
-- 📋 Predictive threat modeling
-- 📋 Attribution analysis
-- 📋 Campaign tracking
-- 📋 Advanced visualization
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Commit changes: `git commit -am 'Add feature'`
-4. Push to branch: `git push origin feature-name`
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## ⚠️ Disclaimer
-
-This system is designed for defensive security purposes only. Use responsibly and in compliance with applicable laws and regulations. The authors are not responsible for misuse or any legal implications of deployment.
-
-## 📞 Support
-
-- **Documentation**: See `/docs` directory for detailed guides
-- **Issues**: Report issues via GitHub Issues
-- **Community**: Join our community discussions
-- **Security**: Report security issues privately to security@project.com
+> **For contributors:** the canonical plan, current state, and build order live in [`HONEYMAN-V2-PLAN.md`](HONEYMAN-V2-PLAN.md). The architecture diagram is in [`ARCHITECTURE.mmd`](ARCHITECTURE.mmd) (Mermaid; renders on GitHub).
 
 ---
 
-**Honeyman Project** - Building Trust Through Advanced Threat Detection
+## What it detects
+
+| Vector | Examples |
+|---|---|
+| **USB** | BadUSB / Rubber Ducky / Bash Bunny / OMG Cable, malicious VID/PID, suspicious volume labels (`STARKILLER`, `PAYLOAD`), autorun.inf abuse, and 360+ malware hash signatures (Stuxnet, Conficker, WannaCry, Mimikatz, Hak5 payloads, …) on auto-mounted mass storage. |
+| **WiFi** | Evil Twin APs, deauth flooding, beacon flooding, WiFi Pineapple / ESP8266 Deauther / Flipper Zero WiFi, suspicious SSIDs, WPS attacks. |
+| **BLE** | Flipper Zero (incl. Unleashed/Xtreme firmware), BLE spam, Apple Continuity abuse, BLE HID keyloggers, ESP32 attack tools, manufacturer-data spoofing. |
+| **AirDrop / mDNS** | Suspicious service names, generic device spoofing, rapid announcement floods, TXT-record abuse. |
+| **Network honeypots** *(optional)* | SSH brute-force, HTTP credential harvesting, port scanning, service enumeration, web-attack probes. |
+
+Every threat carries a location (GPS → WiFi-positioning → IP → operator-pinned), so events appear on the dashboard map at the right place, indoors or out.
+
+For accuracy expectations and the explicit list of what Honeyman does *not* detect, see [`CAPABILITIES.md`](CAPABILITIES.md).
+
+---
+
+## Architecture (in one paragraph)
+
+A sensor runs the `honeyman-agent` Python package, which loads YAML detection rules and executes detector modules in parallel. When a rule matches, the agent attaches a location and POSTs the event to the dashboard backend over HTTPS using a per-sensor API key issued at install time. The backend (FastAPI + Postgres+TimescaleDB) stores threats in a 1-day-chunked hypertable with 90-day retention and 7-day compression. The React dashboard is publicly viewable: anyone can see the map, filter threats, and watch the live WebSocket feed. There are no user accounts and no actions to perform — it's a viewing surface. MQTT is supported as an optional alternative transport for high-volume sensors.
+
+```
+Sensor (Pi)  ──HTTPS──▶  Backend (FastAPI + TimescaleDB)  ──REST/WS──▶  Public Dashboard (React + Leaflet)
+                              ▲
+                              └── optional: MQTT/TLS
+```
+
+See [`ARCHITECTURE.mmd`](ARCHITECTURE.mmd) for the detailed diagram.
+
+---
+
+## Deploy a sensor
+
+> ⚠️ The endpoints below assume a hosted deployment. If you're running your own backend, replace `api.honeyman.io` with your URL.
+
+On a fresh Raspberry Pi (Pi Zero 2 W, Pi 4, or Pi 5):
+
+```bash
+curl -sSL https://honeyman.io/install | bash
+```
+
+The installer will:
+
+1. Detect available hardware (USB, WiFi adapter with monitor mode, Bluetooth)
+2. Ask you for a sensor name and (optional) location label
+3. Install Python deps + the `honeyman-agent` package
+4. Call `POST /api/v2/sensors/register` to claim a sensor ID and receive a one-time API key
+5. Write the API key to `/etc/honeyman/credentials` (mode 0600, owner root)
+6. Drop a systemd unit at `/etc/systemd/system/honeyman.service` and start it
+
+Within a minute or two, the sensor appears on the public dashboard.
+
+For non-interactive installs (e.g. flashing many SD cards), pre-set the env vars:
+
+```bash
+curl -sSL https://honeyman.io/install | \
+  SENSOR_NAME="defcon-hotel" \
+  LOCATION="DefCon 32 — Caesars Palace" \
+  bash
+```
+
+---
+
+## View the dashboard
+
+**Public URL:** http://72.60.25.24:3000  *(will move to `https://dashboard.honeyman.io` when DNS is set up)*
+
+The dashboard shows:
+
+- A world map with color-coded threat markers (red/orange/yellow/blue by severity)
+- Filters for time range, sensor, threat type, severity, detector category
+- A live WebSocket feed of the most recent threats
+- Stat cards (totals, critical count, threats/hr, active sensors)
+- A list of every registered sensor with last-seen and threat count
+
+There is no login. There are no actions. It's a viewing surface.
+
+---
+
+## Custom rules
+
+Detection rules are YAML files. Each sensor ships with the default rule set under `/etc/honeyman/rules/<category>/`. To add or modify rules:
+
+**Locally on a sensor** — edit any YAML file in `/etc/honeyman/rules/`. The rule engine reloads on file change (inotify); no restart needed.
+
+**Centrally** — open a PR against the public rules repo at [`github.com/SecurityWard/honeyman-rules`](https://github.com/SecurityWard/honeyman-rules) *(planned)*. Sensors poll `GET /api/v2/rules` every 5 minutes and write any new/changed rules to disk; locally-edited rules are never overwritten.
+
+A rule looks like:
+
+```yaml
+rule_id: usb_rubber_ducky_001
+name: "USB Rubber Ducky (Hak5)"
+version: 2.0
+enabled: true
+severity: critical
+threat_type: usb_rubber_ducky
+category: usb
+
+conditions:
+  operator: AND
+  clauses:
+    - type: device
+      field: vendor_id
+      operator: equals
+      value: "0x03eb"
+    - type: device
+      field: product_id
+      operator: equals
+      value: "0x2401"
+
+actions:
+  - type: alert_dashboard
+    priority: critical
+  - type: local_log
+    severity: critical
+
+metadata:
+  mitre_attack: [T1200, T1052.001]
+  tags: [hak5, hid_injection]
+  description: "USB Rubber Ducky — HID-injection attack tool from Hak5"
+  confidence: 0.98
+```
+
+The default 35 rules live under [`honeyman-v2/agent/rules/`](honeyman-v2/agent/rules/).
+
+---
+
+## Repository layout
+
+```
+README.md                    ← this file
+HONEYMAN-V2-PLAN.md          canonical V2 plan & status
+ARCHITECTURE.mmd             V2 architecture diagram (Mermaid)
+CAPABILITIES.md              what V2 detects, accuracy, limitations
+CHANGELOG.md                 release notes
+TESTING.md                   how to run the test suites
+LICENSE                      MIT
+
+data/                        malware hash database (used by agent)
+honeyman-v2/
+  agent/                     sensor-side Python package + 35 default rules
+  dashboard-v2/
+    backend/                 FastAPI app
+    frontend/                React + TypeScript dashboard
+  readme/onboarding/         install.sh + Mosquitto + Compose configs
+  *-COMPLETE.md              historical phase completion records
+
+archive/v1/                  V1 codebase (DefCon 2024 release), kept for reference
+archive/v2-removed-auth/     V2 auth code (JWT, users) removed in cleanup
+archive/v2-removed-onboarding/  duplicated standalone Flask provisioning API
+```
+
+---
+
+## Status
+
+V2 is **under active development.** The agent and dashboard code are roughly 80% written; end-to-end deployment and a real-Pi smoke test are the next milestones. See [`HONEYMAN-V2-PLAN.md`](HONEYMAN-V2-PLAN.md) section "Build order" for the current phase.
+
+---
+
+## Contributing
+
+- **Rules:** open PRs to the rules repo (link above). New detection signatures, MITRE ATT&CK mappings, false-positive tuning all welcome.
+- **Code:** open PRs to this repo. Please match the V2 design constraints in `HONEYMAN-V2-PLAN.md` — in particular: no user accounts, public read-only dashboard, sensors authenticate with API keys, rules are YAML-driven.
+- **Bug reports:** GitHub Issues. Include sensor model, agent version (`honeyman-agent --version`), and the relevant chunk of `/var/log/honeyman/agent.log`.
+
+---
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).
+
+---
+
+## Disclaimer
+
+Honeyman is a defensive monitoring tool. Deploy it only where you have the legal authority to do so. Capturing wireless traffic, running honeypots, and observing nearby Bluetooth devices may be regulated in your jurisdiction. The authors are not responsible for misuse.

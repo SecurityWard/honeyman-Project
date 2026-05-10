@@ -39,7 +39,7 @@ class ThreatCreate(ThreatBase):
 
 
 class ThreatResponse(ThreatBase):
-    """Schema for threat response"""
+    """Schema for threat response (V2: no acknowledge fields)"""
     id: UUID
     device_name: Optional[str]
     device_mac: Optional[str]
@@ -58,9 +58,6 @@ class ThreatResponse(ThreatBase):
     raw_event: Optional[Dict[str, Any]]
     mitre_tactics: List[str]
     mitre_techniques: List[str]
-    is_acknowledged: bool
-    acknowledged_at: Optional[datetime]
-    acknowledged_by: Optional[str]
     created_at: datetime
 
     class Config:
@@ -75,12 +72,6 @@ class ThreatListResponse(BaseModel):
     page_size: int
 
 
-class ThreatAcknowledge(BaseModel):
-    """Schema for acknowledging a threat"""
-    acknowledged_by: str = Field(..., min_length=1, max_length=100)
-    notes: Optional[str] = None
-
-
 class ThreatQuery(BaseModel):
     """Schema for threat query filters"""
     sensor_id: Optional[str] = None
@@ -89,7 +80,6 @@ class ThreatQuery(BaseModel):
     severity: Optional[List[str]] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
-    is_acknowledged: Optional[bool] = None
     page: int = Field(default=1, ge=1)
     page_size: int = Field(default=50, ge=1, le=1000)
     sort_by: str = Field(default="timestamp")

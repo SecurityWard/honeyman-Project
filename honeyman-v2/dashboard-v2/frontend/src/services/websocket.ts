@@ -1,5 +1,7 @@
 import type { WebSocketMessage, Threat } from '../types';
 
+// V2: WebSocket feed is public. No auth token required.
+
 type MessageHandler = (message: WebSocketMessage) => void;
 type ThreatHandler = (threat: Threat) => void;
 
@@ -23,10 +25,9 @@ class WebSocketService {
 
     this.isConnecting = true;
     const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/api/v2/ws';
-    const token = localStorage.getItem('access_token');
 
     try {
-      this.ws = new WebSocket(`${wsUrl}?token=${token}`);
+      this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
         console.log('WebSocket connected');

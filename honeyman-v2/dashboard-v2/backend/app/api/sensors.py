@@ -1,23 +1,28 @@
 """
-Sensor API endpoints
+Sensor API endpoints — V2.
+
+Reads (list, get, stats) are public.
+Writes (heartbeat) require the sensor's API key.
+There are no admin update/delete endpoints; operators manage sensors via SSH.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
-from typing import List, Optional
-from uuid import UUID
 from datetime import datetime, timedelta
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.base import get_db
 from ..models.sensor import Sensor
 from ..models.threat import Threat
-from ..models.user import User
 from ..schemas.sensor import (
-    SensorResponse, SensorListResponse, SensorUpdate,
-    SensorStats, SensorHeartbeat
+    SensorHeartbeat,
+    SensorListResponse,
+    SensorResponse,
+    SensorStats,
 )
-from .deps import get_current_user, require_admin
+from .deps import authenticated_sensor
 
 router = APIRouter()
 
@@ -28,203 +33,113 @@ async def list_sensors(
     page_size: int = Query(50, ge=1, le=100),
     is_active: Optional[bool] = None,
     is_online: Optional[bool] = None,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
-    """List all sensors with pagination and filters"""
+    """List all sensors. Public read."""
 
-    # Build query
     query = select(Sensor)
-
     if is_active is not None:
         query = query.where(Sensor.is_active == is_active)
-
     if is_online is not None:
         query = query.where(Sensor.is_online == is_online)
 
-    # Get total count
     count_query = select(func.count()).select_from(query.subquery())
-    total_result = await db.execute(count_query)
-    total = total_result.scalar()
+    total = (await db.execute(count_query)).scalar()
 
-    # Apply pagination
     query = query.offset((page - 1) * page_size).limit(page_size)
     query = query.order_by(Sensor.created_at.desc())
-
-    # Execute query
-    result = await db.execute(query)
-    sensors = result.scalars().all()
+    sensors = (await db.execute(query)).scalars().all()
 
     return SensorListResponse(
         sensors=[SensorResponse.from_orm(s) for s in sensors],
         total=total,
         page=page,
-        page_size=page_size
+        page_size=page_size,
     )
 
 
 @router.get("/sensors/{sensor_id}", response_model=SensorResponse)
-async def get_sensor(
-    sensor_id: str,
-    db: AsyncSession = Depends(get_db)
-):
-    """Get sensor by ID"""
-
-    result = await db.execute(
-        select(Sensor).where(Sensor.sensor_id == sensor_id)
-    )
+async def get_sensor(sensor_id: str, db: AsyncSession = Depends(get_db)):
+    """Get sensor by ID. Public read."""
+    result = await db.execute(select(Sensor).where(Sensor.sensor_id == sensor_id))
     sensor = result.scalar_one_or_none()
-
     if not sensor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Sensor {sensor_id} not found"
+            detail=f"Sensor {sensor_id} not found",
         )
-
     return SensorResponse.from_orm(sensor)
-
-
-@router.put("/sensors/{sensor_id}", response_model=SensorResponse)
-async def update_sensor(
-    sensor_id: str,
-    sensor_update: SensorUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_admin)
-):
-    """Update sensor configuration (admin only)"""
-
-    result = await db.execute(
-        select(Sensor).where(Sensor.sensor_id == sensor_id)
-    )
-    sensor = result.scalar_one_or_none()
-
-    if not sensor:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Sensor {sensor_id} not found"
-        )
-
-    # Update fields
-    update_data = sensor_update.dict(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(sensor, field, value)
-
-    sensor.updated_at = datetime.utcnow()
-
-    await db.commit()
-    await db.refresh(sensor)
-
-    return SensorResponse.from_orm(sensor)
-
-
-@router.delete("/sensors/{sensor_id}")
-async def delete_sensor(
-    sensor_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_admin)
-):
-    """Delete sensor (admin only)"""
-
-    result = await db.execute(
-        select(Sensor).where(Sensor.sensor_id == sensor_id)
-    )
-    sensor = result.scalar_one_or_none()
-
-    if not sensor:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Sensor {sensor_id} not found"
-        )
-
-    await db.delete(sensor)
-    await db.commit()
-
-    return {"message": f"Sensor {sensor_id} deleted successfully"}
 
 
 @router.get("/sensors/{sensor_id}/stats", response_model=SensorStats)
-async def get_sensor_stats(
-    sensor_id: str,
-    db: AsyncSession = Depends(get_db)
-):
-    """Get sensor statistics"""
+async def get_sensor_stats(sensor_id: str, db: AsyncSession = Depends(get_db)):
+    """Get sensor statistics. Public read."""
 
-    # Verify sensor exists
-    sensor_result = await db.execute(
-        select(Sensor).where(Sensor.sensor_id == sensor_id)
-    )
+    sensor_result = await db.execute(select(Sensor).where(Sensor.sensor_id == sensor_id))
     sensor = sensor_result.scalar_one_or_none()
-
     if not sensor:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Sensor {sensor_id} not found"
+            detail=f"Sensor {sensor_id} not found",
         )
 
-    # Calculate time ranges
     now = datetime.utcnow()
     last_24h = now - timedelta(hours=24)
     last_7d = now - timedelta(days=7)
 
-    # Total threats
-    total_result = await db.execute(
-        select(func.count()).where(Threat.sensor_id == sensor_id)
-    )
-    total_threats = total_result.scalar()
+    total_threats = (
+        await db.execute(select(func.count()).where(Threat.sensor_id == sensor_id))
+    ).scalar()
 
-    # Threats last 24h
-    threats_24h_result = await db.execute(
-        select(func.count()).where(
-            and_(
-                Threat.sensor_id == sensor_id,
-                Threat.timestamp >= last_24h
+    threats_24h = (
+        await db.execute(
+            select(func.count()).where(
+                and_(Threat.sensor_id == sensor_id, Threat.timestamp >= last_24h)
             )
         )
-    )
-    threats_24h = threats_24h_result.scalar()
+    ).scalar()
 
-    # Threats last 7d
-    threats_7d_result = await db.execute(
-        select(func.count()).where(
-            and_(
-                Threat.sensor_id == sensor_id,
-                Threat.timestamp >= last_7d
+    threats_7d = (
+        await db.execute(
+            select(func.count()).where(
+                and_(Threat.sensor_id == sensor_id, Threat.timestamp >= last_7d)
             )
         )
-    )
-    threats_7d = threats_7d_result.scalar()
+    ).scalar()
 
-    # Threats by severity
-    severity_result = await db.execute(
-        select(Threat.severity, func.count()).where(
-            Threat.sensor_id == sensor_id
-        ).group_by(Threat.severity)
+    severity_rows = await db.execute(
+        select(Threat.severity, func.count())
+        .where(Threat.sensor_id == sensor_id)
+        .group_by(Threat.severity)
     )
-    threats_by_severity = {row[0]: row[1] for row in severity_result}
+    threats_by_severity = {row[0]: row[1] for row in severity_rows}
 
-    # Threats by detector
-    detector_result = await db.execute(
-        select(Threat.detector_type, func.count()).where(
-            Threat.sensor_id == sensor_id
-        ).group_by(Threat.detector_type)
+    detector_rows = await db.execute(
+        select(Threat.detector_type, func.count())
+        .where(Threat.sensor_id == sensor_id)
+        .group_by(Threat.detector_type)
     )
-    threats_by_detector = {row[0]: row[1] for row in detector_result}
+    threats_by_detector = {row[0]: row[1] for row in detector_rows}
 
-    # Most common threat type
-    threat_type_result = await db.execute(
-        select(Threat.threat_type, func.count().label('count')).where(
-            Threat.sensor_id == sensor_id
-        ).group_by(Threat.threat_type).order_by(func.count().desc()).limit(1)
-    )
-    most_common = threat_type_result.first()
-    most_common_threat_type = most_common[0] if most_common else None
+    most_common_row = (
+        await db.execute(
+            select(Threat.threat_type, func.count().label("count"))
+            .where(Threat.sensor_id == sensor_id)
+            .group_by(Threat.threat_type)
+            .order_by(func.count().desc())
+            .limit(1)
+        )
+    ).first()
+    most_common_threat_type = most_common_row[0] if most_common_row else None
 
-    # Last threat timestamp
-    last_threat_result = await db.execute(
-        select(Threat.timestamp).where(
-            Threat.sensor_id == sensor_id
-        ).order_by(Threat.timestamp.desc()).limit(1)
-    )
-    last_threat = last_threat_result.scalar_one_or_none()
+    last_threat = (
+        await db.execute(
+            select(Threat.timestamp)
+            .where(Threat.sensor_id == sensor_id)
+            .order_by(Threat.timestamp.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
 
     return SensorStats(
         sensor_id=sensor_id,
@@ -234,7 +149,7 @@ async def get_sensor_stats(
         threats_by_severity=threats_by_severity,
         threats_by_detector=threats_by_detector,
         most_common_threat_type=most_common_threat_type,
-        last_threat_timestamp=last_threat
+        last_threat_timestamp=last_threat,
     )
 
 
@@ -242,22 +157,17 @@ async def get_sensor_stats(
 async def sensor_heartbeat(
     sensor_id: str,
     heartbeat: SensorHeartbeat,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    sensor: Sensor = Depends(authenticated_sensor),
 ):
-    """Receive sensor heartbeat (no auth required for sensors)"""
+    """
+    Receive sensor heartbeat. Requires API key.
 
-    result = await db.execute(
-        select(Sensor).where(Sensor.sensor_id == sensor_id)
-    )
-    sensor = result.scalar_one_or_none()
-
-    if not sensor:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Sensor {sensor_id} not found"
-        )
-
-    # Update heartbeat
+    The dependency `authenticated_sensor` resolves the calling sensor from the
+    Authorization header and verifies that the key belongs to {sensor_id}.
+    """
+    # `authenticated_sensor` already verified key ownership via path param.
+    # We re-attach to the session here so the update flushes.
     sensor.last_heartbeat = heartbeat.timestamp
     sensor.is_online = heartbeat.is_online
 
@@ -265,11 +175,14 @@ async def sensor_heartbeat(
         sensor.enabled_detectors = heartbeat.enabled_detectors
 
     if heartbeat.location:
-        sensor.latitude = heartbeat.location.get('latitude')
-        sensor.longitude = heartbeat.location.get('longitude')
-        sensor.location_method = heartbeat.location.get('method')
-        sensor.location_accuracy = heartbeat.location.get('accuracy')
+        sensor.latitude = heartbeat.location.get("latitude")
+        sensor.longitude = heartbeat.location.get("longitude")
+        sensor.location_method = heartbeat.location.get("method")
+        sensor.location_accuracy = heartbeat.location.get("accuracy")
+        if heartbeat.location.get("city"):
+            sensor.city = heartbeat.location["city"]
+        if heartbeat.location.get("country"):
+            sensor.country = heartbeat.location["country"]
 
     await db.commit()
-
     return {"message": "Heartbeat received"}

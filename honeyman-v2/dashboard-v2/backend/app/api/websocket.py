@@ -2,11 +2,11 @@
 WebSocket API endpoint for real-time updates
 """
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from ..services.websocket import manager
-from ..models.user import User
-from .deps import get_current_user
 import logging
+
+# V2: WebSocket feed is public read-only (no auth)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

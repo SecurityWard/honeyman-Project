@@ -1,29 +1,17 @@
 import { useState } from 'react';
 import SensorList from '../components/sensors/SensorList';
-import { useSensors, useDeleteSensor } from '../hooks/useSensors';
+import { useSensors } from '../hooks/useSensors';
 import type { Sensor } from '../types';
 import './SensorsPage.css';
+
+// V2: read-only sensor list. Operators manage individual sensors via SSH.
 
 export default function SensorsPage() {
   const [page, setPage] = useState(1);
   const { data: sensorsData, isLoading } = useSensors(page, 50);
-  const deleteSensor = useDeleteSensor();
-
-  const handleDeleteSensor = async (sensorId: string) => {
-    try {
-      await deleteSensor.mutateAsync(sensorId);
-    } catch (error) {
-      console.error('Failed to delete sensor:', error);
-      alert('Failed to delete sensor');
-    }
-  };
-
-  const handleUpdateSensor = (sensor: Sensor) => {
-    // TODO: Open edit modal
-    console.log('Edit sensor:', sensor);
-  };
 
   const handleSelectSensor = (sensor: Sensor) => {
+    // For now, just log. Future: open a side-panel detail view.
     console.log('Selected sensor:', sensor);
   };
 
@@ -36,7 +24,7 @@ export default function SensorsPage() {
       <div className="page-header">
         <h1>Sensors</h1>
         <p className="page-description">
-          Manage and monitor your deployed Honeyman sensors
+          Honeyman sensors currently registered with the dashboard
         </p>
       </div>
 
@@ -45,8 +33,6 @@ export default function SensorsPage() {
           <SensorList
             sensors={sensorsData.items}
             onSelectSensor={handleSelectSensor}
-            onDeleteSensor={handleDeleteSensor}
-            onUpdateSensor={handleUpdateSensor}
           />
 
           {sensorsData.total_pages > 1 && (

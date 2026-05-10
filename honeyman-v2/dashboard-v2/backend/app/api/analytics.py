@@ -11,12 +11,12 @@ from datetime import datetime, timedelta
 from ..db.base import get_db
 from ..models.sensor import Sensor
 from ..models.threat import Threat
-from ..models.user import User
 from ..schemas.analytics import (
     OverviewStats, ThreatTrend, TopThreatType, TopSensor,
     GeographicDistribution, MitreAttackCoverage, ThreatVelocity
 )
-from .deps import get_current_user
+
+# V2: analytics endpoints are public (no auth)
 
 router = APIRouter()
 

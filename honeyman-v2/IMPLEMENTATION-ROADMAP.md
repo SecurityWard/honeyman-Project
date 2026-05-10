@@ -1,3 +1,8 @@
+> **Archived 2026-05-09** — this roadmap is no longer maintained.
+> The current V2 build order lives in
+> [`../HONEYMAN-V2-PLAN.md`](../HONEYMAN-V2-PLAN.md), section "Build order".
+> Content below is preserved for historical reference only.
+
 # Honeyman V2 - Complete Implementation Roadmap
 
 ## Executive Summary

@@ -1,3 +1,6 @@
+> **Archived 2026-05-09** — superseded by [`HONEYMAN-V2-PLAN.md`](HONEYMAN-V2-PLAN.md)
+> and [`ARCHITECTURE.mmd`](ARCHITECTURE.mmd) (rewritten for V2).
+
 # Honeyman Project Version 2.0 - Technical Architecture
 
 **Document Version:** 1.0

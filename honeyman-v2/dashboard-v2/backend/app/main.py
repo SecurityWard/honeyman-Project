@@ -11,7 +11,7 @@ import logging
 import asyncio
 
 from .core.config import settings
-from .api import sensors, threats, analytics, auth, onboarding, websocket as ws_router
+from .api import sensors, threats, analytics, onboarding, websocket as ws_router
 from .mqtt.subscriber import mqtt_subscriber
 from .services.redis_client import redis_client
 from .services.websocket import manager
@@ -91,7 +91,7 @@ async def root():
 
 
 # Include API routers
-app.include_router(auth.router, prefix=settings.API_PREFIX, tags=["auth"])
+# V2: no auth router; reads are public, writes use per-sensor API keys
 app.include_router(sensors.router, prefix=settings.API_PREFIX, tags=["sensors"])
 app.include_router(threats.router, prefix=settings.API_PREFIX, tags=["threats"])
 app.include_router(analytics.router, prefix=settings.API_PREFIX, tags=["analytics"])
@@ -112,13 +112,16 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Failed to connect to Redis: {e}")
 
-    # Start MQTT subscriber
-    try:
-        mqtt_subscriber.start()
-        await mqtt_subscriber.start_worker()
-        logger.info("MQTT subscriber started")
-    except Exception as e:
-        logger.error(f"Failed to start MQTT subscriber: {e}")
+    # Start MQTT subscriber only if MQTT is offered (V2: optional)
+    if settings.MQTT_OFFERED:
+        try:
+            mqtt_subscriber.start()
+            await mqtt_subscriber.start_worker()
+            logger.info("MQTT subscriber started")
+        except Exception as e:
+            logger.error(f"Failed to start MQTT subscriber: {e}")
+    else:
+        logger.info("MQTT_OFFERED=False — skipping MQTT subscriber. Sensors push via HTTPS.")
 
     # Start WebSocket Redis subscriber
     try:
@@ -135,12 +138,13 @@ async def shutdown_event():
     """Cleanup on shutdown"""
     logger.info("Shutting down Honeyman Dashboard Backend")
 
-    # Stop MQTT subscriber
-    try:
-        mqtt_subscriber.stop()
-        logger.info("MQTT subscriber stopped")
-    except Exception as e:
-        logger.error(f"Error stopping MQTT subscriber: {e}")
+    # Stop MQTT subscriber if it was started
+    if settings.MQTT_OFFERED:
+        try:
+            mqtt_subscriber.stop()
+            logger.info("MQTT subscriber stopped")
+        except Exception as e:
+            logger.error(f"Error stopping MQTT subscriber: {e}")
 
     # Stop WebSocket subscriber
     try:

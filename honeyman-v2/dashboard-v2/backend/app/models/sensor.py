@@ -37,7 +37,8 @@ class Sensor(Base):
 
     # Configuration
     enabled_detectors = Column(JSON, default=list, nullable=False)
-    transport_protocol = Column(String(20), default="mqtt", nullable=False)
+    transport_protocol = Column(String(20), default="https", nullable=False)
+    # https (V2 default) or mqtt (optional opt-in)
 
     # Capabilities
     capabilities = Column(JSON, default=dict, nullable=False)
@@ -64,9 +65,8 @@ class Sensor(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
     registered_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
-    # MQTT credentials (encrypted)
-    mqtt_username = Column(String(255), nullable=True)
-    mqtt_password_hash = Column(String(255), nullable=True)
+    # Per-sensor API key (SHA256 hash; plaintext returned exactly once at registration)
+    api_key_hash = Column(String(64), nullable=False, index=True)
 
     def __repr__(self):
         return f"<Sensor {self.sensor_id} ({self.name})>"
