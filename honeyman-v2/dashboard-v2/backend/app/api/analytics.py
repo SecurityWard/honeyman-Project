@@ -23,8 +23,7 @@ router = APIRouter()
 
 @router.get("/analytics/overview", response_model=OverviewStats)
 async def get_overview_stats(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get dashboard overview statistics"""
 
@@ -105,8 +104,7 @@ async def get_threat_trends(
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
     sensor_id: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get threat trends over time"""
 
@@ -130,10 +128,10 @@ async def get_threat_trends(
     }
     interval = interval_map[period]
 
-    # Build query using TimescaleDB time_bucket
+    # Build query using PostgreSQL date_trunc
     query = text(f"""
         SELECT
-            time_bucket('{interval}', timestamp) AS bucket,
+            date_trunc('{period}', timestamp) AS bucket,
             COUNT(*) as count,
             COUNT(CASE WHEN severity = 'critical' THEN 1 END) as critical,
             COUNT(CASE WHEN severity = 'high' THEN 1 END) as high,
@@ -157,12 +155,10 @@ async def get_threat_trends(
         {
             "timestamp": row[0].isoformat(),
             "count": row[1],
-            "severity": {
-                "critical": row[2],
-                "high": row[3],
-                "medium": row[4],
-                "low": row[5]
-            }
+            "critical": row[2],
+            "high": row[3],
+            "medium": row[4],
+            "low": row[5]
         }
         for row in rows
     ]
@@ -178,12 +174,19 @@ async def get_threat_trends(
 @router.get("/analytics/top-threats", response_model=List[TopThreatType])
 async def get_top_threats(
     limit: int = Query(10, ge=1, le=50),
+    hours: Optional[int] = Query(None),
+    days: Optional[int] = Query(None),
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get top threat types"""
+
+    # Calculate time range from hours/days if provided
+    if hours and not start_time:
+        start_time = datetime.utcnow() - timedelta(hours=hours)
+    elif days and not start_time:
+        start_time = datetime.utcnow() - timedelta(days=days)
 
     # Build query
     query = select(
@@ -221,12 +224,19 @@ async def get_top_threats(
 @router.get("/analytics/top-sensors", response_model=List[TopSensor])
 async def get_top_sensors(
     limit: int = Query(10, ge=1, le=50),
+    hours: Optional[int] = Query(None),
+    days: Optional[int] = Query(None),
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get top sensors by threat count"""
+
+    # Calculate time range from hours/days if provided
+    if hours and not start_time:
+        start_time = datetime.utcnow() - timedelta(hours=hours)
+    elif days and not start_time:
+        start_time = datetime.utcnow() - timedelta(days=days)
 
     # Build subquery for threat counts
     threat_counts = select(
@@ -273,13 +283,30 @@ async def get_top_sensors(
 async def get_threat_map(
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
+    hours: Optional[int] = Query(None),
     severity: Optional[List[str]] = Query(None),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get geographic threat distribution for map visualization"""
 
-    query = text("""
+    # Build WHERE conditions dynamically
+    conditions = ["s.latitude IS NOT NULL", "s.longitude IS NOT NULL"]
+    params = {}
+
+    if hours:
+        conditions.append("t.timestamp >= :start_time")
+        params["start_time"] = datetime.utcnow() - timedelta(hours=hours)
+    elif start_time:
+        conditions.append("t.timestamp >= :start_time")
+        params["start_time"] = start_time
+
+    if end_time:
+        conditions.append("t.timestamp <= :end_time")
+        params["end_time"] = end_time
+
+    where_clause = " AND ".join(conditions)
+
+    query_str = f"""
         SELECT
             t.sensor_id,
             s.latitude,
@@ -293,23 +320,12 @@ async def get_threat_map(
             COUNT(CASE WHEN t.severity = 'low' THEN 1 END) as low
         FROM threats t
         JOIN sensors s ON t.sensor_id = s.sensor_id
-        WHERE s.latitude IS NOT NULL AND s.longitude IS NOT NULL
-        {'AND t.timestamp >= :start_time' if start_time else ''}
-        {'AND t.timestamp <= :end_time' if end_time else ''}
-        {'AND t.severity = ANY(:severity)' if severity else ''}
+        WHERE {where_clause}
         GROUP BY t.sensor_id, s.latitude, s.longitude, s.city, s.country
         ORDER BY threat_count DESC
-    """)
+    """
 
-    params = {}
-    if start_time:
-        params["start_time"] = start_time
-    if end_time:
-        params["end_time"] = end_time
-    if severity:
-        params["severity"] = severity
-
-    result = await db.execute(query, params)
+    result = await db.execute(text(query_str), params)
     rows = result.fetchall()
 
     return [
@@ -333,8 +349,7 @@ async def get_threat_map(
 
 @router.get("/analytics/velocity", response_model=ThreatVelocity)
 async def get_threat_velocity(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get threat velocity metrics"""
 
@@ -367,7 +382,7 @@ async def get_threat_velocity(
     # Peak rate (max threats in any hour in last 7 days)
     peak_query = text("""
         SELECT
-            time_bucket('1 hour', timestamp) AS bucket,
+            date_trunc('hour', timestamp) AS bucket,
             COUNT(*) as count
         FROM threats
         WHERE timestamp >= :start_time

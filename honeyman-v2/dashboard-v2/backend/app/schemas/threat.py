@@ -69,7 +69,7 @@ class ThreatResponse(ThreatBase):
 
 class ThreatListResponse(BaseModel):
     """Schema for threat list response"""
-    threats: List[ThreatResponse]
+    items: List[ThreatResponse]
     total: int
     page: int
     page_size: int

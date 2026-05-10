@@ -9,6 +9,17 @@ interface TopThreatsChartProps {
 const COLORS = ['#dc2626', '#ea580c', '#f59e0b', '#3b82f6', '#8b5cf6', '#06b6d4', '#10b981'];
 
 export default function TopThreatsChart({ data, height = 300 }: TopThreatsChartProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="chart-container">
+        <h3>Top Threat Types</h3>
+        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
+          No threat data available for the selected time period
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="chart-container">
       <h3>Top Threat Types</h3>
@@ -35,7 +46,7 @@ export default function TopThreatsChart({ data, height = 300 }: TopThreatsChartP
               boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
             }}
             formatter={(value: number, _name: string, props: any) => [
-              `${value} (${props.payload.percentage.toFixed(1)}%)`,
+              `${value} (${props.payload?.percentage?.toFixed(1) || 0}%)`,
               'Count'
             ]}
           />

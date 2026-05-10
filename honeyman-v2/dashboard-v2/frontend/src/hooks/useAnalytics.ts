@@ -24,48 +24,54 @@ export function useThreatTrends(period: 'hourly' | 'daily' = 'hourly', hours: nu
   return useQuery({
     queryKey: ['analytics', 'trends', period, hours],
     queryFn: async () => {
-      const response = await api.get<ThreatTrend[]>('/analytics/trends', {
+      const response = await api.get<{ data_points: ThreatTrend[] }>('/analytics/trends', {
         params: { period, hours }
       });
-      return response.data;
+      return response.data.data_points;
     },
     refetchInterval: 60000, // Refresh every minute
   });
 }
 
-export function useTopThreats(limit: number = 10, hours: number = 24) {
+export function useTopThreats(limit: number = 10, hours?: number) {
   return useQuery({
     queryKey: ['analytics', 'top-threats', limit, hours],
     queryFn: async () => {
-      const response = await api.get<TopThreat[]>('/analytics/top-threats', {
-        params: { limit, hours }
-      });
+      const params: Record<string, any> = { limit };
+      if (hours !== undefined) {
+        params.hours = hours;
+      }
+      const response = await api.get<TopThreat[]>('/analytics/top-threats', { params });
       return response.data;
     },
     refetchInterval: 60000,
   });
 }
 
-export function useTopSensors(limit: number = 10, hours: number = 24) {
+export function useTopSensors(limit: number = 10, hours?: number) {
   return useQuery({
     queryKey: ['analytics', 'top-sensors', limit, hours],
     queryFn: async () => {
-      const response = await api.get<TopSensor[]>('/analytics/top-sensors', {
-        params: { limit, hours }
-      });
+      const params: Record<string, any> = { limit };
+      if (hours !== undefined) {
+        params.hours = hours;
+      }
+      const response = await api.get<TopSensor[]>('/analytics/top-sensors', { params });
       return response.data;
     },
     refetchInterval: 60000,
   });
 }
 
-export function useGeoMap(hours: number = 24) {
+export function useGeoMap(hours?: number) {
   return useQuery({
     queryKey: ['analytics', 'map', hours],
     queryFn: async () => {
-      const response = await api.get<GeoThreat[]>('/analytics/map', {
-        params: { hours }
-      });
+      const params: Record<string, any> = {};
+      if (hours !== undefined) {
+        params.hours = hours;
+      }
+      const response = await api.get<GeoThreat[]>('/analytics/map', { params });
       return response.data;
     },
     refetchInterval: 60000,

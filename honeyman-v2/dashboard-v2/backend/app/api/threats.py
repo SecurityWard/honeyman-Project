@@ -34,8 +34,7 @@ async def list_threats(
     page_size: int = Query(50, ge=1, le=1000),
     sort_by: str = Query("timestamp"),
     sort_order: str = Query("desc", regex="^(asc|desc)$"),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     """Query threats with filters and pagination"""
 
@@ -87,7 +86,7 @@ async def list_threats(
     threats = result.scalars().all()
 
     return ThreatListResponse(
-        threats=[ThreatResponse.from_orm(t) for t in threats],
+        items=[ThreatResponse.from_orm(t) for t in threats],
         total=total,
         page=page,
         page_size=page_size
@@ -97,8 +96,7 @@ async def list_threats(
 @router.get("/threats/{threat_id}", response_model=ThreatResponse)
 async def get_threat(
     threat_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get threat by ID"""
 

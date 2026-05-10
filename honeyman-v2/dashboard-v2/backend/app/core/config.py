@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:5173",
+        "http://72.60.25.24:3000",
         "https://dashboard.honeyman.io"
     ]
 

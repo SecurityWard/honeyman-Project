@@ -1,0 +1,29 @@
+# Honeyman V2 - Mosquitto ACL Configuration
+# This file is dynamically updated by the provisioning API
+
+# =============================================================================
+# System Users
+# =============================================================================
+
+# Collector service - can read all sensor topics
+user collector
+topic read honeypot/#
+topic write honeypot/global/#
+
+# Dashboard service - can read all topics
+user dashboard
+topic read honeypot/#
+
+# Health check user
+user healthcheck
+topic read $SYS/#
+
+# =============================================================================
+# Sensor ACLs (dynamically added below)
+# =============================================================================
+
+# Sensors are added automatically when they register
+# Each sensor can only write to their own topics:
+#   topic write honeypot/{sensor_id}/#
+#   topic read honeypot/global/#
+#   topic read honeypot/control/#

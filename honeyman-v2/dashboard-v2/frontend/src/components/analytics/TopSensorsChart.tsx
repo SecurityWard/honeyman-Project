@@ -9,6 +9,17 @@ interface TopSensorsChartProps {
 const COLORS = ['#dc2626', '#ea580c', '#f59e0b', '#3b82f6', '#8b5cf6', '#06b6d4', '#10b981'];
 
 export default function TopSensorsChart({ data, height = 300 }: TopSensorsChartProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="chart-container">
+        <h3>Top Sensors by Activity</h3>
+        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>
+          No sensor data available for the selected time period
+        </div>
+      </div>
+    );
+  }
+
   const chartData = data.map(sensor => ({
     name: sensor.sensor_name || sensor.sensor_id,
     value: sensor.threat_count,
@@ -25,7 +36,7 @@ export default function TopSensorsChart({ data, height = 300 }: TopSensorsChartP
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={(props: any) => `${props.name}: ${props.percentage.toFixed(1)}%`}
+            label={(props: any) => `${props.name}: ${props.percentage?.toFixed(1) || 0}%`}
             outerRadius={80}
             fill="#8884d8"
             dataKey="value"
@@ -42,7 +53,7 @@ export default function TopSensorsChart({ data, height = 300 }: TopSensorsChartP
               boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
             }}
             formatter={(value: number, _name: string, props: any) => [
-              `${value} (${props.payload.percentage.toFixed(1)}%)`,
+              `${value} (${props.payload?.percentage?.toFixed(1) || 0}%)`,
               'Threats'
             ]}
           />

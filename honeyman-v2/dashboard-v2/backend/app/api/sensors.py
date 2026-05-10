@@ -28,8 +28,7 @@ async def list_sensors(
     page_size: int = Query(50, ge=1, le=100),
     is_active: Optional[bool] = None,
     is_online: Optional[bool] = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     """List all sensors with pagination and filters"""
 
@@ -66,8 +65,7 @@ async def list_sensors(
 @router.get("/sensors/{sensor_id}", response_model=SensorResponse)
 async def get_sensor(
     sensor_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get sensor by ID"""
 
@@ -146,8 +144,7 @@ async def delete_sensor(
 @router.get("/sensors/{sensor_id}/stats", response_model=SensorStats)
 async def get_sensor_stats(
     sensor_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     """Get sensor statistics"""
 

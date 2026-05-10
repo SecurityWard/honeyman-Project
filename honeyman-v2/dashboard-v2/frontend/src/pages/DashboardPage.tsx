@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import DashboardOverview from '../components/dashboard/DashboardOverview';
+import DateRangeSelector, { type DateRange } from '../components/dashboard/DateRangeSelector';
 import ThreatMap from '../components/map/ThreatMap';
 import ThreatTrendsChart from '../components/analytics/ThreatTrendsChart';
 import TopThreatsChart from '../components/analytics/TopThreatsChart';
@@ -10,14 +11,33 @@ import type { Threat } from '../types';
 import websocketService from '../services/websocket';
 import './DashboardPage.css';
 
+// Helper function to convert date range to hours
+function getHoursFromRange(range: DateRange): number | undefined {
+  if (range.preset === 'all') return undefined;
+  if (range.preset === '24h') return 24;
+  if (range.preset === '7d') return 24 * 7;
+  if (range.preset === '30d') return 24 * 30;
+  if (range.preset === '90d') return 24 * 90;
+
+  if (range.preset === 'custom' && range.startDate && range.endDate) {
+    const diff = range.endDate.getTime() - range.startDate.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60)); // Convert ms to hours
+  }
+
+  return 24; // Default to 24 hours
+}
+
 export default function DashboardPage() {
   const [recentThreats, setRecentThreats] = useState<Threat[]>([]);
+  const [dateRange, setDateRange] = useState<DateRange>({ preset: '7d' });
+
+  const hours = getHoursFromRange(dateRange);
 
   const { data: overview, isLoading: overviewLoading } = useDashboardOverview();
-  const { data: trends, isLoading: trendsLoading } = useThreatTrends('hourly', 24);
-  const { data: topThreats, isLoading: topThreatsLoading } = useTopThreats(7);
-  const { data: topSensors, isLoading: topSensorsLoading } = useTopSensors(5);
-  const { data: geoData, isLoading: geoLoading } = useGeoMap(24);
+  const { data: trends, isLoading: trendsLoading } = useThreatTrends('hourly', hours || 8760); // 8760 = 1 year
+  const { data: topThreats, isLoading: topThreatsLoading } = useTopThreats(7, hours || undefined);
+  const { data: topSensors, isLoading: topSensorsLoading } = useTopSensors(5, hours || undefined);
+  const { data: geoData, isLoading: geoLoading } = useGeoMap(hours || undefined);
   const { data: threatsData } = useThreats({ page: 1, page_size: 20 });
 
   // WebSocket real-time updates
@@ -35,6 +55,8 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-page">
+      <DateRangeSelector value={dateRange} onChange={setDateRange} />
+
       {overview && <DashboardOverview overview={overview} />}
 
       <div className="dashboard-grid">

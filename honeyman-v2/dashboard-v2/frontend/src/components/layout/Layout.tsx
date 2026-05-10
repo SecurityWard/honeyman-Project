@@ -7,8 +7,11 @@ export default function Layout() {
       <header className="header">
         <div className="header-content">
           <div className="brand">
-            <h1>🍯 Honeyman V2</h1>
-            <span className="version">Dashboard</span>
+            <img src="/honeyman-logo.svg" alt="Honeyman Logo" className="brand-logo" />
+            <div className="brand-text">
+              <h1>Honeyman V2</h1>
+              <span className="version">Dashboard</span>
+            </div>
           </div>
 
           <nav className="nav">
@@ -23,6 +26,12 @@ export default function Layout() {
               className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
             >
               Sensors
+            </NavLink>
+            <NavLink
+              to="/about"
+              className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+            >
+              About
             </NavLink>
           </nav>
 

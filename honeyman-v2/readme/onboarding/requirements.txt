@@ -1,0 +1,7 @@
+# Honeyman V2 - Provisioning API Requirements
+
+flask>=2.3.0
+flask-limiter>=3.5.0
+psycopg2-binary>=2.9.9
+gunicorn>=21.2.0
+python-dotenv>=1.0.0

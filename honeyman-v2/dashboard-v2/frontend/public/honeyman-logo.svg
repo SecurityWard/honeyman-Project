@@ -1,0 +1,40 @@
+<svg width="200" height="220" viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Hexagon border -->
+  <path d="M100 10 L180 55 L180 145 L100 190 L20 145 L20 55 Z" stroke="#000" stroke-width="6" fill="none"/>
+
+  <!-- Inner hexagon border -->
+  <path d="M100 20 L170 60 L170 140 L100 180 L30 140 L30 60 Z" stroke="#000" stroke-width="4" fill="none"/>
+
+  <!-- Vitruvian Man silhouette -->
+  <!-- Head -->
+  <circle cx="100" cy="60" r="12" fill="#000"/>
+  <!-- Body -->
+  <rect x="94" y="72" width="12" height="38" fill="#000"/>
+  <!-- Left arm extended -->
+  <path d="M94 80 L94 85 L55 95 L55 90 Z" fill="#000"/>
+  <path d="M50 88 L48 94 L52 96 L56 93 L58 90 L54 88 Z" fill="#000"/>
+  <!-- Right arm extended -->
+  <path d="M106 80 L106 85 L145 95 L145 90 Z" fill="#000"/>
+  <path d="M150 88 L152 94 L148 96 L144 93 L142 90 L146 88 Z" fill="#000"/>
+  <!-- Left leg -->
+  <path d="M94 110 L85 155 L85 160 L80 160 L80 155 Z" fill="#000"/>
+  <path d="M78 158 L76 164 L80 166 L84 163 L86 160 L82 158 Z" fill="#000"/>
+  <!-- Right leg -->
+  <path d="M106 110 L115 155 L115 160 L120 160 L120 155 Z" fill="#000"/>
+  <path d="M122 158 L124 164 L120 166 L116 163 L114 160 L118 158 Z" fill="#000"/>
+
+  <!-- Honeycomb pattern (left side) -->
+  <path d="M35 75 L42 71 L49 75 L49 83 L42 87 L35 83 Z M35 91 L42 87 L49 91 L49 99 L42 103 L35 99 Z M35 107 L42 103 L49 107 L49 115 L42 119 L35 115 Z M51 83 L58 79 L65 83 L65 91 L58 95 L51 91 Z M51 99 L58 95 L65 99 L65 107 L58 111 L51 107 Z"
+        stroke="#000" stroke-width="2.5" fill="none"/>
+
+  <!-- Circuit pattern (right side) -->
+  <circle cx="155" cy="80" r="5" fill="#000"/>
+  <circle cx="165" cy="75" r="5" fill="#000"/>
+  <circle cx="160" cy="95" r="5" fill="#000"/>
+  <circle cx="150" cy="105" r="5" fill="#000"/>
+  <circle cx="165" cy="110" r="5" fill="#000"/>
+  <line x1="155" y1="80" x2="165" y2="75" stroke="#000" stroke-width="3"/>
+  <line x1="155" y1="80" x2="160" y2="95" stroke="#000" stroke-width="3"/>
+  <line x1="160" y1="95" x2="150" y2="105" stroke="#000" stroke-width="3"/>
+  <line x1="160" y1="95" x2="165" y2="110" stroke="#000" stroke-width="3"/>
+</svg>

@@ -1,4 +1,5 @@
 import type { DashboardOverview as DashboardOverviewType } from '../../types';
+import TooltipIcon from '../common/TooltipIcon';
 import './DashboardOverview.css';
 
 interface DashboardOverviewProps {
@@ -8,46 +9,52 @@ interface DashboardOverviewProps {
 export default function DashboardOverview({ overview }: DashboardOverviewProps) {
   const stats = [
     {
-      label: 'Total Threats (24h)',
-      value: overview.total_threats_24h.toLocaleString(),
-      icon: '🚨',
+      label: 'Total Threats',
+      value: overview.total_threats.toLocaleString(),
       color: 'red',
+      tooltip: 'Total number of security threats detected across all sensors',
+    },
+    {
+      label: 'Threats (24h)',
+      value: overview.threats_last_24h.toLocaleString(),
+      color: 'orange',
+      tooltip: 'Number of threats detected in the last 24 hours',
     },
     {
       label: 'Critical Threats',
-      value: overview.critical_threats_24h.toLocaleString(),
-      icon: '⚠️',
-      color: 'orange',
+      value: overview.critical_threats.toLocaleString(),
+      color: 'purple',
+      tooltip: 'Threats with critical severity requiring immediate attention',
+    },
+    {
+      label: 'High Threats',
+      value: overview.high_threats.toLocaleString(),
+      color: 'pink',
+      tooltip: 'Threats with high severity that should be investigated',
     },
     {
       label: 'Active Sensors',
       value: `${overview.active_sensors} / ${overview.total_sensors}`,
-      icon: '📡',
       color: 'blue',
+      tooltip: 'Number of sensors currently enabled and configured',
     },
     {
-      label: 'Threat Rate',
-      value: `${overview.threat_rate_per_hour.toFixed(1)}/hr`,
-      icon: '📊',
-      color: 'purple',
-    },
-    {
-      label: 'Top Threat Type',
-      value: overview.top_threat_type || 'None',
-      icon: '🎯',
+      label: 'Online Sensors',
+      value: overview.online_sensors.toLocaleString(),
       color: 'green',
+      tooltip: 'Number of sensors currently connected and reporting data',
     },
     {
-      label: 'Top Detector',
-      value: overview.top_detector || 'None',
-      icon: '🔍',
+      label: 'Threat Velocity',
+      value: `${overview.threat_velocity.toFixed(1)}/hr`,
       color: 'teal',
+      tooltip: 'Average rate of threat detection (threats per hour)',
     },
     {
-      label: 'Avg Confidence',
-      value: `${(overview.avg_confidence_score * 100).toFixed(1)}%`,
-      icon: '📈',
+      label: 'Avg Threat Score',
+      value: overview.avg_threat_score ? `${(overview.avg_threat_score * 100).toFixed(1)}%` : 'N/A',
       color: 'indigo',
+      tooltip: 'Average confidence score of detected threats (0-100%)',
     },
   ];
 
@@ -57,10 +64,12 @@ export default function DashboardOverview({ overview }: DashboardOverviewProps) 
       <div className="stats-grid">
         {stats.map((stat, index) => (
           <div key={index} className={`stat-card stat-${stat.color}`}>
-            <div className="stat-icon">{stat.icon}</div>
             <div className="stat-content">
               <div className="stat-value">{stat.value}</div>
-              <div className="stat-label">{stat.label}</div>
+              <div className="stat-label">
+                {stat.label}
+                <TooltipIcon text={stat.tooltip} />
+              </div>
             </div>
           </div>
         ))}

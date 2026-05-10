@@ -40,14 +40,16 @@ export interface Threat {
 
 // Analytics types
 export interface DashboardOverview {
-  total_threats_24h: number;
   total_sensors: number;
   active_sensors: number;
-  critical_threats_24h: number;
-  threat_rate_per_hour: number;
-  top_threat_type: string;
-  top_detector: string;
-  avg_confidence_score: number;
+  online_sensors: number;
+  total_threats: number;
+  threats_last_24h: number;
+  threats_last_7d: number;
+  critical_threats: number;
+  high_threats: number;
+  threat_velocity: number;
+  avg_threat_score: number | null;
 }
 
 export interface ThreatTrend {

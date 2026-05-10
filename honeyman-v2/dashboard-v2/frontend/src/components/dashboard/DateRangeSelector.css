@@ -1,0 +1,183 @@
+.date-range-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.date-range-label {
+  font-weight: 500;
+  color: #374151;
+  font-size: 14px;
+}
+
+.date-range-dropdown {
+  position: relative;
+}
+
+.date-range-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 180px;
+  justify-content: space-between;
+}
+
+.date-range-button:hover {
+  border-color: #9ca3af;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+}
+
+.dropdown-arrow {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.date-range-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  z-index: 1000;
+  min-width: 180px;
+  overflow: hidden;
+}
+
+.preset-option {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  text-align: left;
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.preset-option:hover {
+  background: #f3f4f6;
+}
+
+.preset-option.active {
+  background: #e0e7ff;
+  color: #667eea;
+  font-weight: 600;
+}
+
+.custom-range-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.custom-range-content {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+}
+
+.custom-range-content h3 {
+  margin: 0 0 20px 0;
+  color: #1f2937;
+  font-size: 18px;
+}
+
+.date-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.date-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.date-input-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.date-input-group input {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+  background: white;
+  color: #374151;
+}
+
+.date-input-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.custom-range-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.btn-cancel,
+.btn-apply {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-cancel {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn-cancel:hover {
+  background: #e5e7eb;
+}
+
+.btn-apply {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-apply:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.btn-apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
