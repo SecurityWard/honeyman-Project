@@ -1,56 +1,74 @@
 # Honeyman Agent V2 - Example Configuration
+#
+# Default config path: /etc/honeyman/config.yaml
+# Override with: honeyman-agent --config /path/to/config.yaml
 
-sensor_id: sensor_001
-sensor_name: "RPI5-DefCon-Portable"
+# --- Sensor identity -------------------------------------------------
+# Both of these are written by install.sh after the sensor self-registers.
+sensor_id: "<assigned-by-server>"   # e.g. defcon-hotel-7x9k
+sensor_name: "Honeyman Sensor"
 
-# Detection rules directory
+# Detection rules directory. The rule engine watches this dir and reloads
+# on file change (inotify on Linux).
 rules_dir: /etc/honeyman/rules
 
-# Heartbeat interval (seconds)
+# Heartbeat interval in seconds. Heartbeats also carry the current location
+# so idle sensors stay visible on the dashboard map.
 heartbeat_interval: 60
 
-# Transport configuration
+# --- Transport -------------------------------------------------------
+# V2 default: HTTPS + per-sensor API key. The key lives in a separate file
+# (mode 0600) so the YAML config can be safely shared/version-controlled.
+#
+# To opt into MQTT instead, set transport.protocol: mqtt and fill in the
+# mqtt block below. HTTPS is the recommended default - no broker needed.
 transport:
-  protocol: mqtt  # Primary: mqtt, Fallback: http
-  fallback: http
+  protocol: https      # https (default) | mqtt
+  fallback: none       # none (default) | https | mqtt
 
-  mqtt:
-    broker: mqtt.honeyman.com
-    port: 8883
-    username: sensor_001
-    password: YOUR_PASSWORD_HERE
-    use_tls: true
-    qos: 1
-
-  http:
-    base_url: https://api.honeyman.com
-    api_key: YOUR_API_KEY_HERE
+  https:
+    base_url: https://api.honeyman.io
+    api_prefix: /api/v2
+    api_key_file: /etc/honeyman/api_key   # contains the plaintext key, mode 0600
+    # api_key: "hms_..."                  # uncomment to override the file (testing only)
     timeout: 30
     verify_ssl: true
 
-# Detector modules
+  # Optional. Only used when protocol or fallback references mqtt.
+  mqtt:
+    broker: ""           # e.g. mqtt.honeyman.io
+    port: 8883
+    username: ""
+    password: ""
+    use_tls: true
+    qos: 1
+
+# --- Detector toggles -----------------------------------------------
+# install.sh sets these based on detected hardware.
 detectors:
   usb: true
-  wifi: false  # Requires monitor mode adapter
-  bluetooth: false  # Requires BLE hardware
-  network: true
-  airdrop: false  # Requires macOS or specific WiFi chipset
+  wifi: false       # requires monitor-mode capable WiFi adapter
+  bluetooth: false  # requires BLE hardware
+  network: true     # OpenCanary integration
+  airdrop: false    # requires avahi-utils (Linux) or dns-sd (macOS)
 
-# USB detector settings
+# --- Per-detector settings -----------------------------------------
 usb:
   hash_database_path: /etc/honeyman/data/malware_hashes.db
   scan_storage_devices: true
   max_file_size_mb: 100
 
-# Location service
+# --- Location service -----------------------------------------------
+# GPS -> WiFi positioning -> IP, in that order. IP fallback always works.
+# Operator-pinned coordinates can be set via the install script.
 location:
   enabled: true
-  gps_enabled: false  # Requires GPS hardware
-  google_geolocation_api_key: null  # Optional: for WiFi positioning
+  gps_enabled: false                       # set true if a gpsd-compatible GPS is attached
+  google_geolocation_api_key: null         # optional; falls back to ipapi.co if absent
 
-# Logging
+# --- Logging ---------------------------------------------------------
 logging:
-  level: INFO  # DEBUG, INFO, WARNING, ERROR
+  level: INFO     # DEBUG | INFO | WARNING | ERROR
   file: /var/log/honeyman/agent.log
-  max_bytes: 10485760  # 10MB
+  max_bytes: 10485760   # 10MB
   backup_count: 5

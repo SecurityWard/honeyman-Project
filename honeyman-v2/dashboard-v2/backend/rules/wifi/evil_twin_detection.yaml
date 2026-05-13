@@ -1,0 +1,45 @@
+rule_id: wifi_evil_twin_001
+name: "Evil Twin Access Point Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: evil_twin
+category: wifi
+
+# Detect evil twin access points
+conditions:
+  operator: AND
+  clauses:
+    # Strong signal strength (close proximity)
+    - type: signal_strength
+      field: rssi
+      operator: greater_than
+      value: -50
+
+    # Suspicious SSID patterns
+    - type: ssid_match
+      field: ssid
+      operator: regex
+      pattern: ".*(free.*wifi|public|guest|defcon|blackhat|airport).*"
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1557.002  # Adversary-in-the-Middle: ARP Cache Poisoning
+  references:
+    - https://attack.mitre.org/techniques/T1557/002/
+  tags:
+    - evil_twin
+    - wifi
+    - mitm
+  description: "Detects evil twin WiFi access points by correlating SSID and signal strength"
+
+tuning:
+  confidence_threshold: 0.85
+  max_alerts_per_hour: 20

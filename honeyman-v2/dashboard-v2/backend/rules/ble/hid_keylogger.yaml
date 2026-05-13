@@ -1,0 +1,46 @@
+rule_id: ble_hid_keylogger_001
+name: "BLE HID Keylogger Detection"
+version: 2.0
+enabled: true
+severity: critical
+threat_type: ble_keylogger
+category: ble
+
+# Detect BLE HID keyloggers
+conditions:
+  operator: AND
+  clauses:
+    # HID service UUID
+    - type: service_name
+      field: service_uuid
+      operator: equals
+      value: "00001812-0000-1000-8000-00805f9b34fb"
+
+    # Suspicious device names
+    - type: file_pattern
+      field: device_name
+      operator: regex
+      pattern: ".*(keylog|logger|keyboard|input|hid).*"
+
+actions:
+  - type: alert_dashboard
+    priority: critical
+
+  - type: local_log
+    severity: critical
+
+metadata:
+  mitre_attack:
+    - T1056.001  # Keylogging
+    - T1200  # Hardware Additions
+  tags:
+    - ble_keylogger
+    - hid_service
+    - input_capture
+    - hardware_implant
+  description: "Detects BLE-based keyloggers using HID service"
+  confidence: 0.90
+
+tuning:
+  max_alerts_per_hour: 5
+  cooldown_seconds: 600

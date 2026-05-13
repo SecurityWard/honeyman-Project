@@ -1,0 +1,58 @@
+rule_id: usb_omg_cable_001
+name: "O.MG Cable Detection"
+version: 2.0
+enabled: true
+severity: critical
+threat_type: omg_cable
+category: usb
+
+# Detect O.MG malicious cables
+conditions:
+  operator: OR
+  clauses:
+    # O.MG cables spoofing Apple Lightning
+    - type: device_vendor
+      field: vid_pid
+      operator: in
+      values:
+        - "05ac:024f"  # Apple Lightning (spoofed)
+        - "05ac:12a8"  # Apple USB-C (spoofed)
+        - "05ac:1460"  # Apple USB-C (spoofed)
+
+    # Product string indicators
+    - type: file_pattern
+      field: product_name
+      operator: regex
+      pattern: ".*(O\\.?M\\.?G|Elite|OMG.*Cable).*"
+
+    # Manufacturer indicators
+    - type: file_pattern
+      field: manufacturer
+      operator: regex
+      pattern: ".*(MG|O\\.MG|Elite).*"
+
+actions:
+  - type: alert_dashboard
+    priority: critical
+
+  - type: local_log
+    severity: critical
+
+metadata:
+  mitre_attack:
+    - T1200  # Hardware Additions
+    - T1557  # Adversary-in-the-Middle
+    - T1600  # Weaken Encryption
+  references:
+    - https://mg.lol/
+  tags:
+    - omg_cable
+    - malicious_cable
+    - hardware_implant
+    - supply_chain_attack
+  description: "Detects O.MG malicious USB cables with embedded WiFi payload delivery"
+  confidence: 0.95
+
+tuning:
+  max_alerts_per_hour: 5
+  cooldown_seconds: 600

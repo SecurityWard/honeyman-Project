@@ -1,0 +1,68 @@
+rule_id: network_web_attack_001
+name: "Web Application Attack Detection"
+version: 2.0
+enabled: true
+severity: medium
+threat_type: web_attack
+category: network
+
+# Detect web application attacks
+conditions:
+  operator: OR
+  clauses:
+    # OpenCanary HTTP request
+    - type: network
+      field: logtype
+      operator: equals
+      value: "http.request"
+
+    # SQL injection patterns
+    - type: pattern
+      field: request_path
+      operator: regex
+      pattern: ".*(union|select|insert|update|delete|drop|;--|' or |\" or ).*"
+
+    # Path traversal
+    - type: pattern
+      field: request_path
+      operator: regex
+      pattern: ".*(\\.\\./|\\.\\.\\\\|%2e%2e).*"
+
+    # Admin panel probing
+    - type: pattern
+      field: request_path
+      operator: regex
+      pattern: ".*(admin|login|phpMyAdmin|wp-admin|manager|console).*"
+
+    # Common exploit paths
+    - type: pattern
+      field: request_path
+      operator: regex
+      pattern: ".*(shell|cmd|exec|eval|system|passwd|config).*"
+
+actions:
+  - type: alert_dashboard
+    priority: medium
+
+  - type: local_log
+    severity: medium
+
+metadata:
+  mitre_attack:
+    - T1190  # Exploit Public-Facing Application
+    - T1505.003  # Web Shell
+    - T1082  # System Information Discovery
+  tags:
+    - web
+    - http
+    - sql_injection
+    - path_traversal
+    - web_shell
+    - honeypot
+  description: "Detects web application attacks including SQLi, path traversal, and admin probing"
+  confidence: 0.65
+
+tuning:
+  max_alerts_per_hour: 200
+  cooldown_seconds: 10
+  false_positive_prone: true  # Web scanners very common

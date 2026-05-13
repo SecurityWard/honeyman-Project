@@ -1,0 +1,51 @@
+rule_id: wifi_suspicious_ssid_001
+name: "Suspicious SSID Pattern Detection"
+version: 2.0
+enabled: true
+severity: medium
+threat_type: suspicious_ssid
+category: wifi
+
+# Detect suspicious SSID patterns
+conditions:
+  operator: OR
+  clauses:
+    # Free WiFi lures
+    - type: ssid_match
+      field: ssid
+      operator: regex
+      pattern: ".*(Free.*WiFi|Open.*WiFi|Public.*WiFi|.*_Free|.*Guest|.*Complimentary).*"
+
+    # Setup/Admin pages
+    - type: ssid_match
+      field: ssid
+      operator: regex
+      pattern: ".*(Setup|Config|Admin|DIRECT-).*"
+
+    # Prank/Attack SSIDs
+    - type: ssid_match
+      field: ssid
+      operator: regex
+      pattern: ".*(FBI|NSA|Surveillance|Virus|Hack|Pwn|Exploit|Crack).*"
+
+actions:
+  - type: alert_dashboard
+    priority: medium
+
+  - type: local_log
+    severity: medium
+
+metadata:
+  mitre_attack:
+    - T1566  # Phishing
+  tags:
+    - suspicious_ssid
+    - social_engineering
+    - honeypot_detection
+  description: "Detects suspicious SSID patterns indicating attacks or honeypots"
+  confidence: 0.60
+
+tuning:
+  max_alerts_per_hour: 50
+  false_positive_prone: true
+  whitelist_check: true

@@ -1,5 +1,5 @@
 """
-Onboarding schemas — V2 self-register flow.
+Onboarding schemas - V2 self-register flow.
 
 A sensor calls POST /sensors/register with its self-selected name and
 hardware capabilities. The backend assigns a unique sensor_id (with a
@@ -40,7 +40,7 @@ class SensorRegistration(BaseModel):
     agent_version: str | None = None
     python_version: str | None = None
 
-    # Optional initial location — operator can pin a sensor at install time
+    # Optional initial location - operator can pin a sensor at install time
     initial_location: dict[str, Any] | None = Field(
         default=None,
         description='Optional. {"latitude": float, "longitude": float, "method": "manual", "accuracy": float}',
@@ -49,7 +49,7 @@ class SensorRegistration(BaseModel):
 
 class SensorRegistrationResponse(BaseModel):
     """
-    Returned exactly once. The plaintext api_key is never retrievable again —
+    Returned exactly once. The plaintext api_key is never retrievable again -
     the install script writes it to /etc/honeyman/credentials.
     """
 
@@ -59,7 +59,7 @@ class SensorRegistrationResponse(BaseModel):
     # Where to send data
     api_endpoint: str = Field(..., description='e.g. "https://api.honeyman.io/api/v2"')
 
-    # Optional MQTT details — only populated if the deployment offers MQTT
+    # Optional MQTT details - only populated if the deployment offers MQTT
     mqtt_enabled: bool = False
     mqtt_broker: str | None = None
     mqtt_port: int | None = None

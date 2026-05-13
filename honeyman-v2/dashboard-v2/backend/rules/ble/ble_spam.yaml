@@ -1,0 +1,52 @@
+rule_id: ble_spam_001
+name: "BLE Spam/Beacon Flooding Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: ble_spam
+category: ble
+
+# Detect BLE spam attacks (beacon flooding, rapid name changes)
+conditions:
+  operator: OR
+  clauses:
+    # Spam-related device names
+    - type: file_pattern
+      field: device_name
+      operator: regex
+      pattern: ".*(spam|flood|beacon|rapid|annoying).*"
+
+    # Rapid appearance pattern
+    - type: behavioral
+      metric: appearance_rate
+      operator: anomaly
+      threshold: 10.0
+
+    # Rapid name changes
+    - type: behavioral
+      metric: name_change_rate
+      operator: anomaly
+      threshold: 5.0
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1499  # Endpoint Denial of Service
+  tags:
+    - ble_spam
+    - beacon_flood
+    - rapid_advertisement
+    - dos
+  description: "Detects BLE spam attacks including beacon flooding and rapid name changes"
+  confidence: 0.90
+
+tuning:
+  appearance_threshold: 10  # per minute
+  name_change_threshold: 5  # per minute
+  max_alerts_per_hour: 20

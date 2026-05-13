@@ -11,7 +11,7 @@ import logging
 import asyncio
 
 from .core.config import settings
-from .api import sensors, threats, analytics, onboarding, websocket as ws_router
+from .api import sensors, threats, analytics, onboarding, rules, websocket as ws_router
 from .mqtt.subscriber import mqtt_subscriber
 from .services.redis_client import redis_client
 from .services.websocket import manager
@@ -96,6 +96,7 @@ app.include_router(sensors.router, prefix=settings.API_PREFIX, tags=["sensors"])
 app.include_router(threats.router, prefix=settings.API_PREFIX, tags=["threats"])
 app.include_router(analytics.router, prefix=settings.API_PREFIX, tags=["analytics"])
 app.include_router(onboarding.router, prefix=settings.API_PREFIX, tags=["onboarding"])
+app.include_router(rules.router, prefix=settings.API_PREFIX, tags=["rules"])
 app.include_router(ws_router.router, prefix=settings.API_PREFIX, tags=["websocket"])
 
 
@@ -121,7 +122,7 @@ async def startup_event():
         except Exception as e:
             logger.error(f"Failed to start MQTT subscriber: {e}")
     else:
-        logger.info("MQTT_OFFERED=False — skipping MQTT subscriber. Sensors push via HTTPS.")
+        logger.info("MQTT_OFFERED=False - skipping MQTT subscriber. Sensors push via HTTPS.")
 
     # Start WebSocket Redis subscriber
     try:

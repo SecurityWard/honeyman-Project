@@ -155,73 +155,135 @@ class BaseDetector(ABC):
 
     async def create_threat(self, event: Dict[str, Any], rules: List[Any]) -> Dict[str, Any]:
         """
-        Create standardized threat object
+        Create a threat payload that matches the backend's POST /v2/threats schema.
+
+        See dashboard-v2/backend/app/schemas/threat.py — ThreatCreate. The
+        envelope here is what the backend will accept directly; extra fields
+        (sensor_name, message, etc.) are dropped by Pydantic so we don't
+        bother sending them.
 
         Args:
-            event: Raw event data
-            rules: List of matched rules
+            event: Raw event data from the detector
+            rules: List of matched rule objects
 
         Returns:
-            Standardized threat dictionary
+            Threat dict ready to ship via transport.send(threat, topic='threats')
         """
-        # Calculate threat score (average of all matching rules)
         threat_score = self._calculate_threat_score(rules)
-        risk_level = self._get_risk_level(threat_score)
+        severity = self._get_risk_level(threat_score)
+        confidence = self._max_confidence(rules)
 
-        # Get current location
+        # Pull a top-level latitude/longitude (backend stores them denormalised
+        # on the threat row so the map can render without joining the sensor table).
         location = await self.location_service.get_location()
 
-        # Build threat object
-        threat = {
-            'timestamp': datetime.utcnow().isoformat(),
-            'sensor_id': self.config.get('sensor_id'),
-            'sensor_name': self.config.get('sensor_name'),
-            'source': self.detector_name,
-            'threat_type': rules[0].threat_type if rules else 'unknown',
-            'threat_score': threat_score,
-            'risk_level': risk_level,
-            'threats_detected': [r.name for r in rules],
-            'message': self._generate_message(event, rules),
-            'raw_data': event,
-            'metadata': self._get_metadata()
+        threat: Dict[str, Any] = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "sensor_id": self.config.get("sensor_id"),
+            "threat_type": rules[0].threat_type if rules else "unknown",
+            "detector_type": self._get_rule_category(),
+            "severity": severity,
+            "threat_score": threat_score,
+            "matched_rules": self._serialise_rules(rules),
+            "raw_event": event,
+            "mitre_tactics": self._collect_mitre(rules, "tactics"),
+            "mitre_techniques": self._collect_mitre(rules, "techniques"),
         }
 
-        # Add location if available
+        if confidence is not None:
+            threat["confidence"] = confidence
+
+        # Optional, well-known event fields the detectors commonly populate.
+        for key in (
+            "device_name", "device_mac", "device_ip",
+            "src_host", "src_port", "dst_host", "dst_port",
+        ):
+            if event.get(key) is not None:
+                threat[key] = event[key]
+
         if location:
-            threat['geolocation'] = {
-                'lat': location['lat'],
-                'lon': location['lon'],
-                'accuracy': location.get('accuracy'),
-                'source': location.get('source')
-            }
-            if 'city' in location:
-                threat['city'] = location['city']
-            if 'country' in location:
-                threat['country'] = location['country']
+            if location.get("lat") is not None:
+                threat["latitude"] = location["lat"]
+            if location.get("lon") is not None:
+                threat["longitude"] = location["lon"]
+            if location.get("city"):
+                threat["city"] = location["city"]
+            if location.get("country"):
+                threat["country"] = location["country"]
 
         return threat
 
-    async def send_threat(self, threat: Dict[str, Any]):
-        """
-        Send threat to dashboard via transport layer
+    @staticmethod
+    def _serialise_rules(rules: List[Any]) -> List[Dict[str, Any]]:
+        """Convert matched rule objects into dicts for the threat payload."""
+        out: List[Dict[str, Any]] = []
+        for rule in rules:
+            entry = {
+                "rule_id": getattr(rule, "rule_id", None),
+                "name": getattr(rule, "name", None),
+                "severity": getattr(rule, "severity", None),
+            }
+            confidence = getattr(rule, "confidence", None)
+            if confidence is not None:
+                entry["confidence"] = confidence
+            out.append(entry)
+        return out
 
-        Args:
-            threat: Threat dictionary
+    @staticmethod
+    def _max_confidence(rules: List[Any]) -> Optional[float]:
+        """Return the highest per-rule confidence in [0, 1], or None."""
+        confidences = [
+            getattr(r, "confidence", None) for r in rules
+        ]
+        confidences = [c for c in confidences if c is not None]
+        if not confidences:
+            return None
+        return max(min(float(c), 1.0) for c in confidences)
+
+    @staticmethod
+    def _collect_mitre(rules: List[Any], kind: str) -> List[str]:
         """
+        Pull MITRE ATT&CK tactics/techniques from rule metadata.
+
+        Rule objects expose metadata via either an `mitre_attack` flat list
+        (the YAML rules use this) or via `mitre_tactics` / `mitre_techniques`
+        on the metadata dict. We accept both.
+        """
+        seen: List[str] = []
+        for rule in rules:
+            meta = getattr(rule, "metadata", None) or {}
+            # New-style explicit fields
+            for item in meta.get(f"mitre_{kind}", []) or []:
+                if item not in seen:
+                    seen.append(item)
+            # Legacy flat list — best-effort: T1xxx ≈ technique, TA00xx ≈ tactic
+            for item in meta.get("mitre_attack", []) or []:
+                is_tactic = isinstance(item, str) and item.upper().startswith("TA")
+                if kind == "tactics" and is_tactic and item not in seen:
+                    seen.append(item)
+                elif kind == "techniques" and not is_tactic and item not in seen:
+                    seen.append(item)
+        return seen
+
+    async def send_threat(self, threat: Dict[str, Any]):
+        """Send a threat payload to the backend via the transport layer."""
         try:
-            # Send via transport layer
-            success = await self.transport.send(threat, topic='threats')
+            success = await self.transport.send(threat, topic="threats")
 
             if success:
+                score = threat.get("threat_score") or 0.0
                 logger.info(
-                    f"{self.detector_name} reported threat: "
-                    f"{threat['threat_type']} (score: {threat['threat_score']:.2f})"
+                    "%s reported threat: %s (severity=%s, score=%.2f)",
+                    self.detector_name,
+                    threat.get("threat_type", "unknown"),
+                    threat.get("severity", "?"),
+                    score,
                 )
             else:
-                logger.warning(f"Failed to send threat from {self.detector_name}")
+                logger.warning("Failed to send threat from %s", self.detector_name)
 
-        except Exception as e:
-            logger.error(f"Error sending threat: {e}")
+        except Exception as exc:
+            logger.error("Error sending threat: %s", exc)
 
     def _calculate_threat_score(self, rules: List[Any]) -> float:
         """

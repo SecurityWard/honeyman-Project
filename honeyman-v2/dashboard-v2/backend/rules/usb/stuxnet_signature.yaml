@@ -1,0 +1,59 @@
+rule_id: usb_stuxnet_001
+name: "Stuxnet Signature Detection"
+version: 2.0
+enabled: true
+severity: critical
+threat_type: stuxnet
+category: usb
+
+# Detect Stuxnet malware signatures
+conditions:
+  operator: OR
+  clauses:
+    # Stuxnet driver files
+    - type: file_pattern
+      field: filename
+      operator: in
+      values:
+        - "mrxcls.sys"
+        - "mrxnet.sys"
+
+    # Stuxnet-like patterns in file content
+    - type: file_pattern
+      field: file_content
+      operator: regex
+      pattern: ".*(MRxCls|MRxNet).*"
+
+actions:
+  - type: alert_dashboard
+    priority: critical
+
+  - type: local_log
+    severity: critical
+
+  - type: quarantine_file
+    enabled: true
+
+  - type: external_alert
+    services:
+      - siem
+      - incident_response
+
+metadata:
+  mitre_attack:
+    - T1091  # Replication Through Removable Media
+    - T1542  # Pre-OS Boot
+  cve:
+    - CVE-2010-2568  # LNK/PIF vulnerability
+  tags:
+    - stuxnet
+    - apt
+    - critical_infrastructure
+    - nation_state
+  description: "Detects Stuxnet worm signatures (critical APT malware)"
+  confidence: 0.99
+  threat_actor: "Equation Group / NSA"
+
+tuning:
+  max_alerts_per_hour: 1
+  escalate_immediately: true

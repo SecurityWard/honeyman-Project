@@ -1,0 +1,57 @@
+rule_id: usb_autorun_001
+name: "Autorun.inf Abuse Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: autorun_abuse
+category: usb
+
+# Detect autorun abuse and suspicious executable files
+conditions:
+  operator: OR
+  clauses:
+    # Autorun.inf file
+    - type: file_pattern
+      field: filename
+      operator: equals
+      pattern: "autorun.inf"
+
+    # Suspicious executable with autorun
+    - type: file_pattern
+      field: filename
+      operator: regex
+      pattern: ".*\\.(exe|scr|bat|cmd|ps1|vbs|js)$"
+
+    # Hidden system file patterns
+    - type: file_pattern
+      field: filename
+      operator: in
+      values:
+        - "desktop.ini"
+        - ".DS_Store"
+        - "Thumbs.db"
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1091  # Replication Through Removable Media
+    - T1547.009  # Boot or Logon Autostart: Shortcut Modification
+  tags:
+    - autorun
+    - persistence
+    - windows_exploit
+  description: "Detects autorun.inf and suspicious executables indicating autorun abuse"
+  confidence: 0.80
+
+tuning:
+  max_alerts_per_hour: 20
+  exclude_extensions:
+    - ".txt"
+    - ".jpg"
+    - ".png"

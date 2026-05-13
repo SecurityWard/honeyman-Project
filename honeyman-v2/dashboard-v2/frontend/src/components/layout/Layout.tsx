@@ -28,6 +28,12 @@ export default function Layout() {
               Sensors
             </NavLink>
             <NavLink
+              to="/add-sensor"
+              className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+            >
+              Add Sensor
+            </NavLink>
+            <NavLink
               to="/about"
               className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
             >

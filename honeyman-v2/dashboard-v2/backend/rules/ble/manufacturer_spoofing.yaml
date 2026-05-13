@@ -1,0 +1,44 @@
+rule_id: ble_manufacturer_spoofing_001
+name: "BLE Manufacturer Data Spoofing Detection"
+version: 2.0
+enabled: true
+severity: medium
+threat_type: manufacturer_spoofing
+category: ble
+
+# Detect manufacturer data spoofing
+conditions:
+  operator: AND
+  clauses:
+    # Device changing manufacturers
+    - type: behavioral
+      metric: manufacturer_switching
+      operator: anomaly
+      threshold: 2.0
+
+    # Suspicious manufacturer prefixes (Apple spoofing)
+    - type: file_pattern
+      field: manufacturer_data
+      operator: regex
+      pattern: "^4c00.*"  # Apple Inc.
+
+actions:
+  - type: alert_dashboard
+    priority: medium
+
+  - type: local_log
+    severity: medium
+
+metadata:
+  mitre_attack:
+    - T1036  # Masquerading
+  tags:
+    - manufacturer_spoofing
+    - apple_spoofing
+    - ble_masquerade
+  description: "Detects devices spoofing manufacturer data (e.g., Apple)"
+  confidence: 0.70
+
+tuning:
+  max_alerts_per_hour: 30
+  false_positive_prone: true

@@ -1,0 +1,53 @@
+rule_id: network_telnet_attack_001
+name: "Telnet Attack Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: telnet_attack
+category: network
+
+# Detect Telnet attacks (IoT botnet recruitment)
+conditions:
+  operator: OR
+  clauses:
+    # OpenCanary Telnet login attempt
+    - type: network
+      field: logtype
+      operator: equals
+      value: "telnet.login_attempt"
+
+    # Common IoT botnet credentials
+    - type: pattern
+      field: username
+      operator: regex
+      pattern: ".*(admin|root|default|user|support|tech).*"
+
+    - type: pattern
+      field: password
+      operator: regex
+      pattern: ".*(admin|password|default|12345|root|support).*"
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1110.001  # Brute Force: Password Guessing
+    - T1078  # Valid Accounts
+  tags:
+    - telnet
+    - iot_botnet
+    - mirai
+    - credential_attack
+    - honeypot
+  description: "Detects Telnet attacks commonly used for IoT botnet recruitment (Mirai, etc.)"
+  confidence: 0.90
+
+tuning:
+  max_alerts_per_hour: 40
+  cooldown_seconds: 90
+  note: "Telnet access to honeypot often indicates IoT botnet scanning"

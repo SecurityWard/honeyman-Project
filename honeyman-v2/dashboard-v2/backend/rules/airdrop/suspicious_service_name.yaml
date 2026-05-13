@@ -1,0 +1,45 @@
+rule_id: airdrop_suspicious_name_001
+name: "Suspicious AirDrop Service Name Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: airdrop_suspicious_name
+category: airdrop
+
+# Detect suspicious AirDrop service names
+conditions:
+  operator: OR
+  clauses:
+    # Attack-related names
+    - type: pattern
+      field: service_name
+      operator: regex
+      pattern: ".*(flipper|hack|pwn|test|exploit|payload|shell|attack|pentest).*"
+
+    # Tool-specific names
+    - type: pattern
+      field: service_name
+      operator: regex
+      pattern: ".*(metasploit|cobalt|empire|mimikatz|powershell).*"
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1566.002  # Phishing: Spearphishing Link
+    - T1036  # Masquerading
+  tags:
+    - airdrop
+    - proximity_attack
+    - social_engineering
+  description: "Detects suspicious AirDrop service names indicating attack tools"
+  confidence: 0.85
+
+tuning:
+  max_alerts_per_hour: 20
+  cooldown_seconds: 180

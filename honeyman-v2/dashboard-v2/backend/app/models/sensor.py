@@ -30,7 +30,7 @@ class Sensor(Base):
     # Location
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
-    location_method = Column(String(20), nullable=True)  # gps, wifi, ip, static
+    location_method = Column(String(20), nullable=True)  # gps, wifi, ip, manual
     location_accuracy = Column(Float, nullable=True)
     city = Column(String(100), nullable=True)
     country = Column(String(100), nullable=True)
@@ -51,8 +51,8 @@ class Sensor(Base):
     # }
 
     # System information
-    platform = Column(String(50), nullable=True)  # linux, darwin, etc.
-    architecture = Column(String(20), nullable=True)  # arm64, x86_64
+    platform = Column(String(50), nullable=True)        # rpi5, rpi4, linux, etc.
+    architecture = Column(String(20), nullable=True)    # arm64, x86_64
     agent_version = Column(String(20), nullable=True)
     python_version = Column(String(20), nullable=True)
 

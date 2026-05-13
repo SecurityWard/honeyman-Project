@@ -1,0 +1,165 @@
+.add-sensor-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.add-sensor-hero {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.add-sensor-hero h1 {
+  margin: 0 0 0.75rem 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.add-sensor-hero .lede {
+  margin: 0 auto;
+  max-width: 640px;
+  color: #4b5563;
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.install-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.install-card.secondary {
+  background: #f9fafb;
+}
+
+.install-card h2 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.install-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.install-card-header .hint {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.install-command {
+  position: relative;
+  margin: 1rem 0;
+}
+
+.install-command pre {
+  margin: 0;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 1rem 6rem 1rem 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.install-command code {
+  font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+  white-space: pre;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  background: #1f2937;
+  color: #ffffff;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.copy-btn:hover {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+.copy-btn.copied {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+.install-notes {
+  margin: 1rem 0 0 0;
+  padding-left: 1.25rem;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.install-notes li {
+  margin-bottom: 0.35rem;
+}
+
+.install-notes code {
+  background: #f3f4f6;
+  padding: 0 0.3rem;
+  border-radius: 3px;
+  font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 0.85em;
+}
+
+.block-code {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0.75rem 0 0 0;
+}
+
+.block-code code {
+  font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+  white-space: pre;
+}
+
+.capabilities-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  color: #374151;
+  line-height: 1.5;
+}
+
+@media (min-width: 640px) {
+  .capabilities-list {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem 1.5rem;
+  }
+}
+
+.install-card a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.install-card a:hover {
+  text-decoration: underline;
+}

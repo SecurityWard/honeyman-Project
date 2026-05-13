@@ -1,0 +1,47 @@
+rule_id: network_vnc_attack_001
+name: "VNC Remote Access Attack Detection"
+version: 2.0
+enabled: true
+severity: critical
+threat_type: vnc_attack
+category: network
+
+# Detect VNC remote access attempts
+conditions:
+  operator: OR
+  clauses:
+    # OpenCanary VNC login attempt
+    - type: network
+      field: logtype
+      operator: equals
+      value: "vnc.login_attempt"
+
+    # Multiple VNC connection attempts
+    - type: behavioral
+      metric: vnc_attempts
+      operator: threshold
+      threshold: 2
+
+actions:
+  - type: alert_dashboard
+    priority: critical
+
+  - type: local_log
+    severity: critical
+
+metadata:
+  mitre_attack:
+    - T1021.005  # Remote Services: VNC
+    - T1133  # External Remote Services
+  tags:
+    - vnc
+    - remote_access
+    - lateral_movement
+    - honeypot
+  description: "Detects VNC remote access attempts via honeypot"
+  confidence: 0.95
+
+tuning:
+  max_alerts_per_hour: 10
+  cooldown_seconds: 600
+  note: "VNC access to honeypot is almost always malicious"

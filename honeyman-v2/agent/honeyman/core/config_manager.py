@@ -38,41 +38,38 @@ class ConfigManager:
             return self._get_default_config()
 
     def _get_default_config(self) -> Dict[str, Any]:
-        """Get default configuration"""
+        """V2 defaults: HTTPS+API-key transport, no MQTT."""
         return {
             'sensor_id': 'unknown',
             'sensor_name': 'Unknown Sensor',
             'rules_dir': '/etc/honeyman/rules',
             'heartbeat_interval': 60,
             'transport': {
-                'protocol': 'mqtt',
-                'fallback': 'http',
-                'mqtt': {
-                    'broker': 'localhost',
-                    'port': 8883,
-                    'use_tls': True,
-                    'qos': 1
+                'protocol': 'https',
+                'fallback': 'none',
+                'https': {
+                    'base_url': 'https://api.honeyman.io',
+                    'api_prefix': '/api/v2',
+                    'api_key_file': '/etc/honeyman/api_key',
+                    'timeout': 30,
+                    'verify_ssl': True,
                 },
-                'http': {
-                    'base_url': 'https://api.honeyman.com',
-                    'timeout': 30
-                }
             },
             'detectors': {
                 'usb': True,
                 'wifi': False,
                 'bluetooth': False,
                 'network': True,
-                'airdrop': False
+                'airdrop': False,
             },
             'location': {
                 'enabled': True,
-                'gps_enabled': False
+                'gps_enabled': False,
             },
             'logging': {
                 'level': 'INFO',
-                'file': '/var/log/honeyman/agent.log'
-            }
+                'file': '/var/log/honeyman/agent.log',
+            },
         }
 
     def get(self, key: str, default: Any = None) -> Any:

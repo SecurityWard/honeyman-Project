@@ -1,0 +1,78 @@
+rule_id: usb_rubber_ducky_001
+name: "Rubber Ducky Hardware Detection"
+version: 2.0
+enabled: true
+severity: critical
+threat_type: rubber_ducky
+category: usb
+
+# Detect Rubber Ducky based on VID/PID signatures
+conditions:
+  operator: OR
+  clauses:
+    # ATMEL DFU mode
+    - type: device_vendor
+      field: vid_pid
+      operator: equals
+      value: "03eb:2401"
+
+    # USBaspLoader
+    - type: device_vendor
+      field: vid_pid
+      operator: equals
+      value: "16c0:05dc"
+
+    # Teensy-based devices
+    - type: device_vendor
+      field: vid_pid
+      operator: in
+      values:
+        - "16c0:047c"
+
+    # Arduino Leonardo (common Rubber Ducky base)
+    - type: device_vendor
+      field: vid_pid
+      operator: in
+      values:
+        - "1b4f:9206"
+        - "2341:0036"
+        - "2341:8036"
+        - "2a03:0036"
+
+    # Digispark
+    - type: device_vendor
+      field: vid_pid
+      operator: equals
+      value: "1209:2100"
+
+actions:
+  - type: alert_dashboard
+    priority: critical
+
+  - type: local_log
+    severity: critical
+
+  - type: quarantine_device
+    enabled: false
+
+metadata:
+  mitre_attack:
+    - T1091  # Replication Through Removable Media
+    - T1092  # Communication Through Removable Media
+    - T1200  # Hardware Additions
+  cve:
+    - CVE-2014-3704  # USB HID injection
+  references:
+    - https://attack.mitre.org/techniques/T1091/
+    - https://github.com/hak5darren/USB-Rubber-Ducky
+  tags:
+    - rubber_ducky
+    - hid_injection
+    - badusb
+    - hardware_implant
+  description: "Detects Rubber Ducky hardware based on VID/PID signatures"
+  confidence: 0.95
+
+tuning:
+  max_alerts_per_hour: 10
+  cooldown_seconds: 300

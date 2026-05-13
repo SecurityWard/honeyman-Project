@@ -1,0 +1,52 @@
+rule_id: wifi_esp8266_deauther_001
+name: "ESP8266 Deauther Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: esp8266_deauther
+category: wifi
+
+# Detect ESP8266-based deauthers
+conditions:
+  operator: OR
+  clauses:
+    # ESP8266 deauther SSIDs
+    - type: ssid_match
+      field: ssid
+      operator: regex
+      pattern: ".*(pwned|deauther|esp8266).*"
+
+    # ESP8266 MAC OUI
+    - type: mac_address
+      field: bssid
+      operator: regex
+      pattern: "^(5C:CF:7F|EC:FA:BC|2C:3A:E8):.*"
+
+    # Continuous deauth pattern
+    - type: behavioral
+      metric: continuous_deauth
+      operator: anomaly
+      threshold: 10.0
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1499  # Endpoint Denial of Service
+    - T1557  # Adversary-in-the-Middle
+  tags:
+    - esp8266
+    - deauther
+    - diy_attack_tool
+    - continuous_deauth
+  description: "Detects ESP8266-based WiFi deauther attack tools"
+  confidence: 0.85
+
+tuning:
+  max_alerts_per_hour: 15
+  cooldown_seconds: 180

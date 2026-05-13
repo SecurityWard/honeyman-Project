@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardPage from './pages/DashboardPage';
 import SensorsPage from './pages/SensorsPage';
 import AboutPage from './pages/AboutPage';
+import AddSensorPage from './pages/AddSensorPage';
 import Layout from './components/layout/Layout';
 import './App.css';
 
@@ -24,6 +25,7 @@ function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="sensors" element={<SensorsPage />} />
+            <Route path="add-sensor" element={<AddSensorPage />} />
             <Route path="about" element={<AboutPage />} />
           </Route>
         </Routes>

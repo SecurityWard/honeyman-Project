@@ -1,0 +1,53 @@
+rule_id: wifi_flipper_001
+name: "Flipper Zero WiFi Module Detection"
+version: 2.0
+enabled: true
+severity: high
+threat_type: flipper_wifi
+category: wifi
+
+# Detect Flipper Zero WiFi attacks
+conditions:
+  operator: OR
+  clauses:
+    # Flipper WiFi SSID patterns
+    - type: ssid_match
+      field: ssid
+      operator: regex
+      pattern: ".*(Flipper|FlipperZero|Marauder).*"
+
+    # Deauth capability indicator
+    - type: behavioral
+      metric: deauth_capability
+      operator: anomaly
+      threshold: 8.0
+
+    # Packet injection patterns
+    - type: behavioral
+      metric: packet_injection
+      operator: anomaly
+      threshold: 5.0
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1200  # Hardware Additions
+    - T1499  # Endpoint Denial of Service
+  product: "Flipper Zero WiFi Module"
+  tags:
+    - flipper_zero
+    - wifi_module
+    - deauth
+    - packet_injection
+  description: "Detects Flipper Zero device with WiFi attack module"
+  confidence: 0.90
+
+tuning:
+  max_alerts_per_hour: 10
+  cooldown_seconds: 300

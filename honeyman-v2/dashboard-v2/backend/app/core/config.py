@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     DATA_RETENTION_DAYS: int = 90
     CLEANUP_INTERVAL_HOURS: int = 24
 
+    # Rule distribution (Phase C)
+    # Directory of YAML rules served by GET /api/v2/rules.
+    # If None, defaults to <backend_root>/rules.
+    RULES_DIR: Optional[str] = None
+
     # Geolocation
     GOOGLE_GEOLOCATION_API_KEY: Optional[str] = None
     IP_GEOLOCATION_API_KEY: Optional[str] = None
