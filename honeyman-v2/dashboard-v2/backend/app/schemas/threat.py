@@ -30,6 +30,8 @@ class ThreatCreate(ThreatBase):
     longitude: Optional[float] = Field(None, ge=-180, le=180)
     city: Optional[str] = None
     country: Optional[str] = None
+    accuracy_meters: Optional[float] = Field(None, ge=0)
+    location_method: Optional[str] = None
     matched_rules: List[Dict[str, Any]] = Field(default_factory=list)
     confidence: Optional[float] = Field(None, ge=0, le=1)
     threat_score: Optional[float] = Field(None, ge=0, le=1)
@@ -52,6 +54,8 @@ class ThreatResponse(ThreatBase):
     longitude: Optional[float]
     city: Optional[str]
     country: Optional[str]
+    accuracy_meters: Optional[float]
+    location_method: Optional[str]
     matched_rules: List[Dict[str, Any]]
     confidence: Optional[float]
     threat_score: Optional[float]

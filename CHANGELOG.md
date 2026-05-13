@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### V2 Phase A / B / C — 2026-05
+
+**Phase A — End-to-end transport, schema alignment, API-key auth**
+- Agent: HTTPS+API-key is now the default transport. MQTT moved to opt-in (`transport.protocol: mqtt`, only initialized when explicitly configured)
+- Agent: `BaseDetector.create_threat()` emits a payload matching the backend's `ThreatCreate` schema directly (`detector_type`, `severity`, `matched_rules`, `raw_event`, top-level `latitude`/`longitude`)
+- Agent: `HeartbeatService` emits backend's `SensorHeartbeat` shape (`is_online`, `enabled_detectors` as list, `system_info`, `location` for the map)
+- Agent: HTTP client reads API key from `/etc/honeyman/api_key` (mode 0600), sends `Authorization: Bearer <key>` on all writes
+- Backend: removed JWT/RBAC/User model; reads are public, writes use per-sensor API keys (SHA256-hashed)
+- Backend: `POST /api/v2/sensors/register` returns one-time plaintext API key + ID; `authenticated_sensor` dep enforces key ↔ sensor_id binding
+- Backend: Alembic migration drops `users`, adds `api_key_hash` to `sensors`, drops `is_acknowledged`/`acknowledged_*` columns from `threats`
+- Frontend: removed JWT interceptor, login flows, and acknowledge/delete UI
+- Ops: `honeyman-v2/deployment/phase_a_apply.sh` — idempotent operator script for TimescaleDB install + schema reset + smoke test
+
+**Phase B — Self-register onboarding**
+- `install.sh` rewritten for the V2 self-register flow: calls `/api/v2/sensors/register`, captures one-time API key, drops V2 config + systemd unit
+- New `AddSensorPage` on the dashboard with a copy-able install command and non-interactive variant, wired into nav
+
+**Phase C — Resilience + central rule sync**
+- New `transport/offline_buffer.py`: SQLite-backed persistent FIFO at `/var/lib/honeyman/buffer.db`. Survives agent restarts; bounded at 10k rows
+- `ProtocolHandler` now uses the SQLite buffer (with deque fallback). On reconnect it batches the drain (100 at a time) with ack-on-success and stops on first failure to avoid hammering a flaky backend
+- New backend endpoint `GET /api/v2/rules`: returns `{version, count, generated_at, rules: [{path, category, sha256, content}]}`. Supports `?since_version=…` for short-circuit. Authenticated by sensor API key
+- 37 default rules seeded into `honeyman-v2/dashboard-v2/backend/rules/` from the agent tree (single source of truth for what gets pushed)
+- New agent service `core/rule_sync.py`: polls the backend every 5 min (disabled by default; opt-in via `rule_sync.enabled: true`). Writes new/changed YAML to `/etc/honeyman/rules/`. Path-traversal-protected. Preserves any rule with a `<rule>.yaml.local` marker file alongside it
+- Wired into agent lifecycle (`HoneymanAgent.initialize` / `.start` / `.stop`)
+
+### Removed
+- `archive/v2-removed-auth/` — old `auth.py`, JWT `security.py`, User model + schema
+- `archive/v2-removed-onboarding/` — duplicate standalone Flask `provisioning_api.py`
+- `archive/v1/` — V1 monolithic codebase, kept for reference
+
+
+
 ### Added
 - **Malware Hash Database**: Comprehensive 360+ signature database for USB threat detection
   - 62 USB worm signatures (Stuxnet, Conficker, Agent.btz, Flame, Gauss, DarkTequila)

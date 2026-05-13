@@ -106,23 +106,29 @@ The code is roughly **75–80% written but only ~25% deployed**. Reconciling the
 
 | Component | Code state | Operational state |
 |---|---|---|
-| Agent core (orchestrator, plugin manager, config) | ✅ Built | ⚠️ Not running on any sensor |
+| Agent core (orchestrator, plugin manager, config) | ✅ Built | ⚠️ Not yet running on a real sensor |
 | 5 detectors (USB, WiFi, BLE, AirDrop, Network) | ✅ Built | ⚠️ Not exercised end-to-end |
 | Rule engine + 35 YAML rules | ✅ Built | ✅ Loads correctly |
-| Transport (MQTT + HTTP fallback) | ⚠️ MQTT path only; needs HTTPS+API-key default | ❌ Not connected |
-| Location service | ⚠️ IP geolocation works; GPS + WiFi-positioning are TODO stubs | ❌ Not exercised |
-| SQLite offline buffer | ❌ Not built | ❌ |
-| Backend FastAPI app + 27 endpoints | ✅ Built | ⚠️ Code complete, not deployed |
-| Auth (JWT, RBAC, User model) | ✅ Built | 🗑 **DELETE per V2 vision** |
-| API key issuance + validation | ❌ Not built | ❌ |
-| MQTT subscriber | ✅ Built | ⚠️ Won't run without broker |
-| Postgres database | ✅ Schema defined | ✅ Created on VPS |
-| TimescaleDB hypertable + retention | ❌ Migration uses date_trunc as workaround | ❌ Extension not enabled |
-| Mosquitto broker | ⚠️ Configs written | ❌ Not deployed |
+| Transport: HTTPS+API-key default, MQTT optional | ✅ Built (Phase A) | ❌ Not yet connected to backend |
+| BaseDetector envelope aligned to backend schema | ✅ Built (Phase A) | — |
+| Heartbeat envelope aligned to backend schema | ✅ Built (Phase A) | — |
+| Location field-name fix (latitude/longitude top-level) | ✅ Built (Phase A) | — |
+| Location service | ⚠️ IP geolocation works; GPS + WiFi-positioning are TODO stubs (Phase D) | ❌ |
+| **SQLite offline buffer + persistent FIFO** | ✅ **Built (Phase C)** — `transport/offline_buffer.py`, wired into ProtocolHandler, unit tested | — |
+| **Central rule sync (`GET /api/v2/rules` + agent poll)** | ✅ **Built (Phase C)** — `app/api/rules.py` + agent `core/rule_sync.py`, `.local` marker protection, unit tested | ❌ Not yet polling from a real sensor |
+| Backend FastAPI app (no auth, public reads) | ✅ Built | ⚠️ Code complete, awaiting VPS deploy |
+| Auth (JWT, RBAC, User model) | 🗑 **Removed** — archived under `archive/v2-removed-auth/` | — |
+| API key issuance + validation | ✅ Built (cleanup) — SHA256-hashed per-sensor key, `Authorization: Bearer` on writes | — |
+| MQTT subscriber | ✅ Built | Only starts when `MQTT_OFFERED=true` |
+| Postgres database | ✅ Schema rewritten (no `users`, adds `api_key_hash`) | ✅ Created on VPS |
+| TimescaleDB hypertable + retention | ✅ Migration applies hypertable + 90d retention + 7d compression | ❌ Extension not yet enabled on VPS |
+| Mosquitto broker | ⚠️ Configs written | ❌ Not deployed (HTTPS is primary now) |
 | Frontend (Leaflet map, charts, sensor list) | ✅ Built and deployed | ✅ Visible at http://72.60.25.24:3000 |
-| Frontend auth UI | ❌ Not built | 🗑 **No longer needed** |
-| Sensor edit/detail UI | ❌ Stubbed | Build later |
-| Install script | ✅ Written | ⚠️ Untested on real Pi |
+| Frontend auth UI | 🗑 **Removed** | — |
+| **Frontend "Add Sensor" page** | ✅ **Built (Phase B)** — `pages/AddSensorPage.tsx` with copy-able install command, wired into nav | ⚠️ Not yet rebuilt+deployed to VPS |
+| Sensor edit/detail UI | ❌ Stubbed | Build later (Phase F or later) |
+| Install script | ✅ **Rewritten for V2 self-register flow** (Phase B) | ⚠️ Untested on real Pi |
+| `phase_a_apply.sh` operator script | ✅ **Built** — runs TimescaleDB install, schema reset, .env sync, smoke test on the VPS | ⚠️ Awaiting execution on VPS |
 
 **Known integration bugs that will bite at first end-to-end test:**
 
@@ -260,35 +266,35 @@ The `honeyman-v2/` subdirectory should eventually be promoted to the repo root. 
 
 Phase ordering after cleanup. Each phase produces something demonstrable; don't move on without that demo.
 
-### Phase A — Make a single sensor talk to the dashboard end-to-end (1–2 weeks)
+### Phase A — Make a single sensor talk to the dashboard end-to-end (1–2 weeks) ✅ **code complete**
 
 Goal: a Pi sitting on a desk shows up on the public map, sends one synthetic USB threat, and the dot appears in the right city.
 
-1. Implement HTTPS+API-key transport in the agent. Default to this. MQTT becomes opt-in.
-2. Add API-key middleware to the backend's POST `/v2/threats`, `/v2/heartbeat`, `/v2/rules` endpoints. Read endpoints stay open.
-3. Build the API-key issuance flow inside `POST /v2/sensors/register`. Returns `{sensor_id, api_key}`. Store the hash, not the key.
-4. Fix the location field-name mismatch (`geolocation.lat` ↔ `latitude`).
-5. Strip auth from frontend; remove the JWT axios interceptor.
-6. Enable TimescaleDB extension on the VPS Postgres; convert `threats` to a hypertable; add 90-day retention policy.
-7. Test on a real Pi 4. Send one threat. Verify it lands on the map.
+1. ✅ Implement HTTPS+API-key transport in the agent. Default to this. MQTT becomes opt-in.
+2. ✅ Add API-key middleware to the backend's POST `/v2/threats`, `/v2/heartbeat`, `/v2/rules` endpoints. Read endpoints stay open.
+3. ✅ Build the API-key issuance flow inside `POST /v2/sensors/register`. Returns `{sensor_id, api_key}`. Stores the SHA256 hash, not the key.
+4. ✅ Fix the location field-name mismatch (`geolocation.lat` → top-level `latitude`).
+5. ✅ Strip auth from frontend; remove the JWT axios interceptor.
+6. ⏳ **Operator step** — Enable TimescaleDB extension on the VPS Postgres; convert `threats` to a hypertable; add 90-day retention policy. Use `honeyman-v2/deployment/phase_a_apply.sh`.
+7. ⏳ **Operator step** — Test on a real Pi 4. Send one threat. Verify it lands on the map.
 
-### Phase B — Onboarding works for someone other than you (1 week)
+### Phase B — Onboarding works for someone other than you (1 week) ✅ **code complete**
 
 Goal: a stranger runs `curl ... | bash` and their sensor is on the map within five minutes.
 
-1. Test `install.sh` on a clean Pi 4 and a Pi Zero 2 W. Fix what breaks.
-2. Wire the install script to call `/v2/sensors/register`, capture the returned API key, write it to `/etc/honeyman/credentials`.
-3. Add a public "Add Sensor" page on the dashboard that displays the install command and a QR code.
-4. Test onboarding from a fresh device with no Honeyman context.
+1. ⏳ **Operator step** — Test `install.sh` on a clean Pi 4 and a Pi Zero 2 W. Fix what breaks.
+2. ✅ Wire the install script to call `/v2/sensors/register`, capture the returned API key, write it to `/etc/honeyman/api_key` (mode 0600).
+3. ✅ Add a public "Add Sensor" page on the dashboard — `AddSensorPage.tsx` shows the install command with a Copy button and wires into the nav.
+4. ⏳ **Operator step** — Test onboarding from a fresh device with no Honeyman context.
 
-### Phase C — Resilience and centralized rules (1 week)
+### Phase C — Resilience and centralized rules (1 week) ✅ **code complete**
 
 Goal: a sensor on flaky WiFi doesn't lose data; you can change a rule without SSHing into every Pi.
 
-1. Add SQLite offline buffer in the transport layer; flush on reconnect.
-2. Implement `GET /v2/rules?since=<version>` returning a manifest of active rules.
-3. Add a periodic poll in the agent (every 5 min default). On change, write to `/etc/honeyman/rules/`, signal the rule engine to reload.
-4. Build a minimal rule-management UI on the backend (still no auth — but treat it as admin-only by leaving it un-linked from the public dashboard, accessible only via direct URL with a shared secret in a header). Or skip this entirely and edit rules in a Git repo that the backend syncs from.
+1. ✅ SQLite offline buffer (`transport/offline_buffer.py`) — persistent FIFO at `/var/lib/honeyman/buffer.db`, 10k row cap, ack semantics. Wired into `ProtocolHandler` so it drains on reconnect and survives agent restarts.
+2. ✅ `GET /api/v2/rules?since_version=<hash>` — returns a manifest of all rule files with per-file SHA256 and a global version hash. Authenticated by sensor API key. Reads from `backend/rules/` (37 default rules seeded from the agent tree).
+3. ✅ Agent rule-poll (`core/rule_sync.py`) — runs every 5 min by default (configurable, disabled by default). Diffs remote vs local, writes new/changed YAML, preserves any rule with a `.local` marker file. Rule engine's inotify watcher reloads automatically.
+4. **Deferred for now** — admin rule-edit UI. Today's flow: edit YAML files in the backend's `rules/` dir (or a Git repo pointed at via `RULES_DIR` env), sensors pick up the change on next poll.
 
 ### Phase D — Location upgrades (1 week)
 

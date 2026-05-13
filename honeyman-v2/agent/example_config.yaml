@@ -9,7 +9,8 @@ sensor_id: "<assigned-by-server>"   # e.g. defcon-hotel-7x9k
 sensor_name: "Honeyman Sensor"
 
 # Detection rules directory. The rule engine watches this dir and reloads
-# on file change (inotify on Linux).
+# on file change (inotify on Linux). If rule_sync (below) is enabled,
+# this directory is also kept in sync with the backend.
 rules_dir: /etc/honeyman/rules
 
 # Heartbeat interval in seconds. Heartbeats also carry the current location
@@ -43,6 +44,11 @@ transport:
     use_tls: true
     qos: 1
 
+  # Phase C: persistent FIFO buffer for outbound messages when the
+  # backend is unreachable. Survives agent restarts.
+  offline_buffer_path: /var/lib/honeyman/buffer.db
+  offline_buffer_max_rows: 10000
+
 # --- Detector toggles -----------------------------------------------
 # install.sh sets these based on detected hardware.
 detectors:
@@ -65,6 +71,24 @@ location:
   enabled: true
   gps_enabled: false                       # set true if a gpsd-compatible GPS is attached
   google_geolocation_api_key: null         # optional; falls back to ipapi.co if absent
+
+# --- Central rule sync (Phase C) ------------------------------------
+# When enabled, the agent polls GET /api/v2/rules every interval_seconds
+# and writes new/changed YAML rules into rules_dir. The rule engine's
+# inotify watcher reloads them without a restart.
+#
+# To pin a locally-edited rule against being overwritten by remote pushes,
+# create a marker file next to it, e.g.
+#     touch /etc/honeyman/rules/usb/badusb_detection.yaml.local
+#
+# Disabled by default — opt in by setting enabled: true.
+rule_sync:
+  enabled: false
+  interval_seconds: 300                    # 5 minutes
+  # backend_base_url, api_prefix, api_key_file all default to the values
+  # under transport.https above. Override here only if rules live somewhere
+  # different than threats.
+  state_file: /var/lib/honeyman/rules_version
 
 # --- Logging ---------------------------------------------------------
 logging:

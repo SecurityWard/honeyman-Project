@@ -37,6 +37,9 @@ export interface Threat {
   ip_address?: string;
   latitude?: number;
   longitude?: number;
+  // Phase D: location provenance + uncertainty for the map's accuracy circle
+  accuracy_meters?: number;
+  location_method?: 'gps' | 'wifi' | 'ip' | 'manual';
   metadata?: Record<string, any>;
 }
 

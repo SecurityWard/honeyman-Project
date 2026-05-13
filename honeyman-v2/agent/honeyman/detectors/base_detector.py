@@ -210,6 +210,11 @@ class BaseDetector(ABC):
                 threat["city"] = location["city"]
             if location.get("country"):
                 threat["country"] = location["country"]
+            # Phase D — accuracy + source so the map can render a confidence circle
+            if location.get("accuracy") is not None:
+                threat["accuracy_meters"] = float(location["accuracy"])
+            if location.get("source"):
+                threat["location_method"] = location["source"]
 
         return threat
 

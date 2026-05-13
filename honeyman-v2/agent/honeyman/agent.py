@@ -13,6 +13,7 @@ from typing import Optional
 from .core.config_manager import ConfigManager
 from .core.plugin_manager import PluginManager
 from .core.heartbeat import HeartbeatService
+from .core.rule_sync import RuleSyncService
 from .transport.protocol_handler import ProtocolHandler
 from .rules.rule_engine import RuleEngine
 from .services.location_service import LocationService
@@ -28,16 +29,11 @@ class HoneymanAgent:
     - Detector plugin lifecycle
     - Rule engine
     - Transport layer
-    - Heartbeat/health reporting
+    - Heartbeat / health reporting
+    - Central rule sync (Phase C)
     """
 
     def __init__(self, config_path: Optional[str] = None):
-        """
-        Initialize the Honeyman agent
-
-        Args:
-            config_path: Path to configuration file (default: /etc/honeyman/config.yaml)
-        """
         self.config_path = config_path or '/etc/honeyman/config.yaml'
         self.running = False
         self.detectors = {}
@@ -48,6 +44,7 @@ class HoneymanAgent:
         self.rule_engine = None
         self.transport = None
         self.heartbeat = None
+        self.rule_sync = None
         self.location_service = None
 
         # Setup signal handlers
@@ -57,7 +54,8 @@ class HoneymanAgent:
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals gracefully"""
         logger.info(f"Received signal {signum}, initiating shutdown...")
-        self.stop()
+        # stop() is async; just flip the flag and let the run loop notice
+        self.running = False
 
     async def initialize(self):
         """Initialize all agent components"""
@@ -92,7 +90,7 @@ class HoneymanAgent:
             rule_engine=self.rule_engine,
             transport=self.transport,
             config=self.config,
-            location_service=self.location_service
+            location_service=self.location_service,
         )
 
         # Load detector plugins based on configuration
@@ -112,7 +110,15 @@ class HoneymanAgent:
         self.heartbeat = HeartbeatService(
             agent=self,
             transport=self.transport,
-            interval=heartbeat_interval
+            interval=heartbeat_interval,
+        )
+
+        # Phase C: central rule-sync poller. Disabled by default;
+        # enable via rule_sync.enabled in config.
+        rule_sync_config = self.config.get('rule_sync', {}) or {}
+        self.rule_sync = RuleSyncService(
+            config=rule_sync_config,
+            transport_config=self.config.get('transport', {}),
         )
 
         logger.info(f"Agent initialized with {len(self.detectors)} detectors")
@@ -126,11 +132,14 @@ class HoneymanAgent:
         self.running = True
         logger.info("Starting Honeyman Agent...")
 
-        # Initialize all components
         await self.initialize()
 
         # Start heartbeat service
         await self.heartbeat.start()
+
+        # Start rule-sync poller (no-op if rule_sync.enabled is false)
+        if self.rule_sync:
+            await self.rule_sync.start()
 
         # Start all detectors
         tasks = []
@@ -163,6 +172,10 @@ class HoneymanAgent:
         if self.heartbeat:
             await self.heartbeat.stop()
 
+        # Stop rule-sync poller
+        if self.rule_sync:
+            await self.rule_sync.stop()
+
         # Stop all detectors
         for name, detector in self.detectors.items():
             logger.info(f"Stopping detector: {name}")
@@ -182,11 +195,13 @@ class HoneymanAgent:
             'sensor_name': self.config.get('sensor_name'),
             'platform': self._detect_platform(),
             'capabilities': self._get_capabilities(),
-            'version': '2.0.0'
+            'version': '2.0.0',
         }
-
-        await self.transport.send(registration_data, topic='registration')
-        logger.info("Sent registration to dashboard")
+        try:
+            await self.transport.send(registration_data, topic='registration')
+            logger.info("Sent registration to dashboard")
+        except Exception as exc:
+            logger.warning("Could not send initial registration: %s", exc)
 
     def _detect_platform(self) -> str:
         """Detect the hardware platform"""
@@ -197,9 +212,11 @@ class HoneymanAgent:
                     return 'rpi5'
                 elif 'Raspberry Pi 4' in model:
                     return 'rpi4'
+                elif 'Raspberry Pi Zero 2' in model:
+                    return 'rpizero2w'
                 elif 'Raspberry Pi' in model:
                     return 'rpi'
-        except:
+        except Exception:
             pass
         return 'linux'
 
@@ -219,7 +236,8 @@ class HoneymanAgent:
                 for name, detector in self.detectors.items()
             },
             'transport': self.transport.get_status() if self.transport else {},
-            'rules_loaded': len(self.rule_engine.rules) if self.rule_engine else 0
+            'rule_sync': self.rule_sync.get_status() if self.rule_sync else {},
+            'rules_loaded': len(self.rule_engine.rules) if self.rule_engine else 0,
         }
 
 
@@ -231,17 +249,17 @@ def main():
     parser.add_argument(
         '-c', '--config',
         default='/etc/honeyman/config.yaml',
-        help='Path to configuration file (default: /etc/honeyman/config.yaml)'
+        help='Path to configuration file (default: /etc/honeyman/config.yaml)',
     )
     parser.add_argument(
         '-v', '--verbose',
         action='store_true',
-        help='Enable verbose logging'
+        help='Enable verbose logging',
     )
     parser.add_argument(
         '--version',
         action='version',
-        version='%(prog)s 2.0.0'
+        version='%(prog)s 2.0.0',
     )
 
     args = parser.parse_args()
@@ -249,7 +267,7 @@ def main():
     # Setup basic logging
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     )
 
     # Create and run agent

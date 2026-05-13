@@ -86,6 +86,9 @@ def upgrade() -> None:
         sa.Column('longitude', sa.Float(), nullable=True),
         sa.Column('city', sa.String(100), nullable=True),
         sa.Column('country', sa.String(100), nullable=True),
+        # Phase D — accuracy + provenance so the map can render a confidence circle
+        sa.Column('accuracy_meters', sa.Float(), nullable=True),
+        sa.Column('location_method', sa.String(20), nullable=True),
         sa.Column('matched_rules', postgresql.JSON(), nullable=False, server_default='[]'),
         sa.Column('confidence', sa.Float(), nullable=True),
         sa.Column('threat_score', sa.Float(), nullable=True),
