@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MapContainer, TileLayer, Popup, CircleMarker } from 'react-leaflet';
+import { MapContainer, TileLayer, Popup, CircleMarker, Circle } from 'react-leaflet';
 import type { LatLngExpression } from 'leaflet';
 import type { GeoThreat, Threat } from '../../types';
 import 'leaflet/dist/leaflet.css';
@@ -19,6 +19,20 @@ const severityColors: Record<string, string> = {
   low: '#3b82f6',
   info: '#6b7280',
 };
+
+// Phase D — colour the accuracy circle by location method so operators can
+// see at a glance whether a marker is GPS-precise or IP-coarse. The hex
+// values intentionally pair with the severity palette.
+const locationMethodColors: Record<string, string> = {
+  gps:    '#16a34a',   // green   — most precise
+  wifi:   '#0ea5e9',   // sky     — typically ~30–150m
+  ip:     '#9ca3af',   // gray    — city-level, ~5km
+  manual: '#7c3aed',   // violet  — operator-pinned
+};
+
+// Cap the radius we draw so a 5km IP-geolocation circle doesn't fill the
+// whole viewport at country-level zoom. Real precision is in the popup.
+const MAX_ACCURACY_DISPLAY_METERS = 2000;
 
 export default function ThreatMap({
   geoThreats,
@@ -72,6 +86,36 @@ export default function ThreatMap({
           </CircleMarker>
         ))}
 
+        {/* Phase D — accuracy ring underneath each real-time threat marker.
+            Drawn first so the marker dot sits on top. Only rendered when the
+            agent reported a confidence radius. */}
+        {recentThreats
+          .filter(t => t.latitude && t.longitude && (t.accuracy_meters ?? 0) > 0)
+          .map((t, idx) => {
+            const method = (t.location_method ?? 'ip') as keyof typeof locationMethodColors;
+            const ring = locationMethodColors[method] ?? locationMethodColors.ip;
+            const radius = Math.min(
+              t.accuracy_meters ?? 0,
+              MAX_ACCURACY_DISPLAY_METERS,
+            );
+            return (
+              <Circle
+                key={`acc-${t.id}-${idx}`}
+                center={[t.latitude!, t.longitude!]}
+                radius={radius}
+                pathOptions={{
+                  fillColor: ring,
+                  fillOpacity: 0.08,
+                  color: ring,
+                  weight: 1,
+                  opacity: 0.5,
+                  dashArray: method === 'ip' ? '4 4' : undefined,
+                }}
+                interactive={false}     // clicks go through to the marker
+              />
+            );
+          })}
+
         {/* Real-time threat markers */}
         {recentThreats
           .filter(threat => threat.latitude && threat.longitude)
@@ -97,6 +141,17 @@ export default function ThreatMap({
                   {threat.mac_address && <p><strong>MAC:</strong> {threat.mac_address}</p>}
                   <p><strong>Time:</strong> {new Date(threat.timestamp).toLocaleString()}</p>
                   <p><strong>Confidence:</strong> {(threat.confidence_score * 100).toFixed(0)}%</p>
+                  {threat.location_method && (
+                    <p>
+                      <strong>Location:</strong>{' '}
+                      <span className={`loc-${threat.location_method}`}>
+                        {threat.location_method.toUpperCase()}
+                      </span>
+                      {threat.accuracy_meters !== undefined && (
+                        <> &middot; ±{Math.round(threat.accuracy_meters)} m</>
+                      )}
+                    </p>
+                  )}
                 </div>
               </Popup>
             </CircleMarker>
@@ -110,6 +165,20 @@ export default function ThreatMap({
           <div key={severity} className="legend-item">
             <span className="legend-color" style={{ backgroundColor: color }}></span>
             <span className="legend-label">{severity}</span>
+          </div>
+        ))}
+        <h4 style={{ marginTop: '0.75rem' }}>Location accuracy</h4>
+        {Object.entries(locationMethodColors).map(([method, color]) => (
+          <div key={method} className="legend-item">
+            <span
+              className="legend-color"
+              style={{
+                backgroundColor: 'transparent',
+                border: `2px solid ${color}`,
+                borderStyle: method === 'ip' ? 'dashed' : 'solid',
+              }}
+            ></span>
+            <span className="legend-label">{method}</span>
           </div>
         ))}
       </div>

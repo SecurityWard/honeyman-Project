@@ -64,13 +64,42 @@ usb:
   scan_storage_devices: true
   max_file_size_mb: 100
 
-# --- Location service -----------------------------------------------
-# GPS -> WiFi positioning -> IP, in that order. IP fallback always works.
-# Operator-pinned coordinates can be set via the install script.
+# --- Location service (Phase D) -------------------------------------
+# Resolution order (skipped on a miss, falls through to the next):
+#   1. Operator-pinned manual coordinates (if both lat+lon set below)
+#   2. GPS via gpsd                       (gps_enabled: true)
+#   3. WiFi positioning (Mozilla Location Service or Google)
+#   4. IP geolocation via ipapi.co        (always available, ~5km accuracy)
+#
+# The dashboard map draws a confidence circle around each threat marker
+# whose radius equals accuracy_meters, colour-coded by which method won.
 location:
   enabled: true
-  gps_enabled: false                       # set true if a gpsd-compatible GPS is attached
-  google_geolocation_api_key: null         # optional; falls back to ipapi.co if absent
+
+  # Operator-pinned override. If both manual_latitude and manual_longitude
+  # are set, all dynamic methods are skipped and these are reported as
+  # ground truth on every threat + heartbeat.
+  # manual_latitude: 37.7749
+  # manual_longitude: -122.4194
+  # manual_label: "DefCon 32 hotel lobby"   # optional free-text label
+  # manual_accuracy: 10                     # metres; defaults to 10m for manual
+
+  # GPS via gpsd (apt install gpsd gpsd-clients on the Pi). Listens on
+  # 127.0.0.1:2947 by default. Only effective when a GPS receiver is attached.
+  gps_enabled: false
+  # gpsd_host: 127.0.0.1
+  # gpsd_port: 2947
+  # gpsd_timeout: 5
+
+  # WiFi positioning. With no api key set, the agent uses Mozilla Location
+  # Service's free ?key=test endpoint (rate-limited but works). To use Google
+  # Geolocation API, drop your key here:
+  # wifi_positioning_api_key: "AIza..."
+  # wifi_interface: wlan0     # autodetected via `iw dev` if omitted
+  # wifi_max_aps: 12
+
+  # How long to cache a successful resolution before re-querying any source.
+  # cache_ttl_seconds: 300
 
 # --- Central rule sync (Phase C) ------------------------------------
 # When enabled, the agent polls GET /api/v2/rules every interval_seconds

@@ -113,7 +113,9 @@ The code is roughly **75–80% written but only ~25% deployed**. Reconciling the
 | BaseDetector envelope aligned to backend schema | ✅ Built (Phase A) | — |
 | Heartbeat envelope aligned to backend schema | ✅ Built (Phase A) | — |
 | Location field-name fix (latitude/longitude top-level) | ✅ Built (Phase A) | — |
-| Location service | ⚠️ IP geolocation works; GPS + WiFi-positioning are TODO stubs (Phase D) | ❌ |
+| Location service | ✅ **Built (Phase D)** — manual override + GPS via gpsd + WiFi positioning via MLS/Google + IP fallback. Threats + heartbeats now carry `accuracy_meters` and `location_method`. Unit tested. | — |
+| Threat schema: `accuracy_meters` + `location_method` | ✅ Built (Phase D) — column on `threats`, fields on `ThreatCreate`/`ThreatResponse`, type on frontend `Threat` | — |
+| Dashboard map accuracy circle | ✅ Built (Phase D) — `<Circle>` underneath each marker, colour-coded by method (GPS green / WiFi sky / IP gray-dashed / manual violet), legend in the corner | — |
 | **SQLite offline buffer + persistent FIFO** | ✅ **Built (Phase C)** — `transport/offline_buffer.py`, wired into ProtocolHandler, unit tested | — |
 | **Central rule sync (`GET /api/v2/rules` + agent poll)** | ✅ **Built (Phase C)** — `app/api/rules.py` + agent `core/rule_sync.py`, `.local` marker protection, unit tested | ❌ Not yet polling from a real sensor |
 | Backend FastAPI app (no auth, public reads) | ✅ Built | ⚠️ Code complete, awaiting VPS deploy |
@@ -296,14 +298,16 @@ Goal: a sensor on flaky WiFi doesn't lose data; you can change a rule without SS
 3. ✅ Agent rule-poll (`core/rule_sync.py`) — runs every 5 min by default (configurable, disabled by default). Diffs remote vs local, writes new/changed YAML, preserves any rule with a `.local` marker file. Rule engine's inotify watcher reloads automatically.
 4. **Deferred for now** — admin rule-edit UI. Today's flow: edit YAML files in the backend's `rules/` dir (or a Git repo pointed at via `RULES_DIR` env), sensors pick up the change on next poll.
 
-### Phase D — Location upgrades (1 week)
+### Phase D — Location upgrades (1 week) ✅ **code complete**
 
 Goal: every threat on the map is in the right place, indoors and out.
 
-1. Implement GPS support via `gpsd` in `LocationService._get_gps_location()`.
-2. Implement WiFi-positioning via Mozilla Location Service in `LocationService._get_wifi_location()` (no API key needed).
-3. Add operator-pinned location override (set at registration, sent in heartbeat).
-4. Add a confidence indicator on the map — circle radius = accuracy.
+1. ✅ GPS support via `gpsd` — `LocationService._get_gps_location()` connects to `127.0.0.1:2947`, requests JSON TPV reports, returns `{lat, lon, accuracy, source: "gps"}` when mode ≥ 2. Honours a 5s timeout.
+2. ✅ WiFi positioning — `_get_wifi_location()` scans nearby BSSIDs via `iw dev <iface> scan`, POSTs to Mozilla Location Service (free `?key=test`) by default; operators can set `wifi_positioning_api_key` to use Google's API instead.
+3. ✅ Operator-pinned override — `location.manual_latitude` + `location.manual_longitude` in `config.yaml` skip all dynamic methods and report exact coordinates. Optional `manual_label` and `manual_accuracy` (default 10m).
+4. ✅ Confidence indicator on the map — translucent `<Circle>` (radius = `accuracy_meters`, capped at 2km for display) under each marker, colour-coded by `location_method`. Legend updated.
+
+Wire-level effect: every threat row now carries `accuracy_meters` + `location_method`, the backend migration creates those columns, the agent fills them via `BaseDetector.create_threat()`, and the dashboard renders the confidence circle.
 
 ### Phase E — Canary network stack toggle (3–5 days)
 

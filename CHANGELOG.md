@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### V2 Phase D — Location upgrades — 2026-05
+
+- Agent `LocationService` rewritten: resolves location in the order **manual override → GPS via gpsd → WiFi positioning (Mozilla Location Service / Google) → IP**. Each method returns `{lat, lon, accuracy, source}`; results cached for 5 min.
+- New config options: `location.manual_latitude` / `manual_longitude` / `manual_label` / `manual_accuracy`; `location.gps_enabled` / `gpsd_host` / `gpsd_port`; `location.wifi_positioning_api_key` / `wifi_interface` / `wifi_max_aps`
+- Threat payload now carries `accuracy_meters` and `location_method` end-to-end: agent `BaseDetector` emits them, backend `Threat` model + `ThreatCreate`/`ThreatResponse` schemas accept them, Alembic migration creates the columns, frontend `Threat` type includes them
+- `ThreatMap` dashboard component renders a colour-coded confidence circle under each threat marker (GPS green, WiFi sky, IP gray-dashed, manual violet). Circle radius equals reported accuracy, capped at 2km for readability. Legend updated. Popup shows `LOCATION_METHOD · ±N m`
+- Unit tested: manual override skips all dynamic sources, invalid manual coords are ignored, `iw dev … scan` parser pulls BSSID+signal pairs, disabled service returns None
+
+### Deploy-blocker fixes — 2026-05
+
+- `app/core/api_key.py` — module added (was imported by `deps.py` and `onboarding.py` but missing on the public branch). `generate_api_key` / `hash_api_key` / `verify_api_key` / `extract_bearer_token`.
+- `alembic/env.py` — removed `from app.models.user import User` (V2 has no users). Asyncpg DATABASE_URL now rewritten to psycopg2 inside `set_main_option` for alembic's sync engine
+- `threats` hypertable: composite PK on `(id, timestamp)` in both Alembic migration (`PrimaryKeyConstraint('id', 'timestamp')`) and the SQLAlchemy model. TimescaleDB requires the partition column in any unique/PK index
+- `CORS_ORIGINS` env parsing: `Annotated[List[str], NoDecode]` + `@field_validator("CORS_ORIGINS", mode="before")` accepts either JSON-array (`["a","b"]`) or CSV (`a,b`) — operators can use whichever is friendlier
+- `phase_a_apply.sh` BACKEND_DIR default corrected to `/root/honeyman-Project/honeyman-v2/dashboard-v2/backend`
+
 ### V2 Phase A / B / C — 2026-05
 
 **Phase A — End-to-end transport, schema alignment, API-key auth**

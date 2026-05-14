@@ -7,7 +7,7 @@ Multi-vector threat detection agent for Raspberry Pi and embedded Linux.
 - **Modular detectors**: USB, WiFi, BLE, AirDrop, Network honeypot
 - **YAML rule engine** with hot-reload (inotify)
 - **HTTPS + per-sensor API key** transport (MQTT optional)
-- **Geolocation chain**: GPS, WiFi positioning, IP, operator-pinned
+- **Geolocation chain**: operator-pinned manual → GPS via `gpsd` → WiFi positioning via Mozilla Location Service (or Google with your key) → IP fallback. Every threat carries `accuracy_meters` + `location_method` so the dashboard can draw a confidence circle
 - **Offline resilience**: SQLite-backed FIFO buffer at `/var/lib/honeyman/buffer.db` — survives agent restarts
 - **Heartbeat** with system metrics + current location, so idle sensors stay on the map
 
