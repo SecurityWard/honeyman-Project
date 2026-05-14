@@ -153,10 +153,12 @@ honeyman-v2/
   dashboard-v2/
     backend/                 FastAPI app
     frontend/                React + TypeScript dashboard
+  deployment/                DEPLOY.md, phase_a_apply.sh, ops scripts
   readme/onboarding/         install.sh + Mosquitto + Compose configs
-  *-COMPLETE.md              historical phase completion records
 
+docs/historical/             Earlier V2 design docs (superseded; kept for context)
 archive/v1/                  V1 codebase (DefCon 2024 release), kept for reference
+archive/v1-scripts/          One-shot V1-era helpers (migrate_v1_to_v2.py, etc.)
 archive/v2-removed-auth/     V2 auth code (JWT, users) removed in cleanup
 archive/v2-removed-onboarding/  duplicated standalone Flask provisioning API
 ```
@@ -165,7 +167,19 @@ archive/v2-removed-onboarding/  duplicated standalone Flask provisioning API
 
 ## Status
 
-V2 is **under active development.** The agent and dashboard code are roughly 80% written; end-to-end deployment and a real-Pi smoke test are the next milestones. See [`HONEYMAN-V2-PLAN.md`](HONEYMAN-V2-PLAN.md) section "Build order" for the current phase.
+V2 is **under active development.** Phases A–D are code-complete; Phases E (canary network toggle) and F (operability — systemd, TLS, metrics) are not started.
+
+| Phase | What | Code | Deployed |
+|---|---|---|---|
+| Cleanup | Archive V1, strip JWT/users, single canonical plan | ✅ done | ⏳ partial |
+| A | Sensor ↔ backend end-to-end (HTTPS + per-sensor API key, schema alignment) | ✅ done | ⏳ awaiting `phase_a_apply.sh` |
+| B | Self-register onboarding (`install.sh` + dashboard's Add Sensor page) | ✅ done | ⏳ awaiting deploy + real-Pi test |
+| C | Resilience + central rule sync (SQLite offline buffer, `GET /api/v2/rules`, agent poller) | ✅ done, unit tested | ❌ awaiting deploy |
+| D | Location chain — manual override → GPS via gpsd → WiFi positioning (MLS / Google) → IP. Every threat carries `accuracy_meters` + `location_method`, dashboard map renders a confidence circle | ✅ done, unit tested | ❌ awaiting deploy |
+| E | Optional SSH/HTTP canary toggle + frontend filter | — | — |
+| F | Operability — systemd units, TLS, Prometheus, alerting | — | — |
+
+Real-Pi smoke test (`curl ... | bash` on a Pi 4, watch it appear on the map) is the next milestone. The full plan and per-phase notes live in [`HONEYMAN-V2-PLAN.md`](HONEYMAN-V2-PLAN.md); release notes are in [`CHANGELOG.md`](CHANGELOG.md); deployment runbook is at [`honeyman-v2/deployment/DEPLOY.md`](honeyman-v2/deployment/DEPLOY.md).
 
 ---
 
