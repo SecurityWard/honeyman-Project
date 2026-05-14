@@ -14,11 +14,13 @@ class Threat(Base):
 
     __tablename__ = "threats"
 
-    # Primary key
+    # Composite primary key (id, timestamp). TimescaleDB requires the
+    # partitioning column (`timestamp`) to be part of any unique/PK index
+    # on a hypertable, so the SQLAlchemy metadata must mirror that.
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    # Time dimension (critical for TimescaleDB)
-    timestamp = Column(DateTime(timezone=True), nullable=False, index=True)
+    # Time dimension (critical for TimescaleDB) - also part of the PK
+    timestamp = Column(DateTime(timezone=True), primary_key=True, nullable=False, index=True)
 
     # Sensor reference
     sensor_id = Column(String(100), ForeignKey("sensors.sensor_id"), nullable=False, index=True)

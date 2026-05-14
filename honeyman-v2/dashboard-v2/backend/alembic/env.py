@@ -1,5 +1,11 @@
 """
-Alembic migration environment
+Alembic migration environment.
+
+Notes:
+- V2 has no `users` table; do not import a User model here.
+- The runtime backend uses asyncpg, but Alembic uses a synchronous engine.
+  We rewrite the DATABASE_URL driver to psycopg2 for migrations only.
+  psycopg2-binary is already in requirements.txt.
 """
 
 from logging.config import fileConfig
@@ -8,20 +14,23 @@ from alembic import context
 import sys
 import os
 
-# Add parent directory to path
+# Add parent directory to path so `app.*` imports resolve
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.db.base import Base
-from app.models.sensor import Sensor
-from app.models.threat import Threat
-from app.models.user import User
+from app.models.sensor import Sensor      # noqa: F401  (register table with Base.metadata)
+from app.models.threat import Threat      # noqa: F401  (register table with Base.metadata)
 from app.core.config import settings
 
 # Alembic Config object
 config = context.config
 
-# Set SQLAlchemy URL from settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Set SQLAlchemy URL from settings, swapping the async driver for the sync one.
+# Runtime: postgresql+asyncpg://...   →   Migrations: postgresql://... (psycopg2)
+config.set_main_option(
+    "sqlalchemy.url",
+    settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://"),
+)
 
 # Interpret the config file for Python logging
 if config.config_file_name is not None:
@@ -56,7 +65,7 @@ def run_migrations_online() -> None:
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
-            target_metadata=target_metadata
+            target_metadata=target_metadata,
         )
 
         with context.begin_transaction():

@@ -1,14 +1,16 @@
-"""Initial schema with TimescaleDB hypertable — V2 (no users)
+"""Initial schema with TimescaleDB hypertable - V2 (no users)
 
 Revision ID: 001
 Revises:
 Create Date: 2026-05-09
 
 V2 migration:
-- No users table (public dashboard, no accounts)
-- Sensors authenticate writes via per-sensor API key (api_key_hash column)
-- Threats hypertable with TimescaleDB compression + 90d retention
-- No is_acknowledged columns (no actions in V2)
+- No users table (public dashboard, no accounts).
+- Sensors authenticate writes via per-sensor API key (api_key_hash column).
+- Threats hypertable with TimescaleDB compression + 90d retention.
+- Composite PK (id, timestamp) — TimescaleDB requires the partition column in
+  any unique/PK index.
+- Phase D location columns (accuracy_meters, location_method) on threats.
 """
 from alembic import op
 import sqlalchemy as sa
@@ -66,10 +68,13 @@ def upgrade() -> None:
         sa.Column('api_key_hash', sa.String(64), nullable=False, index=True),
     )
 
-    # Threats table (then converted to hypertable below)
+    # Threats table.
+    # NOTE: TimescaleDB requires the partitioning column (`timestamp`) to be
+    # part of every unique/PK index on the hypertable, so the primary key is
+    # composite (id, timestamp) rather than just `id`.
     op.create_table(
         'threats',
-        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
+        sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column('timestamp', sa.DateTime(timezone=True), nullable=False, index=True),
         sa.Column('sensor_id', sa.String(100), sa.ForeignKey('sensors.sensor_id'), nullable=False, index=True),
         sa.Column('threat_type', sa.String(100), nullable=False, index=True),
@@ -86,7 +91,7 @@ def upgrade() -> None:
         sa.Column('longitude', sa.Float(), nullable=True),
         sa.Column('city', sa.String(100), nullable=True),
         sa.Column('country', sa.String(100), nullable=True),
-        # Phase D — accuracy + provenance so the map can render a confidence circle
+        # Phase D - accuracy + provenance so the map can render a confidence circle
         sa.Column('accuracy_meters', sa.Float(), nullable=True),
         sa.Column('location_method', sa.String(20), nullable=True),
         sa.Column('matched_rules', postgresql.JSON(), nullable=False, server_default='[]'),
@@ -96,6 +101,7 @@ def upgrade() -> None:
         sa.Column('mitre_tactics', postgresql.JSON(), nullable=True, server_default='[]'),
         sa.Column('mitre_techniques', postgresql.JSON(), nullable=True, server_default='[]'),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.PrimaryKeyConstraint('id', 'timestamp'),
     )
 
     # Threats indexes
@@ -112,7 +118,7 @@ def upgrade() -> None:
         );
     """)
 
-    # Compression — chunks older than 7 days
+    # Compression - chunks older than 7 days
     op.execute("""
         ALTER TABLE threats SET (
             timescaledb.compress,
@@ -123,7 +129,7 @@ def upgrade() -> None:
         SELECT add_compression_policy('threats', INTERVAL '7 days', if_not_exists => TRUE);
     """)
 
-    # Retention — drop chunks older than 90 days
+    # Retention - drop chunks older than 90 days
     op.execute("""
         SELECT add_retention_policy('threats', INTERVAL '90 days', if_not_exists => TRUE);
     """)

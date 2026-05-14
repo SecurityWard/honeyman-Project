@@ -30,7 +30,7 @@ LOG_PREFIX="[honeyman-phase-a]"
 START_TS=$(date -Iseconds)
 
 # -------- Tunables (override via env) --------
-BACKEND_DIR="${BACKEND_DIR:-/root/honeyman-v2/backend}"
+BACKEND_DIR="${BACKEND_DIR:-/root/honeyman-Project/honeyman-v2/dashboard-v2/backend}"
 REPO_DIR="${REPO_DIR:-/root/honeyman-Project}"          # parent git checkout (if it exists)
 DB_NAME="${DB_NAME:-honeyman_v2}"
 DB_USER="${DB_USER:-honeyman}"
