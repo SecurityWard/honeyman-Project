@@ -109,17 +109,17 @@
   letter-spacing: 0.5px;
 }
 
-.status-active {
+.status-online {
   background: #d1fae5;
   color: #065f46;
 }
 
-.status-inactive {
+.status-offline {
   background: #fee2e2;
   color: #991b1b;
 }
 
-.status-error {
+.status-pending {
   background: #fef3c7;
   color: #92400e;
 }

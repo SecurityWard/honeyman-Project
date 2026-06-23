@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
-import type { Sensor, PaginatedResponse } from '../types';
+import type { Sensor, SensorListResponse } from '../types';
 
 export function useSensors(page: number = 1, pageSize: number = 50) {
   return useQuery({
     queryKey: ['sensors', page, pageSize],
     queryFn: async () => {
-      const response = await api.get<PaginatedResponse<Sensor>>('/sensors', {
+      const response = await api.get<SensorListResponse>('/sensors', {
         params: { page, page_size: pageSize }
       });
       return response.data;

@@ -2,15 +2,37 @@ export interface Sensor {
   id: string;
   sensor_id: string;
   name: string;
-  location?: string;
-  latitude?: number;
-  longitude?: number;
-  status: 'active' | 'inactive' | 'error';
-  last_seen?: string;
-  total_threats: number;
+  description?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  city?: string | null;
+  country?: string | null;
+  is_active: boolean;
+  is_online: boolean;
+  last_heartbeat?: string | null;
+  location_method?: string | null;
+  location_accuracy?: number | null;
   enabled_detectors: string[];
+  transport_protocol?: string;
+  capabilities?: Record<string, boolean>;
+  platform?: string | null;
+  architecture?: string | null;
+  agent_version?: string | null;
+  python_version?: string | null;
+  total_threats_detected: number;
+  threats_last_24h: number;
   created_at: string;
-  updated_at: string;
+  updated_at?: string | null;
+  registered_at?: string;
+}
+
+// The /api/v2/sensors endpoint wraps the list as { sensors, total, page, page_size }.
+// Threats use a different envelope (`items`) — see PaginatedResponse below.
+export interface SensorListResponse {
+  sensors: Sensor[];
+  total: number;
+  page: number;
+  page_size: number;
 }
 
 // Threat types
