@@ -241,42 +241,52 @@ install_system_deps() {
 # ---------------------------------------------------------------------------
 # Registration (self-register flow)
 # ---------------------------------------------------------------------------
-build_capabilities_json() {
-    python3 - <<PY
-import json
-caps = {
-    "usb":      ${MOD_USB},
-    "ble":      ${MOD_BLE},
-    "wifi":     ${MOD_WIFI},
-    "airdrop":  ${MOD_AIRDROP},
-    "network":  ${MOD_NETWORK},
-}
-enabled = [k for k, v in caps.items() if v]
-print(json.dumps({"capabilities": caps, "enabled_detectors": enabled}))
-PY
-}
-
 register_sensor() {
     step "Registering sensor with ${HONEYMAN_API}..."
-    local caps_json enabled_json platform_json body http_code body_file
+    local body http_code body_file
 
-    caps_and_enabled="$(build_capabilities_json)"
-    body=$(python3 - <<PY
-import json, sys
-caps_and_enabled = json.loads('''$caps_and_enabled''')
+    # Build the registration payload in Python. All values come in through
+    # environment variables and the heredoc is quoted (<<'PY'), so the shell
+    # does no expansion inside — that keeps bash booleans, locations with
+    # special chars, etc. from corrupting the Python source.
+    body=$(
+        MOD_USB="$MOD_USB" \
+        MOD_BLE="$MOD_BLE" \
+        MOD_WIFI="$MOD_WIFI" \
+        MOD_AIRDROP="$MOD_AIRDROP" \
+        MOD_NETWORK="$MOD_NETWORK" \
+        SENSOR_NAME="$SENSOR_NAME" \
+        LOCATION="${LOCATION:-}" \
+        PLATFORM="$PLATFORM" \
+        ARCH="$ARCH" \
+        HONEYMAN_VERSION="$HONEYMAN_VERSION" \
+        python3 - <<'PY'
+import json, os, sys
+
+def to_bool(v):
+    return str(v).strip().lower() == "true"
+
+caps = {
+    "usb":     to_bool(os.environ.get("MOD_USB")),
+    "ble":     to_bool(os.environ.get("MOD_BLE")),
+    "wifi":    to_bool(os.environ.get("MOD_WIFI")),
+    "airdrop": to_bool(os.environ.get("MOD_AIRDROP")),
+    "network": to_bool(os.environ.get("MOD_NETWORK")),
+}
+
 payload = {
-    "requested_name":     "${SENSOR_NAME}",
-    "location_label":     ${LOCATION:+'"'"$LOCATION"'"'} ${LOCATION:-null},
-    "capabilities":       caps_and_enabled["capabilities"],
-    "enabled_detectors":  caps_and_enabled["enabled_detectors"],
-    "platform":           "${PLATFORM}",
-    "architecture":       "${ARCH}",
-    "agent_version":      "${HONEYMAN_VERSION}",
-    "python_version":     "$(python3 --version 2>&1 | awk '{print $2}')",
+    "requested_name":    os.environ["SENSOR_NAME"],
+    "location_label":    os.environ.get("LOCATION") or None,
+    "capabilities":      caps,
+    "enabled_detectors": [k for k, v in caps.items() if v],
+    "platform":          os.environ.get("PLATFORM") or "linux",
+    "architecture":      os.environ.get("ARCH") or "",
+    "agent_version":     os.environ.get("HONEYMAN_VERSION") or "0.0.0",
+    "python_version":    "{}.{}.{}".format(*sys.version_info[:3]),
 }
 print(json.dumps(payload))
 PY
-)
+    )
 
     body_file=$(mktemp)
     http_code=$(curl -sS -o "$body_file" -w '%{http_code}' \
