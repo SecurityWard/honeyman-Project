@@ -37,6 +37,19 @@ CREDS_FILE="${CONFIG_DIR}/credentials"   # legacy alias, written for back-compat
 AGENT_REPO="${AGENT_REPO:-https://github.com/SecurityWard/honeyman-Project.git}"
 AGENT_REF="${AGENT_REF:-main}"
 
+# When the script is piped (curl | bash) stdin is the script body, so any
+# `read` would see EOF immediately and prompts would be skipped silently.
+# Reattach stdin to the controlling terminal if there is one; otherwise
+# force NON_INTERACTIVE so the script picks safe defaults instead of
+# stalling on a never-answered prompt.
+if [[ ! -t 0 ]]; then
+    if [[ -r /dev/tty ]]; then
+        exec < /dev/tty
+    else
+        NON_INTERACTIVE=1
+    fi
+fi
+
 # Colors (suppressed if not a tty)
 if [[ -t 1 ]]; then
     RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
