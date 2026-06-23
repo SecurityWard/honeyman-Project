@@ -37,6 +37,28 @@ export default function AddSensorPage() {
         </p>
       </header>
 
+      <section className="install-card warning">
+        <h2>Before you run this</h2>
+        <p>
+          <strong>If the device has only one wireless adapter, do not enable WiFi
+          or AirDrop detection during install.</strong> Both put the adapter into
+          monitor mode, which disconnects the device from its network. On a Pi
+          Zero W, Pi Zero 2 W, or any single-radio box, that means the installer
+          loses its own connection mid-run and onboarding never completes.
+        </p>
+        <p>To use WiFi/AirDrop detection on a single-radio device, do one of:</p>
+        <ul>
+          <li>Connect the device via <strong>Ethernet</strong> before running the installer.</li>
+          <li>Add a <strong>second USB WiFi adapter</strong> (e.g. ALFA AWUS036ACS) &mdash; one stays in managed mode for connectivity, the other goes into monitor mode for detection.</li>
+          <li>Or install first with WiFi off, then enable it later by editing <code>/etc/honeyman/config.yaml</code> on a device that has the right hardware.</li>
+        </ul>
+        <p className="footnote">
+          The installer detects this case automatically and defaults WiFi/AirDrop
+          to off when only one WiFi adapter is present. USB, BLE, and the
+          optional network honeypot are unaffected.
+        </p>
+      </section>
+
       <section className="install-card">
         <div className="install-card-header">
           <h2>1. Run on the sensor</h2>

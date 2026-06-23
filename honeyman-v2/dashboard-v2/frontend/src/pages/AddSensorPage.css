@@ -37,6 +37,33 @@
   background: #f9fafb;
 }
 
+.install-card.warning {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  border-left: 4px solid #f59e0b;
+}
+
+.install-card.warning h2 {
+  color: #92400e;
+}
+
+.install-card.warning ul {
+  margin: 0.5rem 0 1rem 0;
+  padding-left: 1.25rem;
+}
+
+.install-card.warning li {
+  margin-bottom: 0.4rem;
+  line-height: 1.55;
+  color: #1f2937;
+}
+
+.install-card.warning .footnote {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 0;
+}
+
 .install-card h2 {
   margin: 0 0 0.75rem 0;
   font-size: 1.125rem;

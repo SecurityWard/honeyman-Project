@@ -110,6 +110,7 @@ detect_hardware() {
     HAS_BLE=false
     HAS_WIFI=false
     HAS_WIFI_MONITOR=false
+    SINGLE_WIFI_ADAPTER=false
 
     if command -v hciconfig >/dev/null 2>&1 && hciconfig 2>/dev/null | grep -q "hci0"; then
         HAS_BLE=true
@@ -119,10 +120,22 @@ detect_hardware() {
     if command -v iw >/dev/null 2>&1 && iw dev 2>/dev/null | grep -q "Interface"; then
         HAS_WIFI=true
         WIFI_IFACE=$(iw dev | awk '/Interface/{print $2; exit}')
-        echo "    wifi:      yes (${WIFI_IFACE})"
-        if iw phy 2>/dev/null | grep -qi "monitor"; then
+        WIFI_IFACE_COUNT=$(iw dev 2>/dev/null | grep -c Interface || true)
+        echo "    wifi:      yes (${WIFI_IFACE}, ${WIFI_IFACE_COUNT} interface$([[ $WIFI_IFACE_COUNT -ne 1 ]] && echo s))"
+        if iw phy 2>/dev/null | grep -qi monitor; then
             HAS_WIFI_MONITOR=true
             echo "    monitor:   yes"
+        fi
+        # Single-adapter footgun: putting the only wireless NIC into monitor
+        # mode disconnects the sensor from its own network — including the
+        # SSH session running this installer. Most likely this NIC is also
+        # the default route (Pi Zero W, Zero 2 W, any single-radio device).
+        if [[ "$WIFI_IFACE_COUNT" -le 1 ]]; then
+            DEFAULT_IFACE=$(ip route show default 2>/dev/null | awk '/default/{print $5; exit}')
+            if [[ "$DEFAULT_IFACE" == "$WIFI_IFACE" ]]; then
+                SINGLE_WIFI_ADAPTER=true
+                echo "    ${YELLOW}!${NC} only one WiFi adapter, and it is the default route — WiFi detection will be off by default"
+            fi
         fi
     fi
 }
@@ -164,6 +177,22 @@ choose_modules() {
     MOD_WIFI=$HAS_WIFI
     MOD_AIRDROP=$HAS_WIFI
     MOD_NETWORK=true
+
+    # Single-adapter case: refuse to enable monitor-mode detectors by default,
+    # because doing so kills the sensor's only network connection and the
+    # install never completes (no callback to /register, no heartbeat).
+    if [[ "$SINGLE_WIFI_ADAPTER" == "true" ]]; then
+        MOD_WIFI=false
+        MOD_AIRDROP=false
+        echo
+        echo -e "${YELLOW}!${NC} ${BOLD}This device has only one WiFi adapter (${WIFI_IFACE}).${NC}"
+        echo "  Enabling WiFi or AirDrop detection puts that adapter into monitor mode,"
+        echo "  which disconnects the device from its network and aborts onboarding."
+        echo "  WiFi and AirDrop detection are off by default. To enable them later:"
+        echo "    - Connect this device via Ethernet, or"
+        echo "    - Plug in a second USB WiFi adapter, then edit /etc/honeyman/config.yaml"
+        echo "      and \`sudo systemctl restart honeyman-agent\`."
+    fi
 
     if [[ -n "${NON_INTERACTIVE:-}" ]]; then return; fi
 
