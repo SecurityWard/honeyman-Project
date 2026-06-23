@@ -155,13 +155,11 @@ honeyman-v2/
     frontend/                React + TypeScript dashboard
   deployment/                DEPLOY.md, phase_a_apply.sh, ops scripts
   readme/onboarding/         install.sh + Mosquitto + Compose configs
-
-docs/historical/             Earlier V2 design docs (superseded; kept for context)
-archive/v1/                  V1 codebase (DefCon 2024 release), kept for reference
-archive/v1-scripts/          One-shot V1-era helpers (migrate_v1_to_v2.py, etc.)
-archive/v2-removed-auth/     V2 auth code (JWT, users) removed in cleanup
-archive/v2-removed-onboarding/  duplicated standalone Flask provisioning API
 ```
+
+The V1 codebase, removed-auth/onboarding chunks, and earlier V2 design docs
+have been deleted; `git log` preserves them if you ever need to fish one
+out.
 
 ---
 

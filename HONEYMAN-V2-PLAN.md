@@ -1,9 +1,9 @@
 # Honeyman V2 — Canonical Plan
 
-**Status:** This is the single source of truth for V2.
-The older docs (`HONEYMAN-V2-STATUS.md`, `honeyman-v2/CURRENT-STATUS.md`, `honeyman-v2/V2-MIGRATION-STATUS.md`, `honeyman-v2/IMPLEMENTATION-ROADMAP.md`) are historical and contradict each other. Treat this file as authoritative.
+**Status:** This is the single source of truth for V2. Earlier design docs
+have been removed; `git log` has them if you need them.
 
-Last updated: 2026-05-09
+Last updated: 2026-06-23
 
 ---
 
@@ -119,7 +119,7 @@ The code is roughly **75–80% written but only ~25% deployed**. Reconciling the
 | **SQLite offline buffer + persistent FIFO** | ✅ **Built (Phase C)** — `transport/offline_buffer.py`, wired into ProtocolHandler, unit tested | — |
 | **Central rule sync (`GET /api/v2/rules` + agent poll)** | ✅ **Built (Phase C)** — `app/api/rules.py` + agent `core/rule_sync.py`, `.local` marker protection, unit tested | ❌ Not yet polling from a real sensor |
 | Backend FastAPI app (no auth, public reads) | ✅ Built | ⚠️ Code complete, awaiting VPS deploy |
-| Auth (JWT, RBAC, User model) | 🗑 **Removed** — archived under `archive/v2-removed-auth/` | — |
+| Auth (JWT, RBAC, User model) | 🗑 **Removed** (git history preserves) | — |
 | API key issuance + validation | ✅ Built (cleanup) — SHA256-hashed per-sensor key, `Authorization: Bearer` on writes | — |
 | MQTT subscriber | ✅ Built | Only starts when `MQTT_OFFERED=true` |
 | Postgres database | ✅ Schema rewritten (no `users`, adds `api_key_hash`) | ✅ Created on VPS |
@@ -168,103 +168,7 @@ The code is roughly **75–80% written but only ~25% deployed**. Reconciling the
 
 ---
 
-## 5. Cleanup actions
-
-These are the structural moves needed before further building. They're being executed in this conversation.
-
-**Files moving to `archive/v1/`:**
-
-```
-src/                          → archive/v1/src/
-dashboard/                    → archive/v1/dashboard/
-scripts/                      → archive/v1/scripts/
-deployment/                   → archive/v1/deployment/
-config/                       → archive/v1/config/
-web/                          → archive/v1/web/
-logrotate.conf                → archive/v1/
-logrotate.d/                  → archive/v1/
-log_manager.py                → archive/v1/
-simple_log_collector.py       → archive/v1/
-system_monitor.py             → archive/v1/
-resync_all_threats.py         → archive/v1/
-resync_dashboard_data.py      → archive/v1/
-opencanary.conf               → archive/v1/
-docker-compose.yml            → archive/v1/
-requirements.txt              → archive/v1/
-honeyman.jpeg                 → archive/v1/  (old logo)
-```
-
-**Files staying at top level but keep:**
-
-```
-README.md                     → rewritten for V2 (public-facing)
-LICENSE
-CHANGELOG.md
-ARCHITECTURE.mmd              → rewritten for V2
-CAPABILITIES.md               → rewritten for V2
-HONEYMAN-V2-PLAN.md           → this file (canonical)
-data/                         → kept (malware DB used by V2)
-honeyman-v2/                  → V2 source tree (will be promoted in step below)
-migrate_v1_to_v2.py           → kept (one-time migration script)
-.gitignore
-```
-
-**Files marked archival but not deleted:**
-
-```
-HONEYMAN-V2-STATUS.md         → header points to HONEYMAN-V2-PLAN.md
-ARCHITECTURE-V2.md            → archived — superseded by ARCHITECTURE.mmd + this plan
-V2-OVERVIEW.md                → archived
-V2-IMPLEMENTATION-PLAN.md     → archived
-V2-MIGRATION-STARTED.md       → archived
-V2-MOBILE-SENSOR-DESIGN.md    → kept until merged into this plan
-TESTING.md                    → reviewed and updated for V2
-DEPLOYMENT-NOTES.md           → kept; merged into deployment guide
-honeyman-v2/CURRENT-STATUS.md           → header points here
-honeyman-v2/V2-MIGRATION-STATUS.md      → header points here
-honeyman-v2/IMPLEMENTATION-ROADMAP.md   → header points here
-honeyman-v2/PHASE-2-COMPLETE.md         → kept as historical record
-honeyman-v2/dashboard-v2/PHASE-3-COMPLETE.md  → kept as historical record
-honeyman-v2/dashboard-v2/PHASE-4-COMPLETE.md  → kept as historical record
-```
-
-**Files being deleted outright:**
-
-```
-honeyman-v2/readme/onboarding/provisioning_api.py
-honeyman-v2/readme/onboarding/requirements.txt
-                              → duplicate of FastAPI onboarding endpoint
-"New folder/"                 → mystery directory (verify empty first)
-```
-
-**Code being deleted from the V2 backend:**
-
-```
-backend/app/api/auth.py                  → DELETE (no JWT login)
-backend/app/models/user.py               → DELETE (no users)
-backend/app/schemas/user.py              → DELETE (no users)
-backend/app/core/security.py             → REWRITTEN as api_key.py
-backend/app/api/deps.py                  → REWRITTEN: api_key dep only
-backend/app/main.py                      → drop auth router import
-backend/alembic/versions/001_initial_schema.py
-                                         → drop users table; add api_keys table
-```
-
-**Code being deleted from the V2 frontend:**
-
-```
-frontend/src/services/api.ts             → drop JWT axios interceptor
-                                         (no Authorization header on read endpoints)
-                                         (any saved tokens removed)
-```
-
-**Promotion (deferred to a follow-up commit):**
-
-The `honeyman-v2/` subdirectory should eventually be promoted to the repo root. For now we're keeping it nested to avoid disturbing every import path during cleanup. The promotion itself is mechanical (`git mv honeyman-v2/* .`) once nothing else under it references the prefix.
-
----
-
-## 6. Build order
+## 5. Build order
 
 Phase ordering after cleanup. Each phase produces something demonstrable; don't move on without that demo.
 
@@ -328,7 +232,7 @@ Goal: when a sensor has a network interface, optionally expose SSH/HTTP honeypot
 
 ---
 
-## 7. Rule management model
+## 6. Rule management model
 
 Rules live in YAML files in `/etc/honeyman/rules/<category>/<rule-name>.yaml` on the sensor. There are three ways a rule gets there:
 
@@ -342,7 +246,7 @@ This means rule changes propagate without code redeployment, just as required.
 
 ---
 
-## 8. Public dashboard scope
+## 7. Public dashboard scope
 
 **The dashboard is a viewing surface only.** No accounts, no actions.
 
@@ -365,7 +269,7 @@ What it does NOT do:
 
 ---
 
-## 9. Open decisions
+## 8. Open decisions
 
 A few things I've made implicit choices on but you should confirm:
 
@@ -381,7 +285,7 @@ A few things I've made implicit choices on but you should confirm:
 
 ---
 
-## 10. Out of scope for V2
+## 9. Out of scope for V2
 
 Explicit no-goes for this version, to prevent scope creep:
 
@@ -395,15 +299,13 @@ Explicit no-goes for this version, to prevent scope creep:
 
 ---
 
-## 11. Document map
-
-After cleanup, this is the doc structure:
+## 10. Document map
 
 ```
 README.md                    Public-facing intro + quick-start
 HONEYMAN-V2-PLAN.md          This file (canonical plan)
-ARCHITECTURE.mmd             Mermaid diagram of V2 system
-CAPABILITIES.md              What V2 detects, accuracy, limitations
+ARCHITECTURE.mmd             Mermaid diagram of the system
+CAPABILITIES.md              What Honeyman detects, accuracy, limitations
 CHANGELOG.md                 Release notes
 LICENSE                      MIT
 TESTING.md                   How to run tests + integration scenarios
@@ -417,8 +319,6 @@ honeyman-v2/
 │   │   └── README.md        Backend dev + deploy
 │   └── frontend/            React app
 │       └── README.md        Frontend dev + deploy
-└── deployment/              VPS deployment configs (compose, nginx, etc.)
-
-archive/
-└── v1/                      All V1 code, untouched, for reference
+├── deployment/              VPS deployment configs (compose, nginx, etc.)
+└── readme/onboarding/       install.sh, Mosquitto, Compose configs
 ```

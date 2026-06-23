@@ -49,11 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Wired into agent lifecycle (`HoneymanAgent.initialize` / `.start` / `.stop`)
 
 ### Removed
-- `archive/v2-removed-auth/` — old `auth.py`, JWT `security.py`, User model + schema
-- `archive/v2-removed-onboarding/` — duplicate standalone Flask `provisioning_api.py`
-- `archive/v1/` — V1 monolithic codebase, kept for reference
-
-
+- V1 monolithic codebase and one-shot V1 helpers (previously under `archive/v1/` and `archive/v1-scripts/`) — `git log` preserves the history
+- Pre-API-key auth code (JWT, User model, RBAC) and the duplicated standalone Flask `provisioning_api.py` (previously under `archive/v2-removed-*`)
+- Stale phase-completion and migration-status docs (`*-COMPLETE.md`, `CURRENT-STATUS.md`, `V2-MIGRATION-STATUS.md`, `IMPLEMENTATION-ROADMAP.md`, `dashboard-v2/DEPLOYMENT.md`, `docs/historical/`) — superseded by `HONEYMAN-V2-PLAN.md`
 
 ### Added
 - **Malware Hash Database**: Comprehensive 360+ signature database for USB threat detection
