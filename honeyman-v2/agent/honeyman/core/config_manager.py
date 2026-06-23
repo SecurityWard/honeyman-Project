@@ -48,7 +48,7 @@ class ConfigManager:
                 'protocol': 'https',
                 'fallback': 'none',
                 'https': {
-                    'base_url': 'https://api.honeyman.io',
+                    'base_url': 'https://api.honeymanproject.com',
                     'api_prefix': '/api/v2',
                     'api_key_file': '/etc/honeyman/api_key',
                     'timeout': 30,

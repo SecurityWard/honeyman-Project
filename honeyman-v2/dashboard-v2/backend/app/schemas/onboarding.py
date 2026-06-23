@@ -48,7 +48,7 @@ class SensorRegistrationResponse(BaseModel):
     api_key: str = Field(..., description="One-time plaintext key. Store securely.")
 
     # Where to send data
-    api_endpoint: str = Field(..., description='e.g. "https://api.honeyman.io/api/v2"')
+    api_endpoint: str = Field(..., description='e.g. "https://api.honeymanproject.com/api/v2"')
 
     # Optional MQTT details - only populated if the deployment offers MQTT
     mqtt_enabled: bool = False

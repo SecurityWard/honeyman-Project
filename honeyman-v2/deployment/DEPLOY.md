@@ -283,7 +283,7 @@ journalctl -u honeyman-backend -n 100
 | `time_bucket does not exist` | TimescaleDB extension not enabled in `honeyman_v2` DB | `sudo -u postgres psql -d honeyman_v2 -c "CREATE EXTENSION timescaledb"` |
 | `password authentication failed for user "honeyman"` | `.env` `DATABASE_URL` password mismatches what Postgres knows | Reset: `sudo -u postgres psql -c "ALTER USER honeyman WITH PASSWORD '…'"` then update `.env` |
 | `pydantic.ValidationError: SECRET_KEY field required` | Stale `.env` from a pre-V2 deployment | Remove `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_*`, `REFRESH_TOKEN_*` lines — V2 doesn't use them |
-| `ConnectionRefusedError: [Errno 111]` to `mqtt.honeyman.io` | `MQTT_OFFERED=true` but no broker reachable | Set `MQTT_OFFERED=false` in `.env` |
+| `ConnectionRefusedError: [Errno 111]` to `mqtt.honeymanproject.com` | `MQTT_OFFERED=true` but no broker reachable | Set `MQTT_OFFERED=false` in `.env` |
 | `(psycopg2.OperationalError) FATAL: database "honeyman_v2" does not exist` | DB not created yet | Step 1.2 |
 
 ### Dashboard loads but is empty / shows network errors in DevTools

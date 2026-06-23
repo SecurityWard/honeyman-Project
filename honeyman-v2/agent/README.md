@@ -25,7 +25,7 @@ pip install -e .
 Use the install script:
 
 ```bash
-curl -sSL https://honeyman.io/install | bash
+curl -sSL https://honeymanproject.com/install | bash
 ```
 
 It self-registers the sensor with the backend, captures the one-time API key, and sets up systemd. See `honeyman-v2/readme/onboarding/install.sh`.
@@ -35,7 +35,7 @@ It self-registers the sensor with the backend, captures the one-time API key, an
 ### 1. Register the sensor
 
 ```bash
-curl -X POST https://api.honeyman.io/api/v2/sensors/register \
+curl -X POST https://api.honeymanproject.com/api/v2/sensors/register \
   -H 'Content-Type: application/json' \
   -d '{"requested_name": "test-pi", "capabilities": {"usb": true, "wifi": false}}'
 ```
@@ -102,7 +102,7 @@ See [`example_config.yaml`](example_config.yaml). Key fields:
 | `sensor_id` | Returned by `/sensors/register`, used in heartbeat URL |
 | `transport.protocol` | `https` (default) or `mqtt` |
 | `transport.https.api_key_file` | Path to a file containing the plaintext API key (mode 0600) |
-| `transport.https.base_url` | Backend host, e.g. `https://api.honeyman.io` |
+| `transport.https.base_url` | Backend host, e.g. `https://api.honeymanproject.com` |
 | `detectors.<name>` | Toggle per detector; install.sh sets these from detected hardware |
 | `rules_dir` | Directory of YAML rules; the engine watches it for changes |
 

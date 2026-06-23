@@ -6,17 +6,17 @@
 # drops a config.yaml, installs honeyman-agent, and starts it via systemd.
 #
 # Usage:
-#   curl -sSL https://honeyman.io/install | sudo bash
+#   curl -sSL https://honeymanproject.com/install | sudo bash
 #
 # Non-interactive (e.g. for cloud-init or batch SD card flashing):
-#   curl -sSL https://honeyman.io/install | sudo \
+#   curl -sSL https://honeymanproject.com/install | sudo \
 #     SENSOR_NAME="defcon-hotel" \
 #     LOCATION="DefCon 32 hotel lobby" \
 #     NON_INTERACTIVE=1 \
 #     bash
 #
 # Environment overrides:
-#   HONEYMAN_API       Backend base URL (default: https://api.honeyman.io)
+#   HONEYMAN_API       Backend base URL (default: https://api.honeymanproject.com)
 #   SENSOR_NAME        Self-selected name (slugified; backend adds suffix)
 #   LOCATION           Free-text location label
 #   NON_INTERACTIVE    Skip prompts, accept hardware-detected defaults
@@ -25,7 +25,7 @@
 
 set -euo pipefail
 
-HONEYMAN_API="${HONEYMAN_API:-https://api.honeyman.io}"
+HONEYMAN_API="${HONEYMAN_API:-https://api.honeymanproject.com}"
 HONEYMAN_VERSION="2.0.0"
 INSTALL_DIR="/opt/honeyman"
 CONFIG_DIR="/etc/honeyman"

@@ -80,7 +80,7 @@ services:
       DATABASE_URL: postgresql://honeyman:${DB_PASSWORD:-changeme}@timescaledb/honeyman
       MOSQUITTO_PASSWD_FILE: /mosquitto/config/passwd
       MOSQUITTO_ACL_FILE: /mosquitto/config/acl
-      BROKER_HOST: ${BROKER_HOST:-broker.honeyman.io}
+      BROKER_HOST: ${BROKER_HOST:-broker.honeymanproject.com}
       BROKER_PORT: 8883
       CA_CERT_PATH: /certs/ca.crt
       MAX_SENSORS: ${MAX_SENSORS:-1000}

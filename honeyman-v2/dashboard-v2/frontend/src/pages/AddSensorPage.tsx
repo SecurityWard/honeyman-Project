@@ -13,7 +13,7 @@ export default function AddSensorPage() {
     return window.location.origin.replace(/:\d+$/, ':8000');
   }, []);
 
-  const installCommand = `curl -sSL https://honeyman.io/install | sudo HONEYMAN_API='${apiBase}' bash`;
+  const installCommand = `curl -sSL https://honeymanproject.com/install | sudo HONEYMAN_API='${apiBase}' bash`;
 
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
@@ -77,7 +77,7 @@ export default function AddSensorPage() {
         <p>
           For batch SD-card flashing or cloud-init, pre-set the values:
         </p>
-        <pre className="block-code"><code>{`curl -sSL https://honeyman.io/install | sudo \\
+        <pre className="block-code"><code>{`curl -sSL https://honeymanproject.com/install | sudo \\
   SENSOR_NAME='defcon-hotel' \\
   LOCATION='DefCon 32 hotel lobby' \\
   NON_INTERACTIVE=1 \\

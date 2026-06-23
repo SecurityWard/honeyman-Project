@@ -28,7 +28,7 @@ transport:
   fallback: none       # none (default) | https | mqtt
 
   https:
-    base_url: https://api.honeyman.io
+    base_url: https://api.honeymanproject.com
     api_prefix: /api/v2
     api_key_file: /etc/honeyman/api_key   # contains the plaintext key, mode 0600
     # api_key: "hms_..."                  # uncomment to override the file (testing only)
@@ -37,7 +37,7 @@ transport:
 
   # Optional. Only used when protocol or fallback references mqtt.
   mqtt:
-    broker: ""           # e.g. mqtt.honeyman.io
+    broker: ""           # e.g. mqtt.honeymanproject.com
     port: 8883
     username: ""
     password: ""

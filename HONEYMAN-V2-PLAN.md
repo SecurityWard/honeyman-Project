@@ -373,7 +373,7 @@ A few things I've made implicit choices on but you should confirm:
 
 2. **WiFi positioning provider.** Mozilla Location Service is free and good but has been quietly deprecated/spun off; Google Geolocation costs money but is reliable. For now I'd default to MLS and let operators opt into Google with their own API key in `config.yaml`.
 
-3. **Public dashboard hostname.** Right now it's `http://72.60.25.24:3000`. For a public deployment we want `https://dashboard.honeyman.io` or similar. Need a domain and Let's Encrypt cert.
+3. **Public dashboard hostname.** Right now it's `http://72.60.25.24:3000`. For a public deployment we want `https://dashboard.honeymanproject.com` or similar. Need a domain and Let's Encrypt cert.
 
 4. **Sensor naming privacy.** Self-selected names with random suffixes (`defcon-hotel-7x9k`) — already designed. Operators may not want their physical location guessable. Consider letting operators flag a sensor as "hide exact location" — the map would show city-level only.
 

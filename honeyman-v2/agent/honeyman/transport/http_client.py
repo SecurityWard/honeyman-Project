@@ -28,7 +28,7 @@ class HTTPClient:
     """HTTPS+API-key client for the dashboard backend."""
 
     def __init__(self, config: Dict[str, Any]):
-        self.base_url: str = config.get("base_url", "https://api.honeyman.io").rstrip("/")
+        self.base_url: str = config.get("base_url", "https://api.honeymanproject.com").rstrip("/")
         self.api_prefix: str = config.get("api_prefix", "/api/v2")
         self.sensor_id: Optional[str] = config.get("sensor_id")
         self.timeout: float = float(config.get("timeout", 30))

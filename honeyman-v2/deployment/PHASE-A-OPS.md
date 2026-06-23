@@ -97,11 +97,11 @@ diff -u /root/honeyman-v2/backend/.env /root/honeyman-v2/backend/.env.example
 Make sure these are present and correct:
 
 ```bash
-PUBLIC_API_BASE_URL=https://api.honeyman.io   # or http://72.60.25.24:8000 for now
+PUBLIC_API_BASE_URL=https://api.honeymanproject.com   # or http://72.60.25.24:8000 for now
 MQTT_OFFERED=false                             # true only if you want MQTT alongside HTTPS
 DATABASE_URL=postgresql+asyncpg://honeyman:...@localhost:5432/honeyman_v2
 REDIS_URL=redis://localhost:6379/0
-CORS_ORIGINS=http://72.60.25.24:3000,https://dashboard.honeyman.io
+CORS_ORIGINS=http://72.60.25.24:3000,https://dashboard.honeymanproject.com
 ```
 
 These can be removed if still present:

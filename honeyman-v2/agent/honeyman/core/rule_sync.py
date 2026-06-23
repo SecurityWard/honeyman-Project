@@ -63,7 +63,7 @@ class RuleSyncService:
         self.base_url = (
             config.get("backend_base_url")
             or https_cfg.get("base_url")
-            or "https://api.honeyman.io"
+            or "https://api.honeymanproject.com"
         ).rstrip("/")
         self.api_prefix = (
             config.get("api_prefix")

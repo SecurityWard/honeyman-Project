@@ -12,7 +12,7 @@ Honeyman V2 is a portable, modular honeypot and threat detection system designed
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                          USER'S RASPBERRY PI                                │
 │                                                                             │
-│  $ curl -sSL https://honeyman.io/install | bash                            │
+│  $ curl -sSL https://honeymanproject.com/install | bash                            │
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                    INTERACTIVE SETUP                                 │   │
@@ -128,7 +128,7 @@ Honeyman V2 is a portable, modular honeypot and threat detection system designed
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ STEP 1: User runs install command                               │
-│ $ curl -sSL https://honeyman.io/install | bash                 │
+│ $ curl -sSL https://honeymanproject.com/install | bash                 │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -142,7 +142,7 @@ Honeyman V2 is a portable, modular honeypot and threat detection system designed
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │ STEP 3: Script POSTs to provisioning API                        │
-│ POST https://api.honeyman.io/v1/sensors/register               │
+│ POST https://api.honeymanproject.com/v1/sensors/register               │
 │ {                                                               │
 │   "requested_name": "defcon-hotel",                             │
 │   "location": "Las Vegas, NV",                                  │

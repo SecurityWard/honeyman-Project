@@ -42,12 +42,12 @@ See [`ARCHITECTURE.mmd`](ARCHITECTURE.mmd) for the detailed diagram.
 
 ## Deploy a sensor
 
-> ⚠️ The endpoints below assume a hosted deployment. If you're running your own backend, replace `api.honeyman.io` with your URL.
+> ⚠️ The endpoints below assume a hosted deployment. If you're running your own backend, replace `api.honeymanproject.com` with your URL.
 
 On a fresh Raspberry Pi (Pi Zero 2 W, Pi 4, or Pi 5):
 
 ```bash
-curl -sSL https://honeyman.io/install | bash
+curl -sSL https://honeymanproject.com/install | bash
 ```
 
 The installer will:
@@ -64,7 +64,7 @@ Within a minute or two, the sensor appears on the public dashboard.
 For non-interactive installs (e.g. flashing many SD cards), pre-set the env vars:
 
 ```bash
-curl -sSL https://honeyman.io/install | \
+curl -sSL https://honeymanproject.com/install | \
   SENSOR_NAME="defcon-hotel" \
   LOCATION="DefCon 32 — Caesars Palace" \
   bash
@@ -74,7 +74,7 @@ curl -sSL https://honeyman.io/install | \
 
 ## View the dashboard
 
-**Public URL:** http://72.60.25.24:3000  *(will move to `https://dashboard.honeyman.io` when DNS is set up)*
+**Public URL:** http://72.60.25.24:3000  *(will move to `https://dashboard.honeymanproject.com` when DNS is set up)*
 
 The dashboard shows:
 

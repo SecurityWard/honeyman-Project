@@ -53,7 +53,7 @@ v2_architecture/
 
 ```
 User runs:
-  curl -sSL https://honeyman.io/install | bash
+  curl -sSL https://honeymanproject.com/install | bash
        │
        ▼
 ┌─────────────────────────────────────────┐
@@ -130,7 +130,7 @@ User runs:
   "sensor_id": "defcon-hotel-7x9k",
   "secret": "a7b9c2d4e6f8901234567890abcdef...",
   "broker": {
-    "host": "broker.honeyman.io",
+    "host": "broker.honeymanproject.com",
     "port": 8883,
     "ca_cert": "-----BEGIN CERTIFICATE-----..."
   },
@@ -139,7 +139,7 @@ User runs:
     "health": "honeypot/defcon-hotel-7x9k/health",
     "alerts": "honeypot/defcon-hotel-7x9k/alerts"
   },
-  "dashboard_url": "https://dashboard.honeyman.io/sensor/defcon-hotel-7x9k"
+  "dashboard_url": "https://dashboard.honeymanproject.com/sensor/defcon-hotel-7x9k"
 }
 ```
 

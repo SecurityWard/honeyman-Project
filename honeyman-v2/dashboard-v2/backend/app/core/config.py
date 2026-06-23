@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     WORKERS: int = 4
-    PUBLIC_API_BASE_URL: str = "https://api.honeyman.io"
+    PUBLIC_API_BASE_URL: str = "https://api.honeymanproject.com"
 
     # CORS
     # Accepted forms in the environment variable:
@@ -47,7 +47,7 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:5173",
         "http://72.60.25.24:3000",
-        "https://dashboard.honeyman.io",
+        "https://dashboard.honeymanproject.com",
     ]
 
     # Database (PostgreSQL + TimescaleDB)
