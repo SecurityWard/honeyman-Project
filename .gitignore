@@ -33,12 +33,17 @@ Thumbs.db
 *.swo
 *~
 
-# API Keys and Secrets  
+# API keys and secrets — match common secret-filename patterns,
+# then explicitly re-include source files that handle API keys.
 *api_key*
 *secret*
 *password*
 *credentials*
 HOSTINGER_API_KEY
+!honeyman-v2/**/api_key.py
+!honeyman-v2/**/api_key.ts
+!honeyman-v2/**/test_api_key*.py
+!honeyman-v2/agent/example_config.yaml
 
 # Backup files
 *.backup
