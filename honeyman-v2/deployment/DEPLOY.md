@@ -128,41 +128,29 @@ npm install
 npm run build
 ```
 
-The build lands in `dist/`. Serve it via nginx:
-
-```nginx
-# /etc/nginx/sites-available/honeyman
-server {
-    listen 80;
-    server_name dashboard.your-domain.tld;
-    root /root/honeyman-Project/honeyman-v2/dashboard-v2/frontend/dist;
-    index index.html;
-    location / {
-        try_files $uri $uri/ /index.html;   # SPA fallback
-    }
-}
-
-server {
-    listen 80;
-    server_name api.your-domain.tld;
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Upgrade $http_upgrade;       # required for WebSocket
-        proxy_set_header Connection "upgrade";
-        proxy_read_timeout 86400;
-    }
-}
-```
+The build lands in `dist/`. Serve it via nginx — a working production config
+is at [`./nginx/honeyman.conf`](nginx/honeyman.conf); copy it into place:
 
 ```bash
-ln -s /etc/nginx/sites-available/honeyman /etc/nginx/sites-enabled/honeyman
+cp nginx/honeyman.conf /etc/nginx/sites-available/honeyman
+ln -sf /etc/nginx/sites-available/honeyman /etc/nginx/sites-enabled/honeyman
 nginx -t && systemctl reload nginx
 ```
+
+The config defines three vhosts:
+
+- **`dashboard.your-domain.tld`** — serves the SPA from `dist/`. Also serves
+  `install.sh` at `/install` (so the one-liner shown on the Add Sensor page
+  reaches an actual shell script, not the SPA's `index.html`).
+- **`api.your-domain.tld`** — reverse-proxies to FastAPI on `127.0.0.1:8000`
+  with the `Upgrade`/`Connection` headers set so the WebSocket live feed
+  works.
+- **apex `your-domain.tld`** — 301s to `dashboard.your-domain.tld`.
+
+Edit the domain names to match your DNS before applying. See
+[`./nginx/README.md`](nginx/README.md) for gotchas (especially: do not put
+backup files inside `sites-enabled/` — nginx will load them and conflict
+with the live config).
 
 For TLS, run `certbot --nginx -d dashboard.your-domain.tld -d api.your-domain.tld`. Skip TLS for the local smoke test if you don't have DNS pointed yet — just use `http://72.60.25.24:3000` and `http://72.60.25.24:8000` directly.
 
