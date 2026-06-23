@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     REDIS_CACHE_TTL: int = 300  # 5 minutes
 
-    # MQTT Broker (V2: optional - HTTPS is the default sensor transport)
+    # MQTT broker (optional; HTTPS is the default sensor transport)
     MQTT_OFFERED: bool = False
     MQTT_BROKER_HOST: Optional[str] = None
     MQTT_BROKER_PORT: int = 8883

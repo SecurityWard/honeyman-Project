@@ -2,9 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import type { Sensor, PaginatedResponse } from '../types';
 
-// V2: dashboard is read-only. There are no update/delete mutations.
-// Sensors are managed via SSH on the device, not from the public UI.
-
 export function useSensors(page: number = 1, pageSize: number = 50) {
   return useQuery({
     queryKey: ['sensors', page, pageSize],

@@ -4,8 +4,6 @@ import { useSensors } from '../hooks/useSensors';
 import type { Sensor } from '../types';
 import './SensorsPage.css';
 
-// V2: read-only sensor list. Operators manage individual sensors via SSH.
-
 export default function SensorsPage() {
   const [page, setPage] = useState(1);
   const { data: sensorsData, isLoading } = useSensors(page, 50);

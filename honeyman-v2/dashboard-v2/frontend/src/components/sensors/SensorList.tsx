@@ -3,8 +3,6 @@ import type { Sensor } from '../../types';
 import { format } from 'date-fns';
 import './SensorList.css';
 
-// V2: read-only — no edit/delete buttons.
-
 interface SensorListProps {
   sensors: Sensor[];
   onSelectSensor?: (sensor: Sensor) => void;

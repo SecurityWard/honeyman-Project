@@ -1,13 +1,4 @@
-"""
-Onboarding schemas - V2 self-register flow.
-
-A sensor calls POST /sensors/register with its self-selected name and
-hardware capabilities. The backend assigns a unique sensor_id (with a
-random suffix to disambiguate names) and returns a one-time API key
-that the sensor uses for all subsequent writes.
-
-There are no user accounts and no admin-issued onboarding tokens.
-"""
+"""Onboarding request/response schemas for POST /sensors/register."""
 
 from datetime import datetime
 from typing import Any

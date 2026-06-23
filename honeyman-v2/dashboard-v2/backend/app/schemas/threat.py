@@ -41,7 +41,7 @@ class ThreatCreate(ThreatBase):
 
 
 class ThreatResponse(ThreatBase):
-    """Schema for threat response (V2: no acknowledge fields)"""
+    """Schema for threat response."""
     id: UUID
     device_name: Optional[str]
     device_mac: Optional[str]

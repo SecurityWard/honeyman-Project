@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-WiFi Threat Detector - V2
+WiFi Threat Detector.
 
 Detects WiFi attacks including:
 - Evil Twin access points

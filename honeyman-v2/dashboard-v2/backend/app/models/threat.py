@@ -73,9 +73,6 @@ class Threat(Base):
     mitre_tactics = Column(JSON, default=list, nullable=True)
     mitre_techniques = Column(JSON, default=list, nullable=True)
 
-    # V2: no acknowledge/dismiss fields. The dashboard is view-only.
-
-    # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Indexes for common queries

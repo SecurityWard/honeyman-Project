@@ -59,7 +59,7 @@ class HoneymanAgent:
 
     async def initialize(self):
         """Initialize all agent components"""
-        logger.info("Initializing Honeyman Agent v2.0...")
+        logger.info("Initializing Honeyman Agent...")
 
         # Load configuration
         logger.info(f"Loading configuration from {self.config_path}")

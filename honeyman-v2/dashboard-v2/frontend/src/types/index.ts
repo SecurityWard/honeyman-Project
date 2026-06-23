@@ -1,9 +1,3 @@
-// V2 type definitions
-//
-// No User / Login types — V2 has no accounts.
-// No acknowledged fields on Threat — V2 dashboard is read-only.
-
-// Sensor types
 export interface Sensor {
   id: string;
   sensor_id: string;

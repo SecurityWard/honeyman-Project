@@ -1,4 +1,4 @@
-# Honeyman V2 - VPS Docker Compose
+# Honeyman — VPS Docker Compose.
 # Deploys: Provisioning API, MQTT Broker, Database, Dashboard
 
 version: '3.8'

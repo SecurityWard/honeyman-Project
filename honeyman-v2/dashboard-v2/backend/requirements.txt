@@ -1,4 +1,4 @@
-# Honeyman V2 Dashboard Backend - Python Dependencies
+# Honeyman Dashboard Backend — Python dependencies.
 
 # Core Framework
 fastapi==0.104.1
@@ -19,9 +19,8 @@ paho-mqtt==1.6.1
 redis==5.0.1
 hiredis==2.2.3
 
-# Authentication: V2 uses per-sensor API keys hashed with hashlib.sha256
-# (stdlib). No JWT, no bcrypt, no password hashing required.
-python-multipart==0.0.6  # still useful for file uploads if added later
+# Per-sensor API keys are SHA256-hashed via hashlib (stdlib). No JWT/bcrypt.
+python-multipart==0.0.6  # for any future file-upload endpoints
 
 # WebSocket
 websockets==12.0

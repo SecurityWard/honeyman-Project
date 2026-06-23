@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
-"""
-HTTPS client — V2 default sensor transport.
+"""HTTPS client — default sensor transport.
 
-Authenticates writes with a per-sensor API key:
-    Authorization: Bearer <api_key>
+Authenticates writes with a per-sensor API key (Bearer token). The key is
+loaded from a credentials file (default /etc/honeyman/api_key, mode 0600);
+a `transport.https.api_key` field in config takes precedence for testing.
 
-The key is loaded from a credentials file (default /etc/honeyman/api_key,
-mode 0600) so it never lives in the YAML config that operators may share.
-A `transport.https.api_key` field in config takes precedence for testing.
-
-Endpoints (matches FastAPI backend in dashboard-v2/backend):
-    POST {base_url}/api/v2/threats                     — threat ingest
+Endpoints:
+    POST {base_url}/api/v2/threats                       — threat ingest
     POST {base_url}/api/v2/sensors/{sensor_id}/heartbeat — heartbeat
-    POST {base_url}/api/v2/sensors/register            — onboarding (no auth)
+    POST {base_url}/api/v2/sensors/register              — self-register (no auth)
 """
 
 from __future__ import annotations
@@ -29,7 +25,7 @@ DEFAULT_API_KEY_FILE = "/etc/honeyman/api_key"
 
 
 class HTTPClient:
-    """HTTPS+API-key client for the V2 dashboard backend."""
+    """HTTPS+API-key client for the dashboard backend."""
 
     def __init__(self, config: Dict[str, Any]):
         self.base_url: str = config.get("base_url", "https://api.honeyman.io").rstrip("/")

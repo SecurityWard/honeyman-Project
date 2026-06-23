@@ -1,10 +1,4 @@
-"""
-Threat API endpoints — V2.
-
-Reads (list, get) are public.
-Writes (POST) require the sensor's API key.
-There are no acknowledge/delete endpoints — the dashboard is view-only.
-"""
+"""Threat endpoints. Reads are public; writes require the sensor's API key."""
 
 from datetime import datetime
 from typing import List, Optional

@@ -1,5 +1,5 @@
 """
-Rules distribution endpoint — V2 central rule sync.
+Rules distribution endpoint.
 
 GET /api/v2/rules
     Returns the current rule manifest for the calling sensor:

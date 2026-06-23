@@ -1,6 +1,4 @@
-"""
-API dependencies — V2 uses per-sensor API keys for writes; reads are public.
-"""
+"""API dependencies. Per-sensor API keys gate writes; reads are public."""
 
 from fastapi import Depends, HTTPException, Header, status
 from sqlalchemy.ext.asyncio import AsyncSession

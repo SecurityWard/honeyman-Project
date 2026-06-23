@@ -1,16 +1,14 @@
-"""Initial schema with TimescaleDB hypertable - V2 (no users)
+"""Initial schema.
 
 Revision ID: 001
 Revises:
 Create Date: 2026-05-09
 
-V2 migration:
-- No users table (public dashboard, no accounts).
-- Sensors authenticate writes via per-sensor API key (api_key_hash column).
+- Sensors table with per-sensor API key (api_key_hash column).
 - Threats hypertable with TimescaleDB compression + 90d retention.
-- Composite PK (id, timestamp) — TimescaleDB requires the partition column in
-  any unique/PK index.
-- Phase D location columns (accuracy_meters, location_method) on threats.
+- Composite PK (id, timestamp) — TimescaleDB requires the partition column
+  in any unique/PK index.
+- Location columns (accuracy_meters, location_method) on threats.
 """
 from alembic import op
 import sqlalchemy as sa
@@ -64,7 +62,7 @@ def upgrade() -> None:
         sa.Column('updated_at', sa.DateTime(timezone=True), onupdate=sa.func.now(), nullable=True),
         sa.Column('registered_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
 
-        # V2: per-sensor API key (SHA256 hex digest, 64 chars)
+        # Per-sensor API key (SHA256 hex digest, 64 chars)
         sa.Column('api_key_hash', sa.String(64), nullable=False, index=True),
     )
 

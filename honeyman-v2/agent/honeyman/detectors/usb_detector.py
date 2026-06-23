@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-USB Threat Detector - V2
+USB Threat Detector.
 
 Detects malicious USB devices including:
 - BadUSB/Rubber Ducky

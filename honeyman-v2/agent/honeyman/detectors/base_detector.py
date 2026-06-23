@@ -157,7 +157,7 @@ class BaseDetector(ABC):
         """
         Create a threat payload that matches the backend's POST /v2/threats schema.
 
-        See dashboard-v2/backend/app/schemas/threat.py — ThreatCreate. The
+        See backend app/schemas/threat.py — ThreatCreate. The
         envelope here is what the backend will accept directly; extra fields
         (sensor_name, message, etc.) are dropped by Pydantic so we don't
         bother sending them.

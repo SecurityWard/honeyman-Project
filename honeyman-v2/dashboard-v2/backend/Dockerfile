@@ -1,4 +1,4 @@
-# Honeyman V2 Dashboard Backend - Dockerfile
+# Honeyman Dashboard Backend.
 
 FROM python:3.11-slim
 

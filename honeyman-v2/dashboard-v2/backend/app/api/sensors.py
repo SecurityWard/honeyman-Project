@@ -1,10 +1,4 @@
-"""
-Sensor API endpoints — V2.
-
-Reads (list, get, stats) are public.
-Writes (heartbeat) require the sensor's API key.
-There are no admin update/delete endpoints; operators manage sensors via SSH.
-"""
+"""Sensor endpoints. Reads are public; heartbeats require the sensor's API key."""
 
 from datetime import datetime, timedelta
 from typing import Optional

@@ -1,11 +1,8 @@
-"""
-Alembic migration environment.
+"""Alembic migration environment.
 
-Notes:
-- V2 has no `users` table; do not import a User model here.
-- The runtime backend uses asyncpg, but Alembic uses a synchronous engine.
-  We rewrite the DATABASE_URL driver to psycopg2 for migrations only.
-  psycopg2-binary is already in requirements.txt.
+The runtime backend uses asyncpg, but Alembic needs a sync engine, so the
+DATABASE_URL driver is rewritten to psycopg2 for migrations only.
+psycopg2-binary is already in requirements.txt.
 """
 
 from logging.config import fileConfig

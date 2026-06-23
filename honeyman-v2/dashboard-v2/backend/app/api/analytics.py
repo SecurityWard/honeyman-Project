@@ -16,8 +16,6 @@ from ..schemas.analytics import (
     GeographicDistribution, MitreAttackCoverage, ThreatVelocity
 )
 
-# V2: analytics endpoints are public (no auth)
-
 router = APIRouter()
 
 

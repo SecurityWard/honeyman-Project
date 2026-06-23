@@ -6,7 +6,7 @@ Periodically POSTs sensor health + current location to:
     POST /api/v2/sensors/{sensor_id}/heartbeat
 
 Payload matches the backend's SensorHeartbeat schema
-(see dashboard-v2/backend/app/schemas/sensor.py):
+(see backend app/schemas/sensor.py):
 
     {
         "sensor_id":          "<id>",

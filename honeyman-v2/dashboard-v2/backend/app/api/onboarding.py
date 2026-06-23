@@ -1,12 +1,8 @@
-"""
-Onboarding API — V2 self-register flow.
+"""Sensor self-register endpoint.
 
-Sensors call POST /sensors/register with their self-selected name and
-hardware capabilities. The backend assigns a unique sensor_id (with a
-random suffix to disambiguate) and returns a one-time API key that the
-sensor uses for all subsequent writes.
-
-No user accounts. No admin tokens.
+POST /sensors/register accepts a self-selected name and hardware capabilities,
+assigns a unique sensor_id (with a random suffix), and returns a one-time API
+key the sensor uses for all subsequent writes.
 """
 
 from datetime import datetime

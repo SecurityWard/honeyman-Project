@@ -1,5 +1,5 @@
 #!/bin/bash
-# Honeyman V2 - Sensor Installation Script
+# Honeyman — sensor installation script.
 #
 # Self-registering: hits POST /api/v2/sensors/register, captures the
 # one-time API key, writes it to /etc/honeyman/api_key (mode 0600),
@@ -48,7 +48,7 @@ fi
 print_banner() {
     echo -e "${CYAN}"
     echo "=================================================================="
-    echo "   Honeyman V2 - Sensor Installation (v${HONEYMAN_VERSION})"
+    echo "   Honeyman — Sensor Installation (v${HONEYMAN_VERSION})"
     echo "   Backend: ${HONEYMAN_API}"
     echo "=================================================================="
     echo -e "${NC}"
@@ -197,7 +197,7 @@ install_system_deps() {
 }
 
 # ---------------------------------------------------------------------------
-# Registration (V2 self-register flow)
+# Registration (self-register flow)
 # ---------------------------------------------------------------------------
 build_capabilities_json() {
     python3 - <<PY
@@ -307,7 +307,7 @@ EOF
     fi
 
     cat > "${CONFIG_DIR}/config.yaml" <<EOF
-# Honeyman V2 sensor config — generated $(date -Iseconds)
+# Honeyman sensor config — generated $(date -Iseconds)
 
 sensor_id: "${SENSOR_ID}"
 sensor_name: "${SENSOR_NAME}"
@@ -386,7 +386,7 @@ install_systemd() {
     step "Installing systemd unit..."
     cat > /etc/systemd/system/honeyman-agent.service <<EOF
 [Unit]
-Description=Honeyman V2 Threat Detection Agent
+Description=Honeyman Threat Detection Agent
 After=network-online.target
 Wants=network-online.target
 
@@ -451,7 +451,7 @@ main() {
 
     echo
     echo -e "${GREEN}=================================================================="
-    echo -e "  Honeyman V2 sensor installed"
+    echo -e "  Honeyman sensor installed"
     echo -e "==================================================================${NC}"
     echo
     echo -e "  Sensor ID:    ${BOLD}${SENSOR_ID}${NC}"

@@ -2,8 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import type { Threat, PaginatedResponse, ThreatQueryParams } from '../types';
 
-// V2: dashboard is read-only. No acknowledge or delete mutations.
-
 export function useThreats(params: ThreatQueryParams = {}) {
   return useQuery({
     queryKey: ['threats', params],

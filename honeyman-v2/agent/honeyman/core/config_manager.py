@@ -38,7 +38,7 @@ class ConfigManager:
             return self._get_default_config()
 
     def _get_default_config(self) -> Dict[str, Any]:
-        """V2 defaults: HTTPS+API-key transport, no MQTT."""
+        """Defaults: HTTPS+API-key transport, no MQTT."""
         return {
             'sensor_id': 'unknown',
             'sensor_name': 'Unknown Sensor',

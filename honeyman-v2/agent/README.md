@@ -1,4 +1,4 @@
-# Honeyman Agent V2
+# Honeyman Agent
 
 Multi-vector threat detection agent for Raspberry Pi and embedded Linux.
 
@@ -22,7 +22,7 @@ pip install -e .
 
 ### Production deploy
 
-Use the install script (currently being updated for V2):
+Use the install script:
 
 ```bash
 curl -sSL https://honeyman.io/install | bash
@@ -160,4 +160,4 @@ python test_airdrop_detector.py
 
 ## Status
 
-This is the V2 agent. See `../HONEYMAN-V2-PLAN.md` at the repo root for current phase and roadmap.
+See `../HONEYMAN-V2-PLAN.md` at the repo root for current phase and roadmap.

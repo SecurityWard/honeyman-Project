@@ -1,10 +1,6 @@
 import { useMemo, useState } from 'react';
 import './AddSensorPage.css';
 
-// V2 onboarding page. Public, read-only — just shows the install command
-// and explains what the sensor will do. No registration UI here; the sensor
-// self-registers when install.sh runs.
-
 export default function AddSensorPage() {
   // The base API URL the sensor will register against. Default to the same
   // origin the dashboard talks to; operator can override via env at build time.

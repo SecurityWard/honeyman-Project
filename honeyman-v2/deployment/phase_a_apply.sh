@@ -1,5 +1,5 @@
 #!/bin/bash
-# Honeyman V2 Phase A apply script
+# Honeyman — Phase A apply script.
 #
 # Run AS ROOT on the VPS (72.60.25.24) where the dashboard backend lives.
 # Idempotent — safe to re-run after fixing a step that failed.
@@ -10,7 +10,7 @@
 #   3) Creates a safety pg_dump of the current honeyman_v2 DB
 #   4) Pulls the latest cleanup-PR code into the existing checkout
 #   5) DROPs the old schema + re-runs alembic upgrade head
-#   6) Syncs the backend .env to V2 settings
+#   6) Syncs the backend .env to the current settings
 #   7) Restarts the backend systemd unit
 #   8) Smoke-tests the API: register a fake sensor, push one threat
 #   9) Prints a summary
@@ -201,7 +201,7 @@ pull_code() {
 }
 
 reset_schema() {
-    step "Reset DB schema to V2 (DROP + alembic upgrade head)"
+    step "Reset DB schema (DROP + alembic upgrade head)"
     # Drop the old tables. CASCADE handles FKs and the materialized view.
     sudo -u postgres psql -d "$DB_NAME" >/dev/null <<'SQL'
 DROP MATERIALIZED VIEW IF EXISTS threat_stats_hourly CASCADE;
@@ -231,14 +231,14 @@ SQL
 
     USERS=$(sudo -u postgres psql -d "$DB_NAME" -tAc "SELECT to_regclass('public.users');")
     if [[ "$USERS" == "" || "$USERS" == "(null)" || "$USERS" == "" ]]; then
-        ok "users table absent (V2 has no accounts)"
+        ok "users table absent (no accounts in this build)"
     else
         warn "users table still present: $USERS"
     fi
 }
 
 sync_env() {
-    step "Sync backend .env to V2 settings"
+    step "Sync backend .env to current settings"
     ENV_FILE="$BACKEND_DIR/.env"
     EXAMPLE="$BACKEND_DIR/.env.example"
     if [[ ! -f "$ENV_FILE" ]]; then
@@ -261,7 +261,7 @@ sync_env() {
         -e '/^ALGORITHM=/d' \
         "$ENV_FILE"
 
-    # Ensure required V2 keys are present (append if missing)
+    # Ensure required keys are present (append if missing)
     grep -q '^MQTT_OFFERED='        "$ENV_FILE" || echo "MQTT_OFFERED=false"                          >> "$ENV_FILE"
     grep -q '^PUBLIC_API_BASE_URL=' "$ENV_FILE" || echo "PUBLIC_API_BASE_URL=$PUBLIC_API_BASE_URL"   >> "$ENV_FILE"
 

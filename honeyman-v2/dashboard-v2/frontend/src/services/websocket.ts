@@ -1,7 +1,5 @@
 import type { WebSocketMessage, Threat } from '../types';
 
-// V2: WebSocket feed is public. No auth token required.
-
 type MessageHandler = (message: WebSocketMessage) => void;
 type ThreatHandler = (threat: Threat) => void;
 

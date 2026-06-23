@@ -1,4 +1,4 @@
-# Honeyman Agent V2 - Example Configuration
+# Honeyman Agent — example configuration.
 #
 # Default config path: /etc/honeyman/config.yaml
 # Override with: honeyman-agent --config /path/to/config.yaml
@@ -18,11 +18,11 @@ rules_dir: /etc/honeyman/rules
 heartbeat_interval: 60
 
 # --- Transport -------------------------------------------------------
-# V2 default: HTTPS + per-sensor API key. The key lives in a separate file
+# Default: HTTPS + per-sensor API key. The key lives in a separate file
 # (mode 0600) so the YAML config can be safely shared/version-controlled.
 #
 # To opt into MQTT instead, set transport.protocol: mqtt and fill in the
-# mqtt block below. HTTPS is the recommended default - no broker needed.
+# mqtt block below. HTTPS is the recommended default — no broker needed.
 transport:
   protocol: https      # https (default) | mqtt
   fallback: none       # none (default) | https | mqtt

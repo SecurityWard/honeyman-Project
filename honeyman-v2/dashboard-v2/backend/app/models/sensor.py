@@ -38,7 +38,7 @@ class Sensor(Base):
     # Configuration
     enabled_detectors = Column(JSON, default=list, nullable=False)
     transport_protocol = Column(String(20), default="https", nullable=False)
-    # https (V2 default) or mqtt (optional opt-in)
+    # "https" (default) or "mqtt" (optional opt-in)
 
     # Capabilities
     capabilities = Column(JSON, default=dict, nullable=False)

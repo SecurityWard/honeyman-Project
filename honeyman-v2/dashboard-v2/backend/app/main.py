@@ -1,6 +1,4 @@
-"""
-Honeyman V2 Dashboard Backend - FastAPI Application
-"""
+"""Honeyman Dashboard Backend — FastAPI application."""
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -90,8 +88,6 @@ async def root():
     }
 
 
-# Include API routers
-# V2: no auth router; reads are public, writes use per-sensor API keys
 app.include_router(sensors.router, prefix=settings.API_PREFIX, tags=["sensors"])
 app.include_router(threats.router, prefix=settings.API_PREFIX, tags=["threats"])
 app.include_router(analytics.router, prefix=settings.API_PREFIX, tags=["analytics"])
@@ -113,7 +109,6 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Failed to connect to Redis: {e}")
 
-    # Start MQTT subscriber only if MQTT is offered (V2: optional)
     if settings.MQTT_OFFERED:
         try:
             mqtt_subscriber.start()

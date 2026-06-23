@@ -2,7 +2,7 @@
 """
 Transport multiplexer.
 
-V2 default: HTTPS+API-key. MQTT is opt-in via transport.protocol: mqtt
+Default: HTTPS+API-key. MQTT is opt-in via transport.protocol: mqtt
 (or as a fallback). Clients are only constructed when the configuration
 actually references them.
 
