@@ -57,11 +57,14 @@ claude*
 conversation*
 reminder*
 
-# Data files (except config)
+# Data files (except config and JS package manifests)
 *.json
 !config/*.json
 !dashboard/package.json
 !config/wifi_whitelist.json
+!honeyman-v2/**/package.json
+!honeyman-v2/**/package-lock.json
+!honeyman-v2/**/tsconfig*.json
 *.csv
 *.db
 !data/malware_hashes.db

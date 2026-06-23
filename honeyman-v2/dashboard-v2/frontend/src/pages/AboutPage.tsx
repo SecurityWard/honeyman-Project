@@ -4,199 +4,191 @@ export default function AboutPage() {
   return (
     <div className="about-page">
       <div className="about-hero">
-        <h1>Honeyman V2</h1>
-        <p className="tagline">Physical Security Threat Detection Platform</p>
+        <h1>Honeyman</h1>
+        <p className="tagline">Mobile, multi-vector threat collection for physical events.</p>
       </div>
 
       <div className="about-content">
         <section className="about-section">
-          <h2>What is Honeyman V2?</h2>
+          <h2>What it is</h2>
           <p>
-            Honeyman V2 is an advanced physical security threat detection platform designed to identify and monitor
-            potential security risks in real-time. The system deploys network of sensors that continuously monitor
-            for suspicious activity across WiFi, USB, and Bluetooth interfaces.
+            Honeyman puts a Raspberry Pi-class sensor in a backpack, on a hotel-room desk, or
+            in a conference hall, and reports malicious USB, WiFi, BLE, and AirDrop activity
+            to this dashboard in real time. When a sensor is on a network, it can also expose
+            SSH and HTTP honeypots and report intrusion attempts as events.
           </p>
           <p>
-            Built with modern technologies including React, FastAPI, PostgreSQL, and MQTT, Honeyman V2 provides
-            real-time threat visualization, historical analysis, and comprehensive security insights.
+            This page is a viewing surface. There are no accounts, no actions, no edits.
+            Anyone with the URL can see the map, filter threats, and watch the live feed.
           </p>
         </section>
 
         <section className="about-section">
-          <h2>Detection Capabilities</h2>
+          <h2>What it detects</h2>
           <div className="capabilities-grid">
             <div className="capability-card">
-              <h3>WiFi Threat Detection</h3>
+              <h3>USB</h3>
               <ul>
-                <li><strong>Evil Twin Detection:</strong> Identifies rogue access points impersonating legitimate networks</li>
-                <li><strong>Deauthentication Attacks:</strong> Detects WiFi jamming and forced disconnections</li>
-                <li><strong>Rogue Access Points:</strong> Discovers unauthorized wireless networks</li>
-                <li><strong>Weak Security:</strong> Flags networks using outdated encryption (WEP, WPA)</li>
+                <li><strong>BadUSB / HID injection:</strong> Rubber Ducky, Bash Bunny, OMG Cable, Flipper Zero acting as HID, Teensy, Digispark</li>
+                <li><strong>Mass storage scanning:</strong> recursive SHA-256 hashing against a 360+ malware signature database (Stuxnet, WannaCry, Mimikatz, Hak5 payloads, etc.)</li>
+                <li><strong>VID/PID fingerprinting</strong> of known attack devices</li>
+                <li><strong>Suspicious volume labels</strong> and autorun.inf inspection</li>
               </ul>
             </div>
 
             <div className="capability-card">
-              <h3>USB Threat Detection</h3>
+              <h3>WiFi</h3>
               <ul>
-                <li><strong>Malicious Devices:</strong> Identifies known bad USB devices via hash database (360+ signatures)</li>
-                <li><strong>HID Attacks:</strong> Detects USB devices posing as keyboards/mice (BadUSB, Rubber Ducky)</li>
-                <li><strong>Mass Storage Threats:</strong> Monitors suspicious file operations and autorun attempts</li>
-                <li><strong>Device Fingerprinting:</strong> Tracks unusual device characteristics</li>
+                <li><strong>Evil Twin APs</strong> (same SSID, different BSSIDs)</li>
+                <li><strong>Deauth and beacon flooding</strong></li>
+                <li><strong>Attack tool fingerprints:</strong> WiFi Pineapple, ESP8266 Deauther, Flipper Zero WiFi</li>
+                <li><strong>WPS vulnerabilities and weak encryption</strong> (WEP, vulnerable WPA)</li>
               </ul>
             </div>
 
             <div className="capability-card">
-              <h3>Bluetooth Detection</h3>
+              <h3>BLE</h3>
               <ul>
-                <li><strong>Unauthorized Devices:</strong> Discovers unknown Bluetooth devices in range</li>
-                <li><strong>Active Scanning:</strong> Monitors for surveillance and tracking attempts</li>
-                <li><strong>Device Profiling:</strong> Identifies suspicious device behaviors</li>
+                <li><strong>Flipper Zero</strong> including Unleashed and Xtreme firmware variants</li>
+                <li><strong>BLE spam and Apple Continuity abuse</strong></li>
+                <li><strong>BLE HID keyloggers and ESP32 attack tools</strong></li>
+                <li><strong>Manufacturer-data spoofing</strong></li>
+              </ul>
+            </div>
+
+            <div className="capability-card">
+              <h3>AirDrop / mDNS</h3>
+              <ul>
+                <li>Suspicious service names and generic device spoofing</li>
+                <li>Rapid announcement floods</li>
+                <li>TXT-record abuse</li>
+              </ul>
+            </div>
+
+            <div className="capability-card">
+              <h3>Network honeypots <em>(optional)</em></h3>
+              <ul>
+                <li>SSH brute-force attempts (logged, never authenticated)</li>
+                <li>HTTP credential harvesting against a fake admin page</li>
+                <li>Port scans and service enumeration</li>
               </ul>
             </div>
           </div>
-        </section>
-
-        <section className="about-section">
-          <h2>How Metrics Are Calculated</h2>
-
-          <div className="metric-explanation">
-            <h3>Threat Score</h3>
-            <p>Each threat is assigned a confidence score (0-100%) based on multiple factors:</p>
-            <div className="formula">
-              <code>ThreatScore = BaseScore × ConfidenceMultiplier × ContextWeight</code>
-            </div>
-            <ul>
-              <li><strong>Base Score:</strong> Determined by threat type and detection method</li>
-              <li><strong>Confidence Multiplier:</strong> Based on signature matches, behavior analysis, and known indicators</li>
-              <li><strong>Context Weight:</strong> Historical patterns, location, and time-of-day factors</li>
-            </ul>
-          </div>
-
-          <div className="metric-explanation">
-            <h3>Severity Classification</h3>
-            <div className="severity-levels">
-              <div className="severity-item critical">
-                <span className="severity-badge">Critical</span>
-                <p>Confirmed malicious activity requiring immediate response (known malware, active attacks)</p>
-              </div>
-              <div className="severity-item high">
-                <span className="severity-badge">High</span>
-                <p>Highly suspicious activity that should be investigated promptly (policy violations, weak security)</p>
-              </div>
-              <div className="severity-item medium">
-                <span className="severity-badge">Medium</span>
-                <p>Potentially suspicious behavior warranting review (anomalous patterns, unusual devices)</p>
-              </div>
-              <div className="severity-item low">
-                <span className="severity-badge">Low</span>
-                <p>Informational alerts and baseline monitoring (unusual but not necessarily malicious)</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="metric-explanation">
-            <h3>Threat Velocity</h3>
-            <p>Measures the rate of threat detection over time:</p>
-            <div className="formula">
-              <code>Velocity = TotalThreats / TimeWindow (hours)</code>
-            </div>
-            <p>
-              This metric helps identify threat spikes and patterns. A sudden increase in velocity may indicate
-              an ongoing attack or elevated risk period.
-            </p>
-          </div>
-        </section>
-
-        <section className="about-section">
-          <h2>System Architecture</h2>
-          <div className="architecture-flow">
-            <div className="arch-step">
-              <div className="arch-number">1</div>
-              <h4>Sensors</h4>
-              <p>Raspberry Pi-based detection nodes running custom monitoring software</p>
-            </div>
-            <div className="arch-arrow">→</div>
-            <div className="arch-step">
-              <div className="arch-number">2</div>
-              <h4>MQTT Broker</h4>
-              <p>Message queue for real-time threat data transmission</p>
-            </div>
-            <div className="arch-arrow">→</div>
-            <div className="arch-step">
-              <div className="arch-number">3</div>
-              <h4>Backend API</h4>
-              <p>FastAPI server processing and storing threat data</p>
-            </div>
-            <div className="arch-arrow">→</div>
-            <div className="arch-step">
-              <div className="arch-number">4</div>
-              <h4>PostgreSQL</h4>
-              <p>Time-series database for historical analysis</p>
-            </div>
-            <div className="arch-arrow">→</div>
-            <div className="arch-step">
-              <div className="arch-number">5</div>
-              <h4>Dashboard</h4>
-              <p>Real-time visualization via WebSocket</p>
-            </div>
-          </div>
-
-          <div className="tech-stack">
-            <h4>Technology Stack</h4>
-            <div className="tech-grid">
-              <div className="tech-item">
-                <strong>Frontend:</strong> React, TypeScript, Recharts, Leaflet
-              </div>
-              <div className="tech-item">
-                <strong>Backend:</strong> Python, FastAPI, SQLAlchemy, Pydantic
-              </div>
-              <div className="tech-item">
-                <strong>Database:</strong> PostgreSQL with time-series optimizations
-              </div>
-              <div className="tech-item">
-                <strong>Messaging:</strong> MQTT (Eclipse Mosquitto)
-              </div>
-              <div className="tech-item">
-                <strong>Sensors:</strong> Raspberry Pi 4, Python detection scripts
-              </div>
-              <div className="tech-item">
-                <strong>Deployment:</strong> Nginx, systemd, Docker-ready
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="about-section">
-          <h2>Data Retention & Privacy</h2>
-          <p>
-            By default, Honeyman V2 retains threat data for <strong>90 days</strong>. This retention period is
-            configurable per installation to meet specific compliance or storage requirements.
-          </p>
-          <p>
-            The system is designed for internal security monitoring and does not collect personally identifiable
-            information (PII). All detected data relates to device characteristics and network behavior patterns.
+          <p className="note">
+            For accuracy expectations and an honest list of what Honeyman does <em>not</em>
+            catch, see <code>CAPABILITIES.md</code> in the repository.
           </p>
         </section>
 
         <section className="about-section">
-          <h2>Getting Started</h2>
-          <div className="getting-started">
-            <p>To deploy a Honeyman V2 sensor:</p>
-            <ol>
-              <li>Configure a Raspberry Pi 4 with the sensor software</li>
-              <li>Connect to your MQTT broker</li>
-              <li>Enable desired detection modules (WiFi, USB, Bluetooth)</li>
-              <li>Monitor threats in real-time on this dashboard</li>
-            </ol>
-            <p className="note">
-              For detailed installation instructions, refer to the deployment documentation in the project repository.
-            </p>
+          <h2>Severity</h2>
+          <p>
+            Each rule is tagged with one of four severities. The map color-codes markers
+            accordingly.
+          </p>
+          <div className="severity-levels">
+            <div className="severity-item critical">
+              <span className="severity-badge">Critical</span>
+              <p>Confirmed attack tooling or known-malicious payload &mdash; e.g. a Rubber Ducky VID/PID match, a malware hash hit, an active deauth flood.</p>
+            </div>
+            <div className="severity-item high">
+              <span className="severity-badge">High</span>
+              <p>Strong indicator of attacker presence &mdash; e.g. Pineapple beacons, Flipper Zero advertising, repeated SSH brute-force from one source.</p>
+            </div>
+            <div className="severity-item medium">
+              <span className="severity-badge">Medium</span>
+              <p>Suspicious but not unambiguous &mdash; unusual device names, rapidly cycling MAC addresses, mDNS oddities.</p>
+            </div>
+            <div className="severity-item low">
+              <span className="severity-badge">Low</span>
+              <p>Informational and baseline noise &mdash; weak-but-not-broken encryption, hotspot-style SSIDs, unknown BLE devices.</p>
+            </div>
           </div>
+        </section>
+
+        <section className="about-section">
+          <h2>Confidence and location</h2>
+          <p>
+            Every threat carries a <strong>confidence</strong> between 0 and 1, set by the
+            rule that matched. A VID/PID equality match is high (0.95+); a name-pattern
+            match against a generic word like &ldquo;pwn&rdquo; is lower (0.6&ndash;0.7).
+            Confidence reflects how certain the rule&rsquo;s author was about the signal,
+            not a learned model.
+          </p>
+          <p>
+            Each threat also carries a <strong>location</strong> with an explicit method:
+          </p>
+          <ul className="plain-list">
+            <li><strong>Manual</strong> &mdash; the operator pinned the sensor at install time.</li>
+            <li><strong>GPS</strong> &mdash; a GPS receiver attached to the sensor reported a fix.</li>
+            <li><strong>WiFi</strong> &mdash; the sensor scanned nearby access points and looked them up against Mozilla&rsquo;s Location Service.</li>
+            <li><strong>IP</strong> &mdash; coarse geolocation by public IP, accurate to roughly a city block at best.</li>
+          </ul>
+          <p>
+            The map draws a translucent circle around each marker sized to the reported
+            accuracy and colored by method. A tight green circle means GPS-grade; a wide
+            dashed gray circle means IP-only.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h2>How a threat gets here</h2>
+          <p>
+            The sensor runs a Python agent that loads YAML detection rules and executes
+            detector modules in parallel. When a rule matches, the agent attaches a location
+            and POSTs the event over HTTPS to the backend, authenticated with a per-sensor
+            API key issued at install time. The backend stores threats in Postgres with
+            TimescaleDB (one-day chunks, 90-day retention) and pushes new events to this
+            dashboard over a WebSocket.
+          </p>
+          <p>
+            If the sensor loses connectivity, threats queue in a local SQLite buffer and
+            drain when the link comes back &mdash; no data is dropped during short outages.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h2>Retention and privacy</h2>
+          <p>
+            Threats are kept for <strong>90 days</strong> by default, compressed after
+            seven. Honeyman does not collect personally identifiable information &mdash;
+            the data is device characteristics (MAC addresses, vendor IDs, SSIDs) and the
+            location of the <em>sensor</em>, not of anyone observed by it.
+          </p>
+          <p>
+            Capturing wireless traffic, running honeypots, and observing nearby Bluetooth
+            devices may be regulated in your jurisdiction. Deploy only where you have the
+            legal authority to do so.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h2>Adding a sensor</h2>
+          <p>
+            On a fresh Raspberry Pi (Zero 2 W, 4, or 5), one command:
+          </p>
+          <div className="formula">
+            <code>curl -sSL https://honeymanproject.com/install | bash</code>
+          </div>
+          <p>
+            The installer detects available hardware, asks for a sensor name and optional
+            location, registers the sensor with the backend, writes the returned API key to{' '}
+            <code>/etc/honeyman/credentials</code>, and starts the systemd unit. The sensor
+            usually appears on the map within a minute or two.
+          </p>
+          <p>
+            For full instructions and non-interactive installs (e.g. for flashing many SD
+            cards), see the <a href="/add-sensor">Add Sensor</a> page.
+          </p>
         </section>
 
         <footer className="about-footer">
-          <p>&copy; 2025 Honeyman V2 - Open Source Physical Security Platform</p>
-          <p className="version">Dashboard Version 2.0.0</p>
+          <p>Honeyman &mdash; open source, MIT licensed.</p>
+          <p>
+            <a href="https://github.com/SecurityWard/honeyman-Project" target="_blank" rel="noopener noreferrer">
+              github.com/SecurityWard/honeyman-Project
+            </a>
+          </p>
         </footer>
       </div>
     </div>

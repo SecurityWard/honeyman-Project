@@ -9,7 +9,7 @@ export default function Layout() {
           <div className="brand">
             <img src="/honeyman-logo.svg" alt="Honeyman Logo" className="brand-logo" />
             <div className="brand-text">
-              <h1>Honeyman V2</h1>
+              <h1>Honeyman</h1>
               <span className="version">Dashboard</span>
             </div>
           </div>
@@ -55,7 +55,7 @@ export default function Layout() {
       </main>
 
       <footer className="footer">
-        <p>&copy; 2025 Honeyman V2 - Real-time Threat Detection Platform</p>
+        <p>Honeyman &mdash; multi-vector threat detection for physical events.</p>
       </footer>
     </div>
   );
