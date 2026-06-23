@@ -30,8 +30,8 @@ setup(
     long_description=get_long_description(),
     long_description_content_type='text/markdown',
     author='Honeyman Project',
-    author_email='contact@honeyman.dev',
-    url='https://github.com/honeyman/honeyman-agent',
+    author_email='contact@honeymanproject.com',
+    url='https://github.com/SecurityWard/honeyman-Project',
     license='MIT',
 
     packages=find_packages(exclude=['tests', 'tests.*']),
@@ -40,32 +40,20 @@ setup(
     python_requires='>=3.8',
 
     install_requires=[
-        # Core dependencies
+        # Config + heartbeat
         'pyyaml>=6.0',
-        'requests>=2.28.0',
-        'python-dotenv>=1.0.0',
-
-        # MQTT support
-        'paho-mqtt>=1.6.1',
-
-        # USB detection
-        'pyudev>=0.24.0',
-
-        # BLE detection
-        'bleak>=0.20.0',
-
-        # WiFi detection
-        'scapy>=2.5.0',
-
-        # Network utilities
-        'netifaces>=0.11.0',
         'psutil>=5.9.0',
 
-        # Crypto
-        'cryptography>=41.0.0',
+        # HTTPS transport (sensor -> backend) and central rule sync
+        'aiohttp>=3.9.0',
 
-        # Logging
-        'python-json-logger>=2.0.7',
+        # MQTT transport (optional; only used when transport.protocol == "mqtt")
+        'paho-mqtt>=1.6.1',
+
+        # Detectors
+        'pyudev>=0.24.0',   # USB
+        'bleak>=0.20.0',    # BLE
+        'scapy>=2.5.0',     # WiFi
     ],
 
     extras_require={
