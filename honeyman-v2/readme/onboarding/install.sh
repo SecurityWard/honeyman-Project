@@ -426,6 +426,16 @@ copy_rules() {
     if [[ -d "${INSTALL_DIR}/src/honeyman-v2/agent/rules" ]]; then
         cp -r "${INSTALL_DIR}/src/honeyman-v2/agent/rules/." "${RULES_DIR}/"
         success "Default rules installed ($(find "$RULES_DIR" -name '*.yaml' | wc -l) files)"
+        # Ship the malware-hash DB so USB file scans actually have signatures
+        # to compare against. The detector reads from ${DATA_DIR}/malware_hashes.db
+        # per config.yaml. Without this file, hash-based detection is silently
+        # disabled while VID/PID and volume-label rules still work.
+        if [[ -f "${INSTALL_DIR}/src/data/malware_hashes.db" ]]; then
+            install -m 0644 "${INSTALL_DIR}/src/data/malware_hashes.db" "${DATA_DIR}/malware_hashes.db"
+            success "Malware hash DB installed ($(stat -c%s "${DATA_DIR}/malware_hashes.db" 2>/dev/null || echo "?") bytes)"
+        else
+            warn "malware_hashes.db not found in source tree; file-hash detection will be disabled"
+        fi
     else
         warn "No rules/ directory in agent source — skipping default rules"
     fi
