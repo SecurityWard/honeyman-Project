@@ -37,17 +37,17 @@ CREDS_FILE="${CONFIG_DIR}/credentials"   # legacy alias, written for back-compat
 AGENT_REPO="${AGENT_REPO:-https://github.com/SecurityWard/honeyman-Project.git}"
 AGENT_REF="${AGENT_REF:-main}"
 
-# When the script is piped (curl | bash) stdin is the script body, so any
-# `read` would see EOF immediately and prompts would be skipped silently.
-# Reattach stdin to the controlling terminal if there is one; otherwise
-# force NON_INTERACTIVE so the script picks safe defaults instead of
-# stalling on a never-answered prompt.
-if [[ ! -t 0 ]]; then
-    if [[ -r /dev/tty ]]; then
-        exec < /dev/tty
-    else
-        NON_INTERACTIVE=1
-    fi
+# When the script is piped (curl | bash) bash reads the script body from
+# stdin, so we can't redirect stdin globally — doing so would stall bash
+# trying to read its next command from the terminal. Instead, each `read`
+# call below pulls input from $TTY_IN, which points at /dev/tty when one
+# is available. If there's no controlling terminal (cloud-init, container,
+# unattended automation), force NON_INTERACTIVE so we don't attempt prompts.
+if [[ -r /dev/tty ]]; then
+    TTY_IN=/dev/tty
+else
+    TTY_IN=/dev/null
+    NON_INTERACTIVE="${NON_INTERACTIVE:-1}"
 fi
 
 # Colors (suppressed if not a tty)
@@ -138,7 +138,7 @@ ask_sensor_name() {
             echo
             echo "Pick a name for this sensor (lowercase, hyphens; backend appends a random suffix)."
             echo "Examples: defcon-hotel, lab-pi, conf-room-3"
-            read -rp "Sensor name: " SENSOR_NAME
+            read -rp "Sensor name: " SENSOR_NAME < "$TTY_IN"
             [[ -z "$SENSOR_NAME" ]] && SENSOR_NAME="sensor-$(hostname -s)"
         fi
     fi
@@ -151,7 +151,7 @@ ask_location() {
     if [[ -z "${LOCATION:-}" ]]; then
         if [[ -z "${NON_INTERACTIVE:-}" ]]; then
             echo
-            read -rp "Location label (optional, e.g. 'DefCon 32 hotel lobby'): " LOCATION
+            read -rp "Location label (optional, e.g. 'DefCon 32 hotel lobby'): " LOCATION < "$TTY_IN"
         fi
     fi
     [[ -n "${LOCATION:-}" ]] && success "Location: ${LOCATION}"
@@ -171,7 +171,7 @@ choose_modules() {
     echo -e "${BOLD}Detection modules${NC} (defaults shown; press Enter to accept)"
     prompt_bool() {
         local name="$1" var="$2" current="$3"
-        read -rp "  enable ${name} [$([[ $current == true ]] && echo Y/n || echo y/N)]: " ans
+        read -rp "  enable ${name} [$([[ $current == true ]] && echo Y/n || echo y/N)]: " ans < "$TTY_IN"
         case "${ans,,}" in
             y|yes)     eval "$var=true" ;;
             n|no)      eval "$var=false" ;;
