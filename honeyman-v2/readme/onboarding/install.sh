@@ -381,11 +381,11 @@ transport:
 ${mqtt_block}
 
 detectors:
-  usb:       ${MOD_USB}
-  bluetooth: ${MOD_BLE}
-  wifi:      ${MOD_WIFI}
-  airdrop:   ${MOD_AIRDROP}
-  network:   ${MOD_NETWORK}
+  usb:     ${MOD_USB}
+  ble:     ${MOD_BLE}
+  wifi:    ${MOD_WIFI}
+  airdrop: ${MOD_AIRDROP}
+  network: ${MOD_NETWORK}
 
 usb:
   hash_database_path: ${DATA_DIR}/malware_hashes.db

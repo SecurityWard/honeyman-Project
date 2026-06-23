@@ -54,7 +54,7 @@ transport:
 detectors:
   usb: true
   wifi: false       # requires monitor-mode capable WiFi adapter
-  bluetooth: false  # requires BLE hardware
+  ble: false        # requires BLE hardware (bluez running)
   network: true     # OpenCanary integration
   airdrop: false    # requires avahi-utils (Linux) or dns-sd (macOS)
 

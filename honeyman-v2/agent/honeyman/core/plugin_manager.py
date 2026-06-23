@@ -39,26 +39,25 @@ class PluginManager:
             Detector instance or None if failed
         """
         try:
-            # Map detector names to module paths
-            detector_modules = {
-                'usb': 'honeyman.detectors.usb_detector',
-                'wifi': 'honeyman.detectors.wifi_detector',
-                'bluetooth': 'honeyman.detectors.ble_detector',
-                'ble': 'honeyman.detectors.ble_detector',
-                'airdrop': 'honeyman.detectors.airdrop_detector',
-                'network': 'honeyman.detectors.network_detector',
+            # Map detector names to (module path, class name). The class name
+            # is explicit so config aliases like `bluetooth` (instead of `ble`)
+            # don't break loading by producing a nonexistent class name.
+            detectors = {
+                'usb':       ('honeyman.detectors.usb_detector',     'UsbDetector'),
+                'wifi':      ('honeyman.detectors.wifi_detector',    'WifiDetector'),
+                'ble':       ('honeyman.detectors.ble_detector',     'BleDetector'),
+                'bluetooth': ('honeyman.detectors.ble_detector',     'BleDetector'),
+                'airdrop':   ('honeyman.detectors.airdrop_detector', 'AirDropDetector'),
+                'network':   ('honeyman.detectors.network_detector', 'NetworkDetector'),
             }
 
-            module_path = detector_modules.get(detector_name)
-            if not module_path:
+            entry = detectors.get(detector_name)
+            if not entry:
                 logger.error(f"Unknown detector: {detector_name}")
                 return None
 
-            # Dynamically import detector module
+            module_path, class_name = entry
             module = importlib.import_module(module_path)
-
-            # Get detector class
-            class_name = ''.join(word.capitalize() for word in detector_name.split('_')) + 'Detector'
             detector_class = getattr(module, class_name)
 
             # Instantiate detector
