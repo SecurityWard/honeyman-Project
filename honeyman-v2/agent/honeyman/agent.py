@@ -148,9 +148,6 @@ class HoneymanAgent:
             task = asyncio.create_task(detector.start())
             tasks.append(task)
 
-        # Send initial registration message
-        await self._send_registration()
-
         logger.info("All detectors started successfully")
         logger.info("Honeyman Agent is now monitoring for threats...")
 
@@ -186,46 +183,6 @@ class HoneymanAgent:
             await self.transport.disconnect()
 
         logger.info("Honeyman Agent stopped")
-
-    async def _send_registration(self):
-        """Send initial registration message to dashboard"""
-        registration_data = {
-            'type': 'registration',
-            'sensor_id': self.config.get('sensor_id'),
-            'sensor_name': self.config.get('sensor_name'),
-            'platform': self._detect_platform(),
-            'capabilities': self._get_capabilities(),
-            'version': '2.0.0',
-        }
-        try:
-            await self.transport.send(registration_data, topic='registration')
-            logger.info("Sent registration to dashboard")
-        except Exception as exc:
-            logger.warning("Could not send initial registration: %s", exc)
-
-    def _detect_platform(self) -> str:
-        """Detect the hardware platform"""
-        try:
-            with open('/proc/device-tree/model', 'r') as f:
-                model = f.read().strip()
-                if 'Raspberry Pi 5' in model:
-                    return 'rpi5'
-                elif 'Raspberry Pi 4' in model:
-                    return 'rpi4'
-                elif 'Raspberry Pi Zero 2' in model:
-                    return 'rpizero2w'
-                elif 'Raspberry Pi' in model:
-                    return 'rpi'
-        except Exception:
-            pass
-        return 'linux'
-
-    def _get_capabilities(self) -> dict:
-        """Get hardware capabilities"""
-        return {
-            detector_name: True
-            for detector_name in self.detectors.keys()
-        }
 
     def get_status(self) -> dict:
         """Get agent status for health reporting"""

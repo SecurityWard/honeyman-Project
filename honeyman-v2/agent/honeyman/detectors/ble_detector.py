@@ -35,8 +35,8 @@ logger = logging.getLogger(__name__)
 class BleDetector(BaseDetector):
     """BLE threat detector using bleak or bluetoothctl"""
 
-    def __init__(self, config: Dict[str, Any], rule_engine, transport):
-        super().__init__(config, rule_engine, transport, 'ble')
+    def __init__(self, rule_engine, transport, config: Dict[str, Any], location_service):
+        super().__init__(rule_engine, transport, config, location_service)
 
         # Configuration
         self.scan_interval = config.get('ble', {}).get('scan_interval', 5.0)

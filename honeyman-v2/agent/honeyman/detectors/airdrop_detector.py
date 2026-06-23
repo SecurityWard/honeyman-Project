@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 class AirDropDetector(BaseDetector):
     """AirDrop threat detector using avahi-browse"""
 
-    def __init__(self, config: Dict[str, Any], rule_engine, transport):
-        super().__init__(config, rule_engine, transport, 'airdrop')
+    def __init__(self, rule_engine, transport, config: Dict[str, Any], location_service):
+        super().__init__(rule_engine, transport, config, location_service)
 
         # Configuration
         self.scan_interval = config.get('airdrop', {}).get('scan_interval', 60.0)

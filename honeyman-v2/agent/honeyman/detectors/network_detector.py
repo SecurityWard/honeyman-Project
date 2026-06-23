@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 class NetworkDetector(BaseDetector):
     """Network threat detector via OpenCanary honeypot integration"""
 
-    def __init__(self, config: Dict[str, Any], rule_engine, transport):
-        super().__init__(config, rule_engine, transport, 'network')
+    def __init__(self, rule_engine, transport, config: Dict[str, Any], location_service):
+        super().__init__(rule_engine, transport, config, location_service)
 
         # Configuration
         self.webhook_port = config.get('network', {}).get('webhook_port', 8888)
