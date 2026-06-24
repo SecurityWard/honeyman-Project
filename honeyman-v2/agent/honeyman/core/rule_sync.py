@@ -212,12 +212,22 @@ class RuleSyncService:
                 logger.warning("Rule sync: malformed entry %r", rule)
                 continue
 
-            # Defence in depth: refuse path traversal.
-            if "/.." in f"/{rel}" or rel.startswith("/"):
-                logger.warning("Rule sync: rejecting suspicious path %r", rel)
+            # Defence in depth: refuse anything that doesn't resolve inside
+            # the rules_dir. The string-based "/.." check we had before was
+            # heuristic; resolve and compare with rules_dir keeps a malicious
+            # backend from writing outside the rules tree no matter what
+            # path tricks it ships in the manifest. [Audit AGENT-1]
+            try:
+                rules_root = self.rules_dir.resolve()
+                target = (self.rules_dir / rel).resolve()
+                target.relative_to(rules_root)
+            except (ValueError, OSError):
+                logger.warning(
+                    "Rule sync: rejecting path %r — resolves outside %s",
+                    rel, self.rules_dir,
+                )
                 continue
 
-            target = self.rules_dir / rel
             marker = target.with_suffix(target.suffix + LOCAL_MARKER_SUFFIX)
 
             if marker.exists():

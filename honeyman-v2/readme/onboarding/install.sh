@@ -395,6 +395,10 @@ detectors:
   airdrop: ${MOD_AIRDROP}
   network: ${MOD_NETWORK}
 
+# [Audit INSTALL-1] LOCATION is operator-controlled (env var or interactive
+# prompt); we escape backslash and double-quote here so a label containing
+# `"` or other YAML-special chars can't break out of the string value.
+
 usb:
   hash_database_path: ${DATA_DIR}/malware_hashes.db
   scan_storage_devices: true
@@ -403,7 +407,7 @@ usb:
 location:
   enabled: true
   gps_enabled: false
-${LOCATION:+  manual_label: "${LOCATION}"}
+${LOCATION:+  manual_label: "$(printf '%s' "$LOCATION" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"}
 
 logging:
   level: INFO
