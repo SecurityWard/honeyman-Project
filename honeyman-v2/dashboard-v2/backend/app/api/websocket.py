@@ -13,36 +13,41 @@ logger = logging.getLogger(__name__)
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """
-    WebSocket endpoint for real-time threat updates
+    Public read-only WebSocket. Subscribers receive threat broadcasts that
+    the backend pushes via Redis pub/sub. There is no client-to-server
+    channel — anything the client sends is silently discarded (and capped
+    in size so it can't be used as an upload vector).
 
-    Clients can connect to receive:
-    - Real-time threat notifications
-    - Sensor heartbeat updates
-    - System status updates
+    [Audit F3] Connect is refused when the global cap is hit.
+    [Audit F4] No echo — used to reflect arbitrary client text, which was
+               wasted CPU with no purpose.
     """
-    await manager.connect(websocket)
+    if not await manager.connect(websocket):
+        return  # capped; manager already closed the socket
 
     try:
-        # Send welcome message
         await manager.send_personal_message({
             'type': 'welcome',
             'message': 'Connected to Honeyman real-time feed',
-            'version': '2.0.0'
+            'version': '2.0.0',
         }, websocket)
 
-        # Keep connection alive and handle client messages
+        # Read-and-discard loop — we only consume frames so the OS doesn't
+        # spam disconnects, never act on them. Tiny size cap keeps the
+        # endpoint from being used as a free upload sink.
         while True:
-            # Receive messages from client (for potential commands)
             data = await websocket.receive_text()
-
-            # Echo back for now (can add command handling later)
-            await manager.send_personal_message({
-                'type': 'echo',
-                'data': data
-            }, websocket)
+            if len(data) > 1024:
+                logger.warning(
+                    "WebSocket client sent oversized frame (%d bytes); closing",
+                    len(data),
+                )
+                await websocket.close(code=1009, reason="message too big")
+                break
 
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        pass
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
+    finally:
         manager.disconnect(websocket)

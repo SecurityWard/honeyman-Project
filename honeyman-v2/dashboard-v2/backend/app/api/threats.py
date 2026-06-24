@@ -30,7 +30,13 @@ async def list_threats(
     end_time: Optional[datetime] = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=1000),
-    sort_by: str = Query("timestamp"),
+    # [Audit F6] sort_by allowlisted instead of free-text — getattr against
+    # the ORM would otherwise return arbitrary attributes (methods, etc.)
+    # and either 500 or sort on a non-indexed column.
+    sort_by: str = Query(
+        "timestamp",
+        regex="^(timestamp|severity|threat_type|detector_type|sensor_id|created_at|threat_score|confidence)$",
+    ),
     sort_order: str = Query("desc", regex="^(asc|desc)$"),
     db: AsyncSession = Depends(get_db),
 ):

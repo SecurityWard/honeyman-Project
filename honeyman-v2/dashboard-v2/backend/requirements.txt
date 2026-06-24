@@ -22,6 +22,12 @@ hiredis==2.2.3
 # Per-sensor API keys are SHA256-hashed via hashlib (stdlib). No JWT/bcrypt.
 python-multipart==0.0.6  # for any future file-upload endpoints
 
+# Per-IP rate limiting on /sensors/register and friends. In-memory storage
+# is fine for a single-worker deployment; switch the limiter to a redis://
+# backing store when we scale beyond one uvicorn worker, otherwise each
+# worker counts requests independently and effective limit is N * declared.
+slowapi==0.1.9
+
 # WebSocket
 websockets==12.0
 

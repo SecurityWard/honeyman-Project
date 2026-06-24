@@ -18,26 +18,33 @@ class ThreatBase(BaseModel):
 
 
 class ThreatCreate(ThreatBase):
-    """Schema for creating a threat"""
-    device_name: Optional[str] = None
-    device_mac: Optional[str] = None
-    device_ip: Optional[str] = None
-    src_host: Optional[str] = None
-    src_port: Optional[int] = None
-    dst_host: Optional[str] = None
-    dst_port: Optional[int] = None
+    """Schema for creating a threat.
+
+    [Audit F5] Sizes on each collection field so a compromised sensor key
+    can't push a payload large enough to spike backend memory or eat the
+    Postgres jsonb byte limit.  Limits are generous for real detector
+    output and tight enough to keep a worst-case request comfortably
+    under nginx's 256k cap.
+    """
+    device_name: Optional[str] = Field(None, max_length=255)
+    device_mac: Optional[str] = Field(None, max_length=64)
+    device_ip: Optional[str] = Field(None, max_length=64)
+    src_host: Optional[str] = Field(None, max_length=255)
+    src_port: Optional[int] = Field(None, ge=0, le=65535)
+    dst_host: Optional[str] = Field(None, max_length=255)
+    dst_port: Optional[int] = Field(None, ge=0, le=65535)
     latitude: Optional[float] = Field(None, ge=-90, le=90)
     longitude: Optional[float] = Field(None, ge=-180, le=180)
-    city: Optional[str] = None
-    country: Optional[str] = None
-    accuracy_meters: Optional[float] = Field(None, ge=0)
-    location_method: Optional[str] = None
-    matched_rules: List[Dict[str, Any]] = Field(default_factory=list)
+    city: Optional[str] = Field(None, max_length=100)
+    country: Optional[str] = Field(None, max_length=100)
+    accuracy_meters: Optional[float] = Field(None, ge=0, le=1_000_000)
+    location_method: Optional[str] = Field(None, max_length=20)
+    matched_rules: List[Dict[str, Any]] = Field(default_factory=list, max_length=32)
     confidence: Optional[float] = Field(None, ge=0, le=1)
     threat_score: Optional[float] = Field(None, ge=0, le=1)
     raw_event: Optional[Dict[str, Any]] = None
-    mitre_tactics: Optional[List[str]] = Field(default_factory=list)
-    mitre_techniques: Optional[List[str]] = Field(default_factory=list)
+    mitre_tactics: Optional[List[str]] = Field(default_factory=list, max_length=16)
+    mitre_techniques: Optional[List[str]] = Field(default_factory=list, max_length=32)
 
 
 class ThreatResponse(ThreatBase):

@@ -14,6 +14,13 @@ from .redis_client import redis_client
 logger = logging.getLogger(__name__)
 
 
+# Hard cap on simultaneous WebSocket clients. We don't have an ops case for
+# more than a few hundred concurrent dashboards open at once; this lid stops
+# a single attacker from exhausting file descriptors via tens of thousands
+# of WS connects. [Audit F3]
+MAX_CONNECTIONS = 500
+
+
 class ConnectionManager:
     """Manages WebSocket connections"""
 
@@ -22,11 +29,34 @@ class ConnectionManager:
         self.subscriber_task = None
         self.running = False
 
-    async def connect(self, websocket: WebSocket):
-        """Accept new WebSocket connection"""
+    async def connect(self, websocket: WebSocket) -> bool:
+        """Accept a new WebSocket connection if we're under the cap.
+
+        Returns True on accept, False on refusal (caller should bail out of
+        any further interaction with the socket — we've already closed it).
+        """
+        if len(self.active_connections) >= MAX_CONNECTIONS:
+            # 1013 = "try again later". Spec-correct for "I have capacity
+            # but right now I'm full". Browsers handle it fine.
+            logger.warning(
+                "Refusing WebSocket connect: at cap (%d/%d)",
+                len(self.active_connections),
+                MAX_CONNECTIONS,
+            )
+            try:
+                await websocket.close(code=1013, reason="Server at connection cap")
+            except Exception:
+                # Already disconnected; nothing to clean up.
+                pass
+            return False
+
         await websocket.accept()
         self.active_connections.add(websocket)
-        logger.info(f"WebSocket client connected. Total connections: {len(self.active_connections)}")
+        logger.info(
+            "WebSocket client connected. Total connections: %d",
+            len(self.active_connections),
+        )
+        return True
 
     def disconnect(self, websocket: WebSocket):
         """Remove WebSocket connection"""

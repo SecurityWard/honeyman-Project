@@ -9,12 +9,13 @@ from datetime import datetime
 import secrets
 import re
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.api_key import generate_api_key, hash_api_key
 from ..core.config import settings
+from ..core.rate_limit import REGISTER_CAP, limiter
 from ..db.base import get_db
 from ..models.sensor import Sensor
 from ..schemas.onboarding import SensorRegistration, SensorRegistrationResponse
@@ -42,7 +43,9 @@ def _make_unique_sensor_id(base: str) -> str:
     response_model=SensorRegistrationResponse,
     status_code=status.HTTP_201_CREATED,
 )
+@limiter.limit(REGISTER_CAP)  # Audit F1: cap per-IP register frequency.
 async def register_sensor(
+    request: Request,                            # required by slowapi keyfunc
     registration: SensorRegistration,
     db: AsyncSession = Depends(get_db),
 ) -> SensorRegistrationResponse:

@@ -9,6 +9,7 @@ import logging
 import asyncio
 
 from .core.config import settings
+from .core.rate_limit import attach_rate_limit_handler, rate_limiting_active
 from .api import sensors, threats, analytics, onboarding, rules, websocket as ws_router
 from .mqtt.subscriber import mqtt_subscriber
 from .services.redis_client import redis_client
@@ -42,6 +43,14 @@ app.add_middleware(
 
 # Gzip compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Rate limiting (Audit F1+F2) — slowapi attaches state.limiter and the
+# 429 exception handler. No-op when RATE_LIMIT_ENABLED=false in settings
+# or when slowapi isn't installed.
+@app.on_event("startup")
+async def _wire_rate_limiter() -> None:
+    await attach_rate_limit_handler(app)
+    logger.info("Rate limiting %s", "active" if rate_limiting_active else "disabled")
 
 
 # Request timing middleware

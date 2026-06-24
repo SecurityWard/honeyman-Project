@@ -155,9 +155,13 @@ async def get_rules(
     """
     root = _rules_dir()
     if not root.is_dir():
+        # [Audit F7] Don't echo the absolute path back to the client. Log
+        # it server-side so the operator can debug; the client just sees
+        # the 503.
+        logger.error("Rules directory not configured or missing: %s", root)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Rules directory not configured (looked at {root})",
+            detail="Rules directory not configured. Contact the operator.",
         )
 
     manifest = _build_manifest(root)
