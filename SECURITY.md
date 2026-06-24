@@ -21,13 +21,24 @@ page](https://dashboard.honeymanproject.com/add-sensor) and the
 | Per-sensor API keys (plaintext) | One-time response from `POST /sensors/register`; written to `/etc/honeyman/api_key` mode 0600 on the sensor | A leaked key lets an attacker push fake threats as that sensor. The hash on the backend is SHA-256-only, no salting — a leaked DB plus a key list could be correlated. |
 | Sensor metadata (location, capabilities, last seen) | `sensors` table on the backend, public via `GET /sensors` | Maps to the *operator's* approximate physical location. We accept this as the cost of a public viewing surface; operators are told to use coarse manual locations if they care. |
 | Threat events (raw_event, MAC addresses, hashes, MITRE tags) | `threats` hypertable on the backend, public via `GET /threats` | Includes BLE MAC addresses of devices observed nearby (people's phones, watches). Currently no PII filter; we accept this for V2 because the raw_event is the whole point of the dashboard. **Document this in the safety callout** and revisit if it becomes a complaint. |
-| Backend admin credentials | Postgres password in `.env`, root SSH to the VPS | Direct DB access bypasses every public-read protection. Treat the VPS like any other production box. |
+| Backend admin credentials | Postgres password in `/root/honeyman-Project/honeyman-v2/dashboard-v2/backend/.env` on the **VPS only** (mode 0600, never committed — `.env` is gitignored, only `.env.example` with placeholders is in the repo). Root SSH password is a separate operator credential. | Direct DB access bypasses every public-read protection. Treat the VPS like any other production box. |
 | TLS private keys | Let's Encrypt managed | Standard rotation. Renew is automatic via certbot. |
 | The malware-hash database | `/var/lib/honeyman/malware_hashes.db` on each sensor, shipped from `data/malware_hashes.db` | Integrity matters: if an attacker tampers with this on a sensor they can blind the file-hash branch of the USB detector. |
 
 There are no user accounts, no JWTs, no session tokens, and no
 moderation/admin UI by design — those are not assets because they don't
 exist.
+
+### What's in git vs what only lives on the VPS
+
+Just to be explicit, since this confused at least one reader:
+
+| File | Where it lives | What's in it |
+|---|---|---|
+| `*.env.example` | In the repo, tracked | Placeholders — `your-secure-postgres-password`, etc. Safe to read. |
+| `.env` (all of them) | **Only on the VPS** (or on an operator's local machine). `.gitignore` blocks `.env`, `*.env`, `.env.local`, `.env.*.local`. Verified via `git check-ignore` — none of the live `.env` files are tracked. | Real Postgres password, real CORS origins, real geolocation API keys. Mode 0600 on the VPS, owned by root. |
+| Root SSH password / SSH key for the VPS | Operator's machine only | Whatever the operator set up. Honeyman doesn't know it, doesn't store it, doesn't ship it. |
+| Per-sensor API keys | Sensor's own `/etc/honeyman/api_key` (mode 0600). Backend keeps only the SHA-256 hash. | One-time plaintext returned at registration, never persisted on the backend. |
 
 ---
 
