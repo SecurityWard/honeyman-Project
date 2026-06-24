@@ -7,6 +7,117 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Post-deploy fixes & UX polish — 2026-06
+
+A batch of fixes shaken out by the first real Pi onboarding and the first
+real session of the public dashboard.
+
+**Onboarding / install.sh**
+
+- `https://honeymanproject.com/install` now serves the actual `install.sh`
+  as `text/plain` via an nginx `location = /install` block (was returning
+  the SPA's `index.html`; `bash` choked on `<!doctype html>` line 1).
+- `install.sh` reattaches stdin to `/dev/tty` so `read -rp "Sensor name"`
+  works under `curl … | bash`. First attempt redirected stdin globally
+  with `exec`, which stalled bash before pre-flight; second attempt uses
+  per-`read` `< "$TTY_IN"`.
+- `install.sh` registration payload built via a Python heredoc with the
+  delimiter quoted (`<<'PY'`) and all values passed in via env vars.
+  Earlier version inlined `${MOD_USB}` etc. and Python choked on bash's
+  lowercase `true` (`NameError: name 'true' is not defined`).
+- `install.sh` detects single-WiFi-adapter Pis (one `iw dev` interface
+  that's also the default route) and refuses to default WiFi/AirDrop
+  detection on for them — defaults would otherwise put the only adapter
+  into monitor mode and disconnect the installer from itself.
+- `install.sh` now ships the malware-hash DB (`data/malware_hashes.db`,
+  ~360 signatures) to `/var/lib/honeyman/malware_hashes.db`. Previously
+  the USB detector was silently disabling its file-hash branch.
+- `setup.py` declares `aiohttp>=3.9.0`; dropped unused declared deps
+  (`requests`, `netifaces`, `python-dotenv`, `python-json-logger`,
+  `cryptography`).
+
+**Agent runtime**
+
+- `PluginManager.load_detector` now uses an explicit `{name: (module,
+  class)}` table — was deriving class names by title-casing the config
+  key, which produced `BluetoothDetector` (missing) instead of
+  `BleDetector` and `AirdropDetector` instead of `AirDropDetector`.
+  Both `'bluetooth'` and `'ble'` resolve to `BleDetector` now.
+- `BleDetector`, `NetworkDetector`, `AirDropDetector` constructors
+  accept `location_service` and pass arguments through to `BaseDetector`
+  in the right order. The old `(config, rule_engine, transport)`
+  signature mangled the base attributes.
+- `HoneymanAgent.start()` no longer calls `_send_registration()` —
+  install.sh registers via curl, the agent should just heartbeat. The
+  old call POSTed `{"type":"registration","sensor_name":…}` to
+  `/sensors/register` and got 422 forever because the schema requires
+  `requested_name`, queuing the broken payload into the offline buffer.
+- `BaseDetector.evaluate_event` enforces per-(rule, target) cooldown.
+  Honours `tuning.cooldown_seconds` (preferred) or derives the spacing
+  from `tuning.max_alerts_per_hour`. Identity derived from the most
+  identifying field on the event (`device_mac` > `src_host` >
+  `service_name` > `vendor:product:serial` > …). The cache prunes
+  hourly. Was previously letting the BLE `mac_randomization` rule fire
+  60+ times in three minutes from neighbours' phones.
+
+**Backend / dashboard**
+
+- `POST /api/v2/threats` publishes the serialized `ThreatResponse` to
+  the Redis `threats:realtime` channel after commit, so the WebSocket
+  broadcast layer actually relays HTTPS-delivered threats. Only the MQTT
+  subscriber was publishing before, which meant the live feed was
+  permanently empty under the V2 HTTPS-default transport.
+- `GET /api/v2/sensors` computes `total_threats_detected` and
+  `threats_last_24h` with two bulk GROUP-BY queries instead of reading
+  the never-updated counter columns on the sensors row.
+- `GET /api/v2/analytics/trends` uses `date_trunc('hour' | 'day' |
+  'week', …)` instead of `'hourly' | 'daily' | 'weekly'` — the API
+  values were passed straight into PostgreSQL, which raised
+  `InvalidParameterValueError` on every call so the trends chart was
+  empty.
+
+**Frontend**
+
+- Dashboard "Real-Time Threat Feed" rows are expandable `<details>`
+  elements showing the matched rule (name + rule_id), confidence/score,
+  device MAC/IP, MITRE tags (linked to attack.mitre.org), and a
+  pretty-printed `raw_event` payload. Seeded from REST so it isn't
+  empty until the first WS frame arrives; dedupes by id.
+- Threat map popup rewritten with the same expanded info and the
+  field-name fixes (`confidence_score` → `confidence`, `mac_address` →
+  `device_mac`, `ip_address` → `device_ip`) — the popup was rendering
+  `NaN%` for confidence.
+- Sensors page rows are clickable; navigate to
+  `/dashboard?sensor_id=…`. Dashboard reads the param, filters the
+  threat feed and WebSocket subscription to that sensor, re-centers the
+  map on the sensor's coords, and shows a blue filter banner with a
+  back-link and clear button.
+- Add Sensor page now leads with a red "you are deliberately inviting
+  attacks" callout before the amber single-adapter hardware note.
+- Sensors page no longer renders blank — was reading `sensorsData.items`
+  but the API returns `sensorsData.sensors`. Same for `status`,
+  `location`, `total_threats`, `last_seen` (all renamed in V2 schema).
+- BLE rule `mac_randomization` shipped `enabled: true` despite its own
+  metadata declaring `false_positive_prone: true` and matching every
+  randomized MAC; now `enabled: false`. Operators can opt in.
+
+**Repository hygiene**
+
+- nginx config snapshotted to `honeyman-v2/deployment/nginx/honeyman.conf`
+  + a deployment README so the site can be rebuilt from the repo.
+- `.gitignore` `*api_key*` rule was hiding the actual auth module at
+  `app/core/api_key.py`; added explicit negation rules so legitimate
+  source files for handling API keys stay tracked.
+- `package.json`, `package-lock.json`, `tsconfig*.json` were caught by
+  a broader `*.json` ignore rule; whitelisted under `honeyman-v2/**`.
+- Domain rename: every active code/doc reference updated from
+  `honeyman.io` (never registered) to `honeymanproject.com`.
+- "V2" branding scrubbed from user-facing UI strings (the version
+  number stays in the URL prefix `/api/v2/` and directory names).
+- Stale archived directories (`archive/v1/`, `archive/v1-scripts/`,
+  `archive/v2-removed-*`, `docs/historical/`) deleted — 27,466 lines
+  removed; `git log` preserves the history.
+
 ### V2 Phase D — Location upgrades — 2026-05
 
 - Agent `LocationService` rewritten: resolves location in the order **manual override → GPS via gpsd → WiFi positioning (Mozilla Location Service / Google) → IP**. Each method returns `{lat, lon, accuracy, source}`; results cached for 5 min.

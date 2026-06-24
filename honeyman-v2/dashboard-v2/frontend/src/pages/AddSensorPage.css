@@ -37,6 +37,47 @@
   background: #f9fafb;
 }
 
+.install-card.danger {
+  background: #fef2f2;
+  border-color: #dc2626;
+  border-left: 4px solid #dc2626;
+  color: #1f2937;
+}
+
+.install-card.danger h2 {
+  color: #991b1b;
+}
+
+.install-card.danger p,
+.install-card.danger li,
+.install-card.danger code,
+.install-card.danger strong {
+  color: #1f2937;
+}
+
+.install-card.danger p {
+  margin: 0.6rem 0;
+  line-height: 1.55;
+}
+
+.install-card.danger ul {
+  margin: 0.5rem 0 1rem 0;
+  padding-left: 1.25rem;
+}
+
+.install-card.danger li {
+  margin-bottom: 0.5rem;
+  line-height: 1.55;
+}
+
+.install-card.danger .footnote {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 0;
+  padding-top: 0.6rem;
+  border-top: 1px dashed #fca5a5;
+}
+
 .install-card.warning {
   background: #fffbeb;
   border-color: #f59e0b;

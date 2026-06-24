@@ -4,7 +4,9 @@ Mobile, multi-vector threat collection for physical events.
 
 Honeyman puts a Raspberry Pi-class sensor in a backpack, on a hotel-room desk, or in a conference hall — and reports malicious USB, WiFi, BLE, and AirDrop activity in real time to a public map. When the sensor is on a network, it can also expose SSH and HTTP honeypots and report intrusion attempts as events.
 
-V1 launched at DefCon. V2 (this branch) is a redesign: simpler to deploy, public read-only dashboard, no user accounts, central YAML rules that update without reflashing sensors.
+V1 launched at DefCon. The current build (V2) is a redesign: simpler to
+deploy, public read-only dashboard, no user accounts, central YAML rules
+that update without reflashing sensors.
 
 > **For contributors:** the canonical plan, current state, and build order live in [`HONEYMAN-V2-PLAN.md`](HONEYMAN-V2-PLAN.md). The architecture diagram is in [`ARCHITECTURE.mmd`](ARCHITECTURE.mmd) (Mermaid; renders on GitHub).
 
@@ -53,11 +55,14 @@ curl -sSL https://honeymanproject.com/install | bash
 The installer will:
 
 1. Detect available hardware (USB, WiFi adapter with monitor mode, Bluetooth)
-2. Ask you for a sensor name and (optional) location label
-3. Install Python deps + the `honeyman-agent` package
-4. Call `POST /api/v2/sensors/register` to claim a sensor ID and receive a one-time API key
-5. Write the API key to `/etc/honeyman/credentials` (mode 0600, owner root)
-6. Drop a systemd unit at `/etc/systemd/system/honeyman.service` and start it
+2. Refuse to default WiFi/AirDrop on if the device has only one wireless adapter (would disconnect the installer from itself mid-run)
+3. Ask you for a sensor name and (optional) location label
+4. Install Python deps + the `honeyman-agent` package
+5. Install `usbmount` so plugged-in USB drives auto-mount for filesystem scanning (set `USBMOUNT_ENABLED=0` to skip)
+6. Ship the malware-hash DB (~360 signatures) to `/var/lib/honeyman/malware_hashes.db`
+7. Call `POST /api/v2/sensors/register` to claim a sensor ID and receive a one-time API key
+8. Write the API key to `/etc/honeyman/api_key` (mode 0600, owner root)
+9. Drop a systemd unit at `/etc/systemd/system/honeyman-agent.service` and start it
 
 Within a minute or two, the sensor appears on the public dashboard.
 
@@ -74,7 +79,7 @@ curl -sSL https://honeymanproject.com/install | \
 
 ## View the dashboard
 
-**Public URL:** http://72.60.25.24:3000  *(will move to `https://dashboard.honeymanproject.com` when DNS is set up)*
+**Public URL:** <https://dashboard.honeymanproject.com>
 
 The dashboard shows:
 
@@ -165,19 +170,29 @@ out.
 
 ## Status
 
-V2 is **under active development.** Phases A–D are code-complete; Phases E (canary network toggle) and F (operability — systemd, TLS, metrics) are not started.
+Phases A–D and most of E are deployed. A Pi Zero 2 W is running the
+agent against the production backend right now; the dashboard, API,
+WebSocket live feed, and per-sensor click-through views are all live.
+Remaining work is operability polish (Phase F: log rotation, metrics,
+alerting) and rule-quality tuning (Phase G).
 
-| Phase | What | Code | Deployed |
-|---|---|---|---|
-| Cleanup | Archive V1, strip JWT/users, single canonical plan | ✅ done | ⏳ partial |
-| A | Sensor ↔ backend end-to-end (HTTPS + per-sensor API key, schema alignment) | ✅ done | ⏳ awaiting `phase_a_apply.sh` |
-| B | Self-register onboarding (`install.sh` + dashboard's Add Sensor page) | ✅ done | ⏳ awaiting deploy + real-Pi test |
-| C | Resilience + central rule sync (SQLite offline buffer, `GET /api/v2/rules`, agent poller) | ✅ done, unit tested | ❌ awaiting deploy |
-| D | Location chain — manual override → GPS via gpsd → WiFi positioning (MLS / Google) → IP. Every threat carries `accuracy_meters` + `location_method`, dashboard map renders a confidence circle | ✅ done, unit tested | ❌ awaiting deploy |
-| E | Optional SSH/HTTP canary toggle + frontend filter | — | — |
-| F | Operability — systemd units, TLS, Prometheus, alerting | — | — |
+| Phase | What | Status |
+|---|---|---|
+| A | Sensor ↔ backend end-to-end (HTTPS + per-sensor API key) | ✅ Deployed |
+| B | Self-register onboarding (`install.sh` + Add Sensor page) | ✅ Deployed |
+| C | Resilience + central rule sync (SQLite offline buffer, `GET /api/v2/rules`) | ✅ Deployed (poller opt-in) |
+| D | Location chain — manual / GPS / WiFi / IP, with accuracy circles on the map | ✅ Deployed |
+| E | Optional SSH/HTTP canary + frontend filter | ✅ Mostly deployed (OpenCanary server running; explicit toggle + UI filter still to do) |
+| F | Operability — log rotation, Prometheus, alerting | ⏳ Partial (nginx+TLS done; metrics/alerting/logrotate not) |
+| G | Rule quality & tuning | ⏳ Open — see `HONEYMAN-V2-PLAN.md` §5 |
+| H | Security review | ⏳ Scheduled — see [`SECURITY.md`](SECURITY.md) |
 
-Real-Pi smoke test (`curl ... | bash` on a Pi 4, watch it appear on the map) is the next milestone. The full plan and per-phase notes live in [`HONEYMAN-V2-PLAN.md`](HONEYMAN-V2-PLAN.md); release notes are in [`CHANGELOG.md`](CHANGELOG.md); deployment runbook is at [`honeyman-v2/deployment/DEPLOY.md`](honeyman-v2/deployment/DEPLOY.md).
+The full plan and per-phase notes live in
+[`HONEYMAN-V2-PLAN.md`](HONEYMAN-V2-PLAN.md); release notes are in
+[`CHANGELOG.md`](CHANGELOG.md); the test plan is in
+[`TESTING.md`](TESTING.md); the threat model + review checklist is in
+[`SECURITY.md`](SECURITY.md); deployment runbook is in
+[`honeyman-v2/deployment/DEPLOY.md`](honeyman-v2/deployment/DEPLOY.md).
 
 ---
 

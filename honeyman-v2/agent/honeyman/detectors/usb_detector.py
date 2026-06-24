@@ -151,12 +151,30 @@ class UsbDetector(BaseDetector):
 
     async def _analyze_usb_device(self, device: pyudev.Device):
         """
-        Analyze USB device for threats
+        Analyze USB device for threats.
+
+        Three event shapes worth handling differently:
+          - usb_device   parent USB-level events (carry VID/PID/manufacturer)
+          - disk         block-device events (DEVTYPE='disk', is_storage)
+          - partition    block-partition events (DEVTYPE='partition' — these
+                         carry ID_FS_LABEL even when the partition isn't
+                         mounted, so they're how we catch STARKILLER-style
+                         volume-label rules without needing usbmount)
 
         Args:
             device: pyudev Device object
         """
-        # Extract device properties
+        devtype = device.get('DEVTYPE') or ''
+
+        # Partition events carry the filesystem label as soon as udev probes
+        # them, mount or no mount. Handle them on a dedicated path so we can
+        # walk up to the parent USB device for VID/PID context and fire the
+        # volume-label rules.
+        if devtype == 'partition':
+            await self._analyze_partition(device)
+            return
+
+        # Extract device properties for non-partition events
         device_data = self._extract_device_info(device)
 
         # Check whitelist
@@ -177,6 +195,55 @@ class UsbDetector(BaseDetector):
         # If device is storage, check filesystem
         if device_data.get('is_storage'):
             await self._analyze_storage_device(device, device_data)
+
+    async def _analyze_partition(self, device: pyudev.Device):
+        """Run rule evaluation against a partition's filesystem label.
+
+        Partition events fire as soon as udev probes the filesystem, which
+        happens at insertion time — no mount required. That makes them the
+        right place to catch volume-label rules like `STARKILLER`, `PWNED`,
+        `BADUSB`, etc., regardless of whether usbmount is installed.
+
+        We walk up to the parent USB device so the threat carries proper
+        VID/PID, manufacturer, and product context.
+        """
+        volume_label = device.get('ID_FS_LABEL') or device.get('ID_FS_LABEL_ENC')
+        if not volume_label:
+            return
+
+        parent = device.find_parent('usb', 'usb_device')
+        device_data: Dict[str, Any] = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'device_path': device.device_path,
+            'fs_type': device.get('ID_FS_TYPE'),
+            'fs_uuid': device.get('ID_FS_UUID'),
+            'volume_label': volume_label,
+            'filename': volume_label,        # alias — the volume-label rule
+                                             # uses field=volume_label, but
+                                             # other file-pattern rules use
+                                             # field=filename; cover both.
+            'is_storage': True,
+        }
+        if parent is not None:
+            device_data.update({
+                'vid':           parent.get('ID_VENDOR_ID', 'unknown'),
+                'pid':           parent.get('ID_MODEL_ID', 'unknown'),
+                'vid_pid':       f"{parent.get('ID_VENDOR_ID', 'unknown')}:{parent.get('ID_MODEL_ID', 'unknown')}",
+                'vendor':        parent.get('ID_VENDOR', 'unknown'),
+                'manufacturer':  parent.get('ID_VENDOR', 'unknown'),
+                'model':         parent.get('ID_MODEL', 'unknown'),
+                'product_name':  parent.get('ID_MODEL', 'unknown'),
+                'serial':        parent.get('ID_SERIAL_SHORT', 'unknown'),
+                'usb_interfaces': parent.get('ID_USB_INTERFACES'),
+            })
+
+        logger.info(
+            f"Partition mounted/probed: label={volume_label!r} "
+            f"vid_pid={device_data.get('vid_pid', 'unknown')} "
+            f"vendor={device_data.get('vendor', 'unknown')}"
+        )
+
+        await self.evaluate_event(device_data)
 
     def _extract_device_info(self, device: pyudev.Device) -> Dict[str, Any]:
         """
@@ -212,6 +279,11 @@ class UsbDetector(BaseDetector):
             'device_path': device_path,
             'is_storage': is_storage,
             'device_class': device.get('ID_USB_DRIVER', 'unknown'),
+            # ID_USB_INTERFACES looks like ":030101:080650:" — colon-separated
+            # interface-class hex codes (HID Keyboard = 0301xx, Mass Storage
+            # = 0806xx, etc.). The "exposes both HID and MSC" BadUSB rule
+            # regexes against this.
+            'usb_interfaces': device.get('ID_USB_INTERFACES', ''),
             'timestamp': datetime.utcnow().isoformat(),
         }
 
@@ -239,39 +311,45 @@ class UsbDetector(BaseDetector):
 
     async def _analyze_storage_device(self, device: pyudev.Device, device_data: Dict[str, Any]):
         """
-        Analyze storage device for malicious files
+        Analyze a disk-level USB storage device.
+
+        The volume-label check is normally handled on the partition event
+        (see _analyze_partition), but some firmwares put ID_FS_LABEL on the
+        disk itself, so we check here too as a safety net.
+
+        The file-hash scan requires the partition to be mounted. usbmount or
+        similar auto-mount tooling is expected; without it this method
+        returns gracefully without scanning, but the partition-level
+        volume-label rule still runs.
 
         Args:
             device: pyudev Device object
             device_data: Device information
         """
         try:
-            # Get mount point
-            mount_point = self._get_mount_point(device)
+            # Disk-level label as a safety net — fire even without mount.
+            volume_label = self._get_volume_label(device)
+            if volume_label:
+                await self.evaluate_event({
+                    **device_data,
+                    'volume_label': volume_label,
+                    'filename': volume_label,
+                })
 
+            # File-hash scan requires a mount point.
+            mount_point = self._get_mount_point(device)
             if not mount_point:
-                logger.debug("Storage device not mounted yet")
-                # Wait a bit for mount
                 await asyncio.sleep(2.0)
                 mount_point = self._get_mount_point(device)
-
             if not mount_point:
-                logger.debug("Storage device still not mounted, skipping filesystem scan")
+                logger.info(
+                    "Storage device %s not mounted; skipping filesystem scan. "
+                    "Install usbmount on the sensor for auto-mount.",
+                    device.device_node or device.device_path,
+                )
                 return
 
             logger.info(f"Scanning storage device at: {mount_point}")
-
-            # Get volume label
-            volume_label = self._get_volume_label(device)
-            if volume_label:
-                # Check volume label against rules
-                volume_data = {
-                    **device_data,
-                    'volume_label': volume_label
-                }
-                await self.evaluate_event(volume_data)
-
-            # Scan files
             await self._scan_files(mount_point, device_data)
 
         except Exception as e:

@@ -1,12 +1,25 @@
 rule_id: usb_rubber_ducky_001
 name: "Rubber Ducky Hardware Detection"
-version: 2.0
+version: 2.1
 enabled: true
 severity: critical
 threat_type: rubber_ducky
 category: usb
 
-# Detect Rubber Ducky based on VID/PID signatures
+# Detect Rubber Ducky variants. We hit on three independent signals so a
+# device that spoofs *any* of them (and modern variants spoof VID/PID
+# liberally as e.g. Apple keyboards to bypass naive AV) still trips:
+#
+#   1. Canonical VID/PID combos used by stock Hak5 / Arduino / Teensy /
+#      Digispark / USBaspLoader builds.
+#   2. Product/manufacturer string still containing "Ducky" or "Hak5" or
+#      "Rubber" — most off-the-shelf payloads don't bother renaming the
+#      device descriptor.
+#   3. A device that advertises BOTH a HID Keyboard interface (0301xx)
+#      AND a Mass Storage interface (0806xx) in ID_USB_INTERFACES — the
+#      actual behavioural fingerprint of a BadUSB device that pretends to
+#      be a keyboard and a thumb drive simultaneously. Catches the
+#      "fake Apple keyboard" Duckies that fool the VID/PID rule above.
 conditions:
   operator: OR
   clauses:
@@ -44,6 +57,31 @@ conditions:
       field: vid_pid
       operator: equals
       value: "1209:2100"
+
+    # Product-name match — catches Duckies that spoof VID/PID but leave
+    # the original descriptor strings in place. Surprisingly common.
+    - type: file_pattern
+      field: product_name
+      operator: regex
+      pattern: ".*([Dd]ucky|[Rr]ubber|[Hh]ak5|[Bb]ash.*[Bb]unny|O\\.?M\\.?G).*"
+
+    # Manufacturer-string match — same idea, different field. Some Duckies
+    # report manufacturer="Ducky" while the product name claims to be a
+    # standard keyboard.
+    - type: file_pattern
+      field: manufacturer
+      operator: regex
+      pattern: ".*([Dd]ucky|[Hh]ak5|[Bb]ash.*[Bb]unny).*"
+
+    # Behavioural: HID Keyboard interface (class 0301xx) AND Mass Storage
+    # interface (class 0806xx) on the same device. udev exposes this in
+    # ID_USB_INTERFACES as `:030101:080650:` style. This is the strongest
+    # signal — a device with no business being both a keyboard AND a thumb
+    # drive is almost certainly a BadUSB / HID-injection tool.
+    - type: file_pattern
+      field: usb_interfaces
+      operator: regex
+      pattern: ".*0301[0-9a-fA-F]{2}.*0806[0-9a-fA-F]{2}.*"
 
 actions:
   - type: alert_dashboard

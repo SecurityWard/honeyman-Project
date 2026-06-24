@@ -1,582 +1,364 @@
-# Honeyman Project - Validation Test Cases
+# Honeyman test plan
 
-This document provides comprehensive test cases to validate each detection capability of the Honeyman Project. These tests should be run in a controlled environment to ensure proper system functionality.
+Pragmatic test plan covering what's worth automating, what stays manual,
+and what to re-check before every release. Organised by where the test
+runs (sensor / backend / dashboard) and what flavour it is (unit /
+integration / manual / regression).
 
-## 🛡️ Test Environment Setup
+Three guiding principles:
 
-### Prerequisites
-- Isolated test network (separate from production)
-- Test devices: Laptop, smartphone, USB devices
-- Wireless adapters with monitor mode support
-- Administrative access to test systems
+1. **Real network, real Pi, at least once per change** that touches the
+   sensor or the install path. Mocked detectors miss too many failure
+   modes (udev queueing, bluetooth `User=root` capability issues,
+   single-adapter monitor-mode disconnects).
+2. **Regression tests for every production bug** that bit us. The
+   commits in CHANGELOG `Post-deploy fixes` are all candidates — they
+   each shipped past the existing test suite and we should make sure
+   they can't again.
+3. **Run the manual smoke flow before pushing anything that touches the
+   API surface.** It takes five minutes and catches schema drift that
+   the unit tests don't.
 
-### Safety Notice
-⚠️ **IMPORTANT**: All tests should be conducted in isolated environments. Never run these tests on production networks or systems without explicit authorization.
+---
 
-## 📡 WiFi Detection Tests
+## 1. Sensor side — agent + detectors
 
-### Test Case W1: Evil Twin Access Point Detection
+### 1.1 Unit tests (existing)
 
-**Objective**: Verify detection of evil twin access points
-
-**Setup**:
-1. Identify a legitimate WiFi network in range
-2. Create a fake access point with the same SSID but different BSSID
-3. Configure similar signal strength and security settings
-
-**Test Steps**:
 ```bash
-# Using hostapd to create evil twin
-sudo hostapd /etc/hostapd/evil_twin.conf &
-
-# Monitor detection
-tail -f logs/wifi_enhanced.log | grep -i "evil_twin"
+cd honeyman-v2/agent
+pip install -e ".[dev]"
+pytest tests/
 ```
 
-**Expected Results**:
-- Detection within 30 seconds of evil twin activation
-- Alert showing "evil_twin_same_ssid" threat type
-- Threat score >= 0.6
-- Dashboard shows "HIGH" or "CRITICAL" alert
+Existing files under `honeyman-v2/agent/tests/`:
 
-**Pass Criteria**: 
-- ✅ Detection occurs within 60 seconds
-- ✅ Threat score >= 0.6
-- ✅ Correct threat classification
+| File | What it covers |
+|---|---|
+| `test_usb_detector.py` | USB event parsing, malware-hash DB lookups, autorun.inf inspection |
+| `test_wifi_detector.py` | scapy parsing, evil-twin detection logic |
+| `test_ble_detector.py` (in the agent root) | BLE device tracking, manufacturer-data spoofing |
+| `test_airdrop_detector.py` (in the agent root) | avahi-browse parsing, service-name patterns |
+| `test_network_detector.py` (in the agent root) | OpenCanary log parsing |
 
-### Test Case W2: Beacon Flooding Attack
+### 1.2 Unit tests we still need
 
-**Objective**: Verify detection of beacon flooding attacks
+Bugs that shipped past the existing suite — each one becomes a test that
+would have caught the regression:
 
-**Setup**:
-1. Configure wireless adapter in monitor mode
-2. Prepare beacon flooding script or tool
-3. Set flood rate to >100 beacons per minute
+- **Plugin manager class-name lookup.** Test that each name in the
+  `detectors` table actually resolves to an importable class. Would
+  have caught the `BluetoothDetector` / `AirdropDetector` typo regressions.
+- **Detector constructor signature.** Parametric test that asserts every
+  detector accepts `(rule_engine, transport, config, location_service)`
+  as kwargs and forwards them to `BaseDetector` in the right order.
+- **Per-(rule, target) cooldown.**
+  - Same rule, same identity, second event within `cooldown_seconds` →
+    filtered.
+  - Same rule, same identity, second event after `cooldown_seconds` →
+    passes.
+  - Same rule, *different* identity → both pass.
+  - Rule with no `tuning` → never filtered.
+  - `tuning.cooldown_seconds: 60` wins over `max_alerts_per_hour: 100`.
+- **`_event_identity` precedence.** Each key in the priority chain
+  (`device_mac` → `src_host` → `service_name` → `device_id` → `ssid`
+  → `bssid` → `file_hash` → `vendor:product:serial` → `anon`) wins
+  when present.
+- **`HoneymanAgent.start` does not call `/sensors/register`.**
+  Regression for the spurious self-registration loop. Mock the
+  transport; assert no calls whose topic is `'registration'`.
+- **Install script registration payload shape.** Run the heredoc'd
+  Python block with representative inputs and confirm
+  `requested_name`/`capabilities`/`enabled_detectors` are present and
+  bash booleans become Python booleans correctly.
 
-**Test Steps**:
+### 1.3 Manual smoke — on a real Pi (Pi Zero 2 W or better)
+
+These are the tests that broke on Phase B. Run them on any sensor that
+just installed.
+
+| # | What | How | Pass criteria |
+|---|---|---|---|
+| S1 | Fresh install completes | `curl -sSL https://honeymanproject.com/install \| sudo HONEYMAN_API='https://api.honeymanproject.com' bash` | Last line says `Honeyman sensor installed`, exit code 0 |
+| S2 | systemd unit enabled | `systemctl is-enabled honeyman-agent` | `enabled` |
+| S3 | Service active | `systemctl is-active honeyman-agent` | `active` |
+| S4 | All three detectors loaded | `journalctl -u honeyman-agent -n 50 \| grep "Loaded detector"` | Three lines: `usb`, `ble`, `network`. No `Failed to load detector` |
+| S5 | Sensor shows on dashboard | open https://dashboard.honeymanproject.com/sensors | Sensor row appears, badge becomes `ONLINE` within 60s |
+| S6 | Click-through to dashboard works | click the sensor row | Lands on `/dashboard?sensor_id=…`, banner visible, map centered on sensor |
+| S7 | Reboot persistence | `sudo reboot`; wait 90s; recheck S2/S3/S5 | Same results after reboot |
+| S8 | Detector toggle reflects in heartbeat | edit `/etc/honeyman/config.yaml` to disable `ble`; `systemctl restart honeyman-agent`; wait 90s | Sensor row `enabled_detectors` shows `["usb", "network"]` |
+
+---
+
+## 2. Detection accuracy — manual
+
+Numbered by `T<vector><n>`. Each test produces a known stimulus and
+expects a known threat to land within a target time. Pass criteria are
+visible end-to-end (dashboard map + feed).
+
+### USB
+
+| # | Stimulus | Expected threat | Latency |
+|---|---|---|---|
+| TU1 | USB stick formatted `mkfs.vfat -F 32 -n STARKILLER` | `suspicious_volume` (medium) | ≤ 10s |
+| TU2 | USB stick with `autorun.inf` at root | `autorun_abuse` (high) | ≤ 10s |
+| TU3 | USB stick with a file whose SHA-256 is in `data/malware_hashes.db` (e.g. EICAR after manually adding the hash) | `malware_hash` (critical) | ≤ 30s |
+| TU4 | Plug in a Hak5 Rubber Ducky (VID `0x03eb` PID `0x2401`) | `usb_rubber_ducky` (critical) | ≤ 2s |
+| TU5 | Same Rubber Ducky plugged in twice within the cooldown | one threat, not two | per `tuning.cooldown_seconds` |
+
+### BLE
+
+| # | Stimulus | Expected | Notes |
+|---|---|---|---|
+| TB1 | Flipper Zero advertising | `flipper_zero_ble` (critical) | requires Flipper |
+| TB2 | Plain neighbour iPhone in range | **no threat** (after the `mac_randomization` rule was disabled) | regression for the noise problem |
+| TB3 | Same BLE device firing repeatedly | rate-limited per `cooldown_seconds` | watch agent log for `Throttled rule` debug lines |
+
+### Network honeypot
+
+| # | Stimulus | Expected | Notes |
+|---|---|---|---|
+| TN1 | `ssh root@<sensor-ip> -o PasswordAuthentication=yes` (any pw) | `ssh_brute_force` after 3 attempts | OpenCanary webhook |
+| TN2 | `curl http://<sensor-ip>:8888/admin` with form data | `http_credential_harvesting` | |
+| TN3 | nmap port scan | `port_scan` | one event, not one per port |
+
+### WiFi *(only on Pis with a second WiFi adapter)*
+
+| # | Stimulus | Expected |
+|---|---|---|
+| TW1 | `hostapd` raised with a known SSID also on a real AP | `evil_twin` |
+| TW2 | `mdk4 wlan0mon b -s 200` (beacon flood) | `beacon_flooding` |
+
+### AirDrop / mDNS
+
+| # | Stimulus | Expected |
+|---|---|---|
+| TA1 | `avahi-publish-service "PWNED" _airdrop._tcp 80` | `airdrop_suspicious_name` |
+
+---
+
+## 3. Backend — FastAPI
+
+### 3.1 Integration tests (run against a local Postgres + Redis)
+
 ```bash
-# Using mdk4 for beacon flooding
-sudo mdk4 wlan0mon b -f /tmp/ssid_list.txt -s 1000
-
-# Monitor detection
-grep -i "beacon_flood" logs/wifi_enhanced.log
+cd honeyman-v2/dashboard-v2/backend
+pip install -e ".[dev]"
+pytest tests/
 ```
 
-**Expected Results**:
-- Detection within 10 seconds of flooding start
-- Alert showing "beacon_flooding" threat type
-- Beacon rate calculation shown in logs
-- CRITICAL threat level classification
+(Tests directory hasn't been spun up yet — this is the highest-priority
+gap in the suite. The smoke flow below covers most of what the tests
+should assert.)
 
-**Pass Criteria**:
-- ✅ Detection within 30 seconds
-- ✅ Beacon rate accurately measured (>100/min)
-- ✅ Threat score >= 0.8
+### 3.2 Smoke flow
 
-### Test Case W3: Deauthentication Attack
+Run from any laptop with `curl` + `python3`. Reusable as a CI step.
 
-**Objective**: Verify detection of WiFi deauthentication attacks
-
-**Setup**:
-1. Identify target network and client
-2. Configure wireless adapter in monitor mode
-3. Prepare deauth attack tools
-
-**Test Steps**:
 ```bash
-# Using aireplay-ng for deauth attack
-sudo aireplay-ng -0 10 -a [TARGET_BSSID] wlan0mon
+BASE=https://api.honeymanproject.com
 
-# Monitor detection
-grep -i "deauth" logs/wifi_enhanced.log
+# 1. register
+REG=$(curl -s -X POST $BASE/api/v2/sensors/register -H 'Content-Type: application/json' -d '{
+  "requested_name":"test","capabilities":{"usb":true},"enabled_detectors":["usb"],
+  "platform":"linux","agent_version":"2.0.0",
+  "initial_location":{"latitude":37.77,"longitude":-122.42,"method":"manual","accuracy":100}
+}')
+SID=$(jq -r .sensor_id <<<"$REG"); KEY=$(jq -r .api_key <<<"$REG")
+
+# 2. heartbeat
+curl -s -X POST "$BASE/api/v2/sensors/$SID/heartbeat" -H "Authorization: Bearer $KEY" \
+  -H 'Content-Type: application/json' -d "{
+  \"sensor_id\":\"$SID\",\"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%S)\",\"is_online\":true,
+  \"enabled_detectors\":[\"usb\"],\"system_info\":{\"cpu_percent\":1,\"memory_percent\":10,
+  \"disk_percent\":10,\"uptime_seconds\":1},
+  \"location\":{\"latitude\":37.77,\"longitude\":-122.42,\"method\":\"manual\",\"accuracy\":100}}" \
+  | jq .
+
+# 3. push a threat
+curl -s -X POST $BASE/api/v2/threats -H "Authorization: Bearer $KEY" \
+  -H 'Content-Type: application/json' -d "{
+  \"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%S)\",\"sensor_id\":\"$SID\",
+  \"threat_type\":\"usb_rubber_ducky\",\"detector_type\":\"usb\",\"severity\":\"critical\",
+  \"threat_score\":0.95,\"confidence\":0.98,
+  \"matched_rules\":[{\"rule_id\":\"usb_rubber_ducky_001\",\"name\":\"USB Rubber Ducky\",\"severity\":\"critical\",\"confidence\":0.98}],
+  \"raw_event\":{\"vendor_id\":\"0x03eb\"},\"latitude\":37.77,\"longitude\":-122.42,
+  \"accuracy_meters\":100,\"location_method\":\"manual\"}" | jq .
+
+# 4. listing
+curl -s "$BASE/api/v2/sensors" | jq '.sensors[] | {sensor_id, is_online, total_threats_detected, threats_last_24h}'
+curl -s "$BASE/api/v2/threats?sensor_id=$SID" | jq '.items | length'
+
+# 5. cleanup (run against the VPS, not over the API — no public delete)
+ssh root@72.60.25.24 "sudo -u postgres psql -d honeyman_v2 -c \"DELETE FROM threats WHERE sensor_id='$SID'; DELETE FROM sensors WHERE sensor_id='$SID';\""
 ```
 
-**Expected Results**:
-- Detection of excessive deauth frames
-- Identification of attack pattern
-- Source MAC address logging
-- HIGH threat level alert
+Pass criteria:
 
-**Pass Criteria**:
-- ✅ Deauth attack detected within 60 seconds
-- ✅ Attack source identified
-- ✅ Threat score >= 0.5
+- step 1 returns 201 with `sensor_id` and `api_key`
+- step 2 returns 200 with `{"message":"Heartbeat received"}`
+- step 3 returns 201 with the persisted row including the UUID
+- step 4 reports `total_threats_detected=1`, `threats_last_24h=1`, threat
+  listing length 1
+- The same threat appears on `https://dashboard.honeymanproject.com`
+  within ~2 seconds of step 3, with the matched rule, raw_event, and
+  MITRE tags rendered in the expandable feed row
 
-## 📱 BLE Detection Tests
+### 3.3 Auth regression tests
 
-### Test Case B1: Flipper Zero Detection
-
-**Objective**: Verify detection of Flipper Zero or similar devices
-
-**Setup**:
-1. Acquire Flipper Zero or simulate with ESP32
-2. Configure device with Nordic UART service
-3. Enable BLE advertising with suspicious patterns
-
-**Test Steps**:
 ```bash
-# Monitor BLE detection
-python3 ble_enhanced_detector.py &
-tail -f logs/ble_enhanced.log | grep -i "flipper\|suspicious"
+# wrong key — expect 401
+curl -i -X POST $BASE/api/v2/threats -H "Authorization: Bearer hms_garbage" \
+  -H 'Content-Type: application/json' -d '{"timestamp":"…","sensor_id":"…","threat_type":"x","detector_type":"usb","severity":"low"}'
+
+# right key, wrong sensor_id in body — expect 403
+curl -i -X POST $BASE/api/v2/threats -H "Authorization: Bearer $KEY" \
+  -H 'Content-Type: application/json' -d '{"timestamp":"…","sensor_id":"someone-else","threat_type":"x","detector_type":"usb","severity":"low"}'
+
+# no auth header — expect 401
+curl -i -X POST $BASE/api/v2/threats -H 'Content-Type: application/json' -d '{…}'
 ```
 
-**Expected Results**:
-- Device fingerprint analysis
-- Nordic UART service detection
-- Threat classification as "suspicious_device"
-- HIGH threat level assignment
+### 3.4 WebSocket regression
 
-**Pass Criteria**:
-- ✅ Device detected within 45 seconds
-- ✅ Nordic UART service identified
-- ✅ Threat score >= 0.7
-
-### Test Case B2: BLE Rapid Scanning Behavior
-
-**Objective**: Verify detection of rapid BLE scanning patterns
-
-**Setup**:
-1. Configure test device for rapid connect/disconnect cycles
-2. Set appearance/disappearance rate >5 times per 5 minutes
-3. Use unique MAC address for tracking
-
-**Test Steps**:
 ```bash
-# Simulate rapid scanning with Python script
-python3 simulate_ble_scanner.py --rapid-mode &
+# in one terminal
+wscat -c wss://api.honeymanproject.com/api/v2/ws
 
-# Monitor detection
-grep -i "rapid_appearance\|frequent" logs/ble_enhanced.log
+# in another, fire the smoke flow from 3.2
+# the wscat session should print {"type":"threat","data":{…full ThreatResponse…},…}
 ```
 
-**Expected Results**:
-- Pattern recognition of rapid appearances
-- Behavioral analysis scoring
-- Alert for "frequent_appearance_pattern"
-- MEDIUM threat classification
+Without this test the empty-live-feed regression we just fixed could
+have shipped silently.
 
-**Pass Criteria**:
-- ✅ Pattern detected after 5+ rapid appearances
-- ✅ Behavioral score calculated correctly
-- ✅ Threat score >= 0.3
+### 3.5 Analytics regression
 
-### Test Case B3: Proximity Attack Simulation
+`/analytics/trends` was returning 500 with
+`InvalidParameterValueError: unit 'hourly' not recognized`. Add a test
+for each `period` value:
 
-**Objective**: Verify detection of very close BLE devices
-
-**Setup**:
-1. Position test device very close to detector (<1 meter)
-2. Configure high transmission power
-3. Monitor RSSI readings
-
-**Test Steps**:
 ```bash
-# Position device close and monitor
-# RSSI should be > -30 dBm
-grep -i "proximity\|rssi" logs/ble_enhanced.log
+for p in hourly daily weekly; do
+  echo -n "$p: "
+  curl -s -o /dev/null -w "%{http_code}\n" "$BASE/api/v2/analytics/trends?period=$p"
+done
+# expect 200 200 200
 ```
 
-**Expected Results**:
-- RSSI measurement > -30 dBm
-- Proximity attack detection
-- Distance estimation < 1 meter
-- MEDIUM threat alert
+---
 
-**Pass Criteria**:
-- ✅ High RSSI detected (> -30 dBm)
-- ✅ Proximity threat identified
-- ✅ Accurate distance estimation
+## 4. Dashboard (frontend)
 
-## 💻 Web Honeypot Tests
+### 4.1 Build sanity
 
-### Test Case H1: Credential Harvesting Detection
-
-**Objective**: Verify capture of login attempts on honeypot portal
-
-**Setup**:
-1. Access corporate portal at http://localhost:8080
-2. Prepare test credentials for submission
-3. Monitor form submission logging
-
-**Test Steps**:
 ```bash
-# Submit credentials through web form
-curl -X POST http://localhost:8080/api/login-attempt \
-  -H "Content-Type: application/json" \
-  -d '{"username":"testuser","password":"testpass"}'
-
-# Monitor logs
-grep -i "credential\|login" logs/opencanary.log
+cd honeyman-v2/dashboard-v2/frontend
+npm install
+npm run build
 ```
 
-**Expected Results**:
-- Credential capture in logs
-- User agent and timestamp recorded
-- Source IP identification
-- Form submission details logged
-
-**Pass Criteria**:
-- ✅ Credentials captured accurately
-- ✅ Metadata (IP, User-Agent) logged
-- ✅ Timestamp within 1 second of submission
-
-### Test Case H2: Port Scanning Detection
-
-**Objective**: Verify detection of network port scanning
-
-**Setup**:
-1. Configure port scanning tool (nmap)
-2. Scan multiple honeypot service ports
-3. Monitor connection attempts
-
-**Test Steps**:
-```bash
-# Perform port scan
-nmap -sS -p 1-1000 localhost
-
-# Monitor detection
-grep -i "portscan\|scan" logs/opencanary.log
-```
-
-**Expected Results**:
-- Multiple port connection attempts logged
-- Source IP and port information
-- Scanning pattern recognition
-- MEDIUM to HIGH threat classification
-
-**Pass Criteria**:
-- ✅ Multiple port attempts detected
-- ✅ Scanning pattern identified
-- ✅ Source accurately logged
-
-### Test Case H3: Document Access Monitoring
-
-**Objective**: Verify canary document access detection
-
-**Setup**:
-1. Access document portal at http://localhost:8080/documents.html
-2. Attempt to download sensitive documents
-3. Monitor access attempts
-
-**Test Steps**:
-```bash
-# Access document portal and click documents
-# Monitor access logs
-grep -i "document_access" logs/web_access.log
-```
-
-**Expected Results**:
-- Document access attempts logged
-- Document names and categories recorded
-- User session tracking
-- Access denied simulation
-
-**Pass Criteria**:
-- ✅ Document access logged
-- ✅ User session tracked
-- ✅ Access attempt details captured
-
-## 🔌 USB Detection Tests
-
-### Test Case U1: Unknown Device Insertion
-
-**Objective**: Verify detection of USB device insertion
-
-**Setup**:
-1. Prepare unknown USB device (flash drive, etc.)
-2. Monitor USB subsystem events
-3. Insert device while monitoring
-
-**Test Steps**:
-```bash
-# Monitor USB detection
-python3 usb_detection_enhanced.py &
-
-# Insert USB device
-# Monitor logs
-tail -f logs/usb_enhanced.log
-```
-
-**Expected Results**:
-- USB insertion event detected
-- Device enumeration information
-- Vendor/Product ID logging
-- Device type classification
-
-**Pass Criteria**:
-- ✅ Insertion detected immediately
-- ✅ Device information captured
-- ✅ Classification performed
-
-### Test Case U2: HID Device Detection
-
-**Objective**: Verify detection of Human Interface Devices
-
-**Setup**:
-1. Connect HID device (keyboard, mouse)
-2. Monitor HID-specific enumeration
-3. Detect rapid input patterns
-
-**Test Steps**:
-```bash
-# Connect HID device with rapid input
-# Monitor HID-specific detection
-grep -i "hid\|keyboard\|mouse" logs/usb_enhanced.log
-```
-
-**Expected Results**:
-- HID device classification
-- Input pattern analysis
-- Suspicious behavior detection
-- MEDIUM threat if unusual patterns
-
-**Pass Criteria**:
-- ✅ HID device correctly classified
-- ✅ Input patterns analyzed
-- ✅ Behavioral scoring applied
-
-### Test Case U3: Mass Storage Analysis
-
-**Objective**: Verify analysis of USB mass storage devices
-
-**Setup**:
-1. Connect USB flash drive or external storage
-2. Monitor filesystem enumeration
-3. Analyze device properties
-
-**Test Steps**:
-```bash
-# Connect mass storage device
-# Monitor storage analysis
-grep -i "storage\|filesystem\|mount" logs/usb_enhanced.log
-```
-
-**Expected Results**:
-- Storage device recognition
-- Filesystem type detection
-- Capacity and properties logging
-- Basic content analysis
-
-**Pass Criteria**:
-- ✅ Storage device detected
-- ✅ Properties correctly identified
-- ✅ Security analysis performed
-
-## 📊 Correlation Testing
-
-### Test Case C1: Multi-Vector Attack Correlation
-
-**Objective**: Verify correlation across different attack vectors
-
-**Setup**:
-1. Execute WiFi evil twin attack
-2. Simultaneously attempt credential harvesting
-3. Insert suspicious USB device
-4. Monitor correlation engine
-
-**Test Steps**:
-```bash
-# Start multi-vector attacks simultaneously
-./test_multi_vector_attack.sh
-
-# Monitor correlation
-grep -i "correlation\|multi" logs/multi_vector.log
-```
-
-**Expected Results**:
-- Cross-protocol threat correlation
-- Temporal relationship identification
-- Elevated threat scoring
-- CRITICAL alert generation
-
-**Pass Criteria**:
-- ✅ Multiple vectors correlated
-- ✅ Temporal analysis performed
-- ✅ Combined threat score elevated
-
-### Test Case C2: Timeline Correlation
-
-**Objective**: Verify temporal correlation of related events
-
-**Setup**:
-1. Execute attacks in sequence with timing
-2. Monitor timeline analysis
-3. Verify correlation windows
-
-**Test Steps**:
-```bash
-# Execute timed sequence of attacks
-python3 test_timeline_correlation.py
-
-# Monitor timeline analysis
-grep -i "timeline\|sequence" logs/correlation.log
-```
-
-**Expected Results**:
-- Timeline reconstruction
-- Event sequence analysis
-- Correlation confidence scoring
-- Attack campaign identification
-
-**Pass Criteria**:
-- ✅ Timeline accurately reconstructed
-- ✅ Sequence correlation identified
-- ✅ Confidence scores calculated
-
-### Test Case C3: Behavioral Analysis Validation
-
-**Objective**: Verify behavioral pattern recognition
-
-**Setup**:
-1. Generate consistent attack patterns
-2. Vary attack timing and intensity
-3. Monitor behavioral analysis
-
-**Test Steps**:
-```bash
-# Generate behavioral patterns
-python3 test_behavioral_patterns.py
-
-# Monitor behavioral analysis
-grep -i "behavior\|pattern" logs/behavioral.log
-```
-
-**Expected Results**:
-- Pattern recognition accuracy
-- Behavioral baseline establishment
-- Anomaly detection
-- Learning algorithm adaptation
-
-**Pass Criteria**:
-- ✅ Patterns accurately identified
-- ✅ Baselines established
-- ✅ Anomalies detected
-
-## 🎯 Dashboard Validation Tests
-
-### Test Case D1: Real-time Data Display
-
-**Objective**: Verify dashboard displays threat data in real-time
-
-**Setup**:
-1. Access enhanced dashboard
-2. Generate test threats
-3. Monitor dashboard updates
-
-**Test Steps**:
-```bash
-# Access dashboard at http://72.60.25.24:8080/enhanced_dashboard.html
-# Generate test threats
-# Verify real-time updates
-```
-
-**Expected Results**:
-- Threat counters update within 10 seconds
-- Charts reflect new data
-- Timeline shows recent events
-- Status indicators accurate
-
-**Pass Criteria**:
-- ✅ Updates within 10 seconds
-- ✅ Data accuracy maintained
-- ✅ Visual elements functional
-
-### Test Case D2: API Response Validation
-
-**Objective**: Verify API endpoints return correct data
-
-**Setup**:
-1. Generate known threat data
-2. Query API endpoints
-3. Validate response accuracy
-
-**Test Steps**:
-```bash
-# Test API endpoints
-curl http://72.60.25.24:8080/api/threats/stats
-curl http://72.60.25.24:8080/api/threats/recent
-curl http://72.60.25.24:8080/api/threats/correlations
-
-# Verify response data
-```
-
-**Expected Results**:
-- Accurate threat statistics
-- Proper JSON formatting
-- Correct data relationships
-- Reasonable response times (<2s)
-
-**Pass Criteria**:
-- ✅ Data accuracy verified
-- ✅ Response format correct
-- ✅ Performance acceptable
-
-### Test Case D3: Mobile Responsiveness
-
-**Objective**: Verify dashboard functionality on mobile devices
-
-**Setup**:
-1. Access dashboard on mobile device/browser
-2. Test responsive design
-3. Verify functionality
-
-**Test Steps**:
-```bash
-# Access dashboard with mobile user agent
-# Test touch interactions
-# Verify layout adaptation
-```
-
-**Expected Results**:
-- Layout adapts to screen size
-- Touch interactions work
-- All data remains accessible
-- Performance acceptable
-
-**Pass Criteria**:
-- ✅ Responsive design functional
-- ✅ Mobile interactions work
-- ✅ Data accessibility maintained
-
-## 📋 Test Execution Schedule
-
-### Automated Testing
-```bash
-# Run automated test suite
-./run_validation_tests.sh
-
-# Generate test report
-./generate_test_report.sh
-```
-
-### Manual Testing Checklist
-- [ ] WiFi Detection Tests (W1-W3)
-- [ ] BLE Detection Tests (B1-B3)
-- [ ] Web Honeypot Tests (H1-H3)
-- [ ] USB Detection Tests (U1-U3)
-- [ ] Correlation Tests (C1-C3)
-- [ ] Dashboard Tests (D1-D3)
-
-### Performance Benchmarks
-- Detection Time: <60 seconds for all threat types
-- False Positive Rate: <10% for all capabilities
-- System Resource Usage: <80% CPU, <4GB RAM
-- Dashboard Response Time: <2 seconds
-
-## 🔄 Continuous Validation
-
-### Regular Testing Schedule
-- **Daily**: Automated basic functionality tests
-- **Weekly**: Manual validation of key capabilities
-- **Monthly**: Complete test suite execution
-- **Quarterly**: Performance benchmark validation
-
-### Test Result Documentation
-All test results should be documented with:
-- Test execution timestamp
-- Pass/fail status for each test case
-- Performance metrics collected
-- Any anomalies or issues identified
-- Recommendations for improvements
-
-This comprehensive test suite ensures the Honeyman Project maintains its detection capabilities and performance standards throughout its deployment lifecycle.
+Build should complete in ≤ 30s with no TypeScript errors.
+
+### 4.2 Manual UI smoke
+
+After every frontend deploy:
+
+| # | Page | What to check |
+|---|---|---|
+| F1 | `/dashboard` | Map loads, marker visible for the running sensor, no console errors |
+| F2 | `/dashboard` | Threat feed populated (REST seed) within ~2s of load |
+| F3 | `/dashboard` | Push a threat via the smoke flow → new row appears in feed within ~2s (WS path) |
+| F4 | `/dashboard` | Click a feed row → expands to show matched rule, hashes, MITRE, raw_event |
+| F5 | `/dashboard` | Click a map marker → popup shows the same rich detail, no `NaN` anywhere |
+| F6 | `/sensors` | At least one sensor row, total_threats_detected and threats_last_24h match the smoke-flow numbers |
+| F7 | `/sensors` | Hover row → shows "→ view threats" hint. Click → navigates to `/dashboard?sensor_id=…` |
+| F8 | `/dashboard?sensor_id=…` | Blue filter banner visible with sensor name + clear-filter button + back-link |
+| F9 | `/dashboard?sensor_id=…` | "Clear filter" returns to `/dashboard`, banner gone, broadcasts unfiltered again |
+| F10 | `/add-sensor` | Red "deliberately inviting attacks" callout appears first, then the amber single-adapter caveat. Both readable (no white text on tan) |
+| F11 | `/add-sensor` | Copy button copies the right URL (`honeymanproject.com/install`, not `honeyman.io`) |
+| F12 | `/about` | All text renders dark (no white-on-light regression from the index.css `:root` dark default) |
+
+### 4.3 Stale-field regression
+
+The frontend `Threat` and `Sensor` types were drifted from the backend
+schemas. Bake into CI: for every API endpoint the dashboard consumes,
+fetch one real response and compare keys against the TypeScript
+interface. Any key in the response that's not in the interface (or
+vice-versa) fails.
+
+---
+
+## 5. End-to-end (E2E)
+
+The shortest meaningful E2E is the manual smoke flow run against the
+deployed stack with a real Pi powering up cold. Replace any individual
+sub-flow above with the deployed equivalent — it covers the same paths
+with real wire-level behaviour.
+
+For a release E2E:
+
+1. Wipe the running Pi: stop the agent, `rm -rf /etc/honeyman
+   /var/lib/honeyman /var/log/honeyman /opt/honeyman`, remove the
+   systemd unit.
+2. Wipe the DB: `DELETE FROM threats; DELETE FROM sensors;` on the VPS.
+3. From the Pi: `curl -sSL https://honeymanproject.com/install | sudo
+   HONEYMAN_API='https://api.honeymanproject.com' bash`. Answer the
+   prompts.
+4. Run S1–S8 from §1.3.
+5. Run TU1, TU2, TB3, TN1 from §2.
+6. Run F1–F12 from §4.2.
+
+If all 23 checks pass on a fresh Pi against the live VPS, the release
+is good to tag.
+
+---
+
+## 6. Performance & scale (not yet measured)
+
+Not measured in production yet. When we have a second sensor:
+
+- **Threat ingest rate.** How many `POST /threats` per second can the
+  backend sustain before the Redis publish becomes a bottleneck? The
+  protocol handler batches drains of the offline buffer at 100 at a
+  time, so floor is ~100/min/sensor.
+- **WebSocket fanout.** How many simultaneous WS subscribers before
+  `broadcast()`'s `for connection in self.active_connections` becomes
+  expensive? Cheap measurement: open N tabs and `console.log` the
+  inter-frame delta on each.
+- **Postgres + TimescaleDB.** Already in a hypertable; the long-term
+  question is whether the GROUP BYs in `/sensors` and
+  `/analytics/trends` stay sub-100ms past ~10⁷ rows. Watch
+  `pg_stat_statements`.
+
+---
+
+## 7. CI suggestions (not yet wired up)
+
+Cheap wins to add to whatever CI gets stood up:
+
+- `pytest honeyman-v2/agent/tests/` on push
+- `cd honeyman-v2/dashboard-v2/frontend && npm run build` on push
+- `python -m py_compile $(git ls-files 'honeyman-v2/dashboard-v2/backend/**/*.py')`
+- `bash -n honeyman-v2/readme/onboarding/install.sh`
+- The auth-regression curls from §3.3 against a throw-away backend
+- The analytics regression from §3.5
+
+---
+
+## 8. What we still aren't testing
+
+Honest list — these matter and aren't covered yet:
+
+- **Real WiFi monitor mode** (no second WiFi-capable test Pi)
+- **GPS** path of `LocationService` (no test box with a GPS HAT)
+- **OpenCanary integration** with all its built-in honeypots (only the
+  webhook receiver was exercised on the running sensor)
+- **Rule sync via `/api/v2/rules`** end-to-end (opt-in poller never
+  enabled in production)
+- **Mosquitto / MQTT transport** end-to-end (not deployed)
+- **Backwards-compatibility of the rule schema** as we add fields
+- **Log rotation** on the backend (`/var/log/honeyman-backend.log`
+  grows unbounded today)
+
+Address these as the relevant phase gets deployed.

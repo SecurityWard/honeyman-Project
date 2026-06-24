@@ -102,42 +102,54 @@ Honeyman V2 is a **mobile, multi-vector threat collection platform**. Pi-class p
 
 ## 3. Current state, honestly
 
-The code is roughly **75–80% written but only ~25% deployed**. Reconciling the three contradictory status docs:
+**Phases A through D are deployed and a real Pi Zero 2 W is reporting in.**
+The remaining gaps are Phase E (canary toggle), Phase F (operability polish),
+and rule-quality tuning. Numbers from production right now:
 
-| Component | Code state | Operational state |
-|---|---|---|
-| Agent core (orchestrator, plugin manager, config) | ✅ Built | ⚠️ Not yet running on a real sensor |
-| 5 detectors (USB, WiFi, BLE, AirDrop, Network) | ✅ Built | ⚠️ Not exercised end-to-end |
-| Rule engine + 35 YAML rules | ✅ Built | ✅ Loads correctly |
-| Transport: HTTPS+API-key default, MQTT optional | ✅ Built (Phase A) | ❌ Not yet connected to backend |
-| BaseDetector envelope aligned to backend schema | ✅ Built (Phase A) | — |
-| Heartbeat envelope aligned to backend schema | ✅ Built (Phase A) | — |
-| Location field-name fix (latitude/longitude top-level) | ✅ Built (Phase A) | — |
-| Location service | ✅ **Built (Phase D)** — manual override + GPS via gpsd + WiFi positioning via MLS/Google + IP fallback. Threats + heartbeats now carry `accuracy_meters` and `location_method`. Unit tested. | — |
-| Threat schema: `accuracy_meters` + `location_method` | ✅ Built (Phase D) — column on `threats`, fields on `ThreatCreate`/`ThreatResponse`, type on frontend `Threat` | — |
-| Dashboard map accuracy circle | ✅ Built (Phase D) — `<Circle>` underneath each marker, colour-coded by method (GPS green / WiFi sky / IP gray-dashed / manual violet), legend in the corner | — |
-| **SQLite offline buffer + persistent FIFO** | ✅ **Built (Phase C)** — `transport/offline_buffer.py`, wired into ProtocolHandler, unit tested | — |
-| **Central rule sync (`GET /api/v2/rules` + agent poll)** | ✅ **Built (Phase C)** — `app/api/rules.py` + agent `core/rule_sync.py`, `.local` marker protection, unit tested | ❌ Not yet polling from a real sensor |
-| Backend FastAPI app (no auth, public reads) | ✅ Built | ⚠️ Code complete, awaiting VPS deploy |
-| Auth (JWT, RBAC, User model) | 🗑 **Removed** (git history preserves) | — |
-| API key issuance + validation | ✅ Built (cleanup) — SHA256-hashed per-sensor key, `Authorization: Bearer` on writes | — |
-| MQTT subscriber | ✅ Built | Only starts when `MQTT_OFFERED=true` |
-| Postgres database | ✅ Schema rewritten (no `users`, adds `api_key_hash`) | ✅ Created on VPS |
-| TimescaleDB hypertable + retention | ✅ Migration applies hypertable + 90d retention + 7d compression | ❌ Extension not yet enabled on VPS |
-| Mosquitto broker | ⚠️ Configs written | ❌ Not deployed (HTTPS is primary now) |
-| Frontend (Leaflet map, charts, sensor list) | ✅ Built and deployed | ✅ Visible at http://72.60.25.24:3000 |
-| Frontend auth UI | 🗑 **Removed** | — |
-| **Frontend "Add Sensor" page** | ✅ **Built (Phase B)** — `pages/AddSensorPage.tsx` with copy-able install command, wired into nav | ⚠️ Not yet rebuilt+deployed to VPS |
-| Sensor edit/detail UI | ❌ Stubbed | Build later (Phase F or later) |
-| Install script | ✅ **Rewritten for V2 self-register flow** (Phase B) | ⚠️ Untested on real Pi |
-| `phase_a_apply.sh` operator script | ✅ **Built** — runs TimescaleDB install, schema reset, .env sync, smoke test on the VPS | ⚠️ Awaiting execution on VPS |
+- 1 sensor (`honeyman0-1-e17b`, Pi Zero 2 W) on the public map
+- USB + BLE + Network detectors all loading and producing threats
+- Live WebSocket feed broadcasting via Redis from the HTTPS ingest path
+- TimescaleDB 2.25 hypertable, 90-day retention, 7-day compression active
+- Let's Encrypt TLS on `dashboard.honeymanproject.com` and
+  `api.honeymanproject.com`
+- `https://honeymanproject.com/install` serves the install script as
+  `text/plain` so the curl-pipe-bash one-liner actually reaches a shell
 
-**Known integration bugs that will bite at first end-to-end test:**
+| Component | Status |
+|---|---|
+| Agent core (orchestrator, plugin manager, config, heartbeat) | ✅ Deployed |
+| Plugin manager class-name table | ✅ Deployed — explicit `(module, class)` map per detector key; aliases `bluetooth`→`ble` and rejects guessing |
+| `UsbDetector` | ✅ Deployed — pyudev events, malware-hash DB loaded (360 sigs) |
+| `BleDetector` | ✅ Deployed — bleak scanner, 5-second cadence |
+| `NetworkDetector` | ✅ Deployed — OpenCanary webhook server on :8888 |
+| `WifiDetector` | ⚠️ Built, off by default on single-adapter Pis (installer guards) |
+| `AirDropDetector` | ⚠️ Built, off by default on single-adapter Pis (installer guards) |
+| Rule engine + 37 YAML rules | ✅ Deployed and producing alerts |
+| Per-(rule, target) cooldown in `BaseDetector` | ✅ Deployed — honours `tuning.cooldown_seconds` or derives from `tuning.max_alerts_per_hour` |
+| Transport: HTTPS + per-sensor API key (default) | ✅ Deployed — Bearer auth on writes |
+| MQTT transport (optional) | ✅ Built, `MQTT_OFFERED=false` in production |
+| SQLite offline buffer | ✅ Deployed at `/var/lib/honeyman/buffer.db` |
+| Location service (manual → GPS via gpsd → WiFi → IP) | ✅ Deployed — IP-fallback path in active use |
+| Central rule sync (`GET /api/v2/rules`) | ✅ Deployed in backend; agent polling **disabled by default**, opt-in |
+| Backend FastAPI app | ✅ Deployed at `api.honeymanproject.com`, systemd `honeyman-backend.service`, 4 workers |
+| `POST /threats` publishes to Redis | ✅ Deployed — Phase-A regression fix for the empty live feed |
+| Live sensor threat counts in `/sensors` list | ✅ Deployed — bulk GROUP BY at request time, no counter drift |
+| API key issuance + validation | ✅ Deployed — SHA256-hashed per-sensor key, one-time return at register |
+| Postgres + TimescaleDB | ✅ Deployed — hypertable + 90d retention + 7d compression policy active |
+| Nginx + Let's Encrypt | ✅ Deployed — config snapshot in `honeyman-v2/deployment/nginx/honeyman.conf` |
+| `/install` endpoint serving `install.sh` | ✅ Deployed (text/plain via nginx `location = /install`) |
+| Frontend dashboard | ✅ Deployed at `dashboard.honeymanproject.com` |
+| Frontend "Add Sensor" page | ✅ Deployed — includes a red **deliberate-risk** callout + amber single-adapter callout |
+| Frontend "Sensors" page | ✅ Deployed — click a sensor row to filter `/dashboard?sensor_id=…` |
+| Frontend "Real-time Threat Feed" | ✅ Deployed — expandable details for matched rule, hashes, MITRE, raw_event |
+| Trends chart (`/analytics/trends`) | ✅ Deployed — fixed `date_trunc('hour'/'day'/'week')` (was raising on every call) |
+| Sensor edit/detail UI | ❌ Not built — the click-filter dashboard view replaces the immediate need |
+| Mosquitto broker on VPS | ⚠️ Configs in repo (`honeyman-v2/readme/onboarding/`), not deployed |
 
-1. **Topic-naming mismatch.** Agent sends to topic `'threats'`; backend MQTT subscriber expects `honeyman/sensors/{id}/threats`; onboarding architecture doc uses `honeypot/{id}/{type}`. Pick one.
-2. **Location field-name mismatch.** Agent emits `geolocation.lat / geolocation.lon`; backend MQTT subscriber reads `payload.get('latitude') / payload.get('longitude')`. Threats will arrive but their map coordinates will be NULL until this is fixed.
-3. **Two onboarding implementations.** Standalone Flask `provisioning_api.py` vs FastAPI `app/api/onboarding.py`. The standalone needs to die.
-4. **Backend MQTT subscriber assumes broker exists** at startup. Until Mosquitto is up or the subscriber is made optional, the backend won't start cleanly.
+**No known integration bugs as of `dd87307`.** The four that were in this
+section at the start of Phase A (MQTT topic mismatch, location field-name
+mismatch, duplicate onboarding implementations, MQTT subscriber required
+at startup) are all resolved.
 
 ---
 
@@ -172,63 +184,105 @@ The code is roughly **75–80% written but only ~25% deployed**. Reconciling the
 
 Phase ordering after cleanup. Each phase produces something demonstrable; don't move on without that demo.
 
-### Phase A — Make a single sensor talk to the dashboard end-to-end (1–2 weeks) ✅ **code complete**
+### Phase A — Single sensor talks to the dashboard end-to-end ✅ **deployed**
 
-Goal: a Pi sitting on a desk shows up on the public map, sends one synthetic USB threat, and the dot appears in the right city.
+Goal: a Pi shows up on the public map, sends a threat, the dot appears in
+the right city.
 
-1. ✅ Implement HTTPS+API-key transport in the agent. Default to this. MQTT becomes opt-in.
-2. ✅ Add API-key middleware to the backend's POST `/v2/threats`, `/v2/heartbeat`, `/v2/rules` endpoints. Read endpoints stay open.
-3. ✅ Build the API-key issuance flow inside `POST /v2/sensors/register`. Returns `{sensor_id, api_key}`. Stores the SHA256 hash, not the key.
-4. ✅ Fix the location field-name mismatch (`geolocation.lat` → top-level `latitude`).
-5. ✅ Strip auth from frontend; remove the JWT axios interceptor.
-6. ⏳ **Operator step** — Enable TimescaleDB extension on the VPS Postgres; convert `threats` to a hypertable; add 90-day retention policy. Use `honeyman-v2/deployment/phase_a_apply.sh`.
-7. ⏳ **Operator step** — Test on a real Pi 4. Send one threat. Verify it lands on the map.
+All sub-steps complete. The Phase A operator script
+(`honeyman-v2/deployment/phase_a_apply.sh`) ran successfully against the
+production VPS; TimescaleDB is installed, the hypertable + retention +
+compression policies are in place, and one Pi Zero 2 W has been
+heartbeating since `dd87307` with 200+ real threat events.
 
-### Phase B — Onboarding works for someone other than you (1 week) ✅ **code complete**
+### Phase B — Self-register onboarding ✅ **deployed**
 
-Goal: a stranger runs `curl ... | bash` and their sensor is on the map within five minutes.
+Goal: a stranger runs `curl … | bash` and their sensor is on the map
+within a few minutes.
 
-1. ⏳ **Operator step** — Test `install.sh` on a clean Pi 4 and a Pi Zero 2 W. Fix what breaks.
-2. ✅ Wire the install script to call `/v2/sensors/register`, capture the returned API key, write it to `/etc/honeyman/api_key` (mode 0600).
-3. ✅ Add a public "Add Sensor" page on the dashboard — `AddSensorPage.tsx` shows the install command with a Copy button and wires into the nav.
-4. ⏳ **Operator step** — Test onboarding from a fresh device with no Honeyman context.
+All sub-steps complete plus several real-world fixes uncovered by the
+first physical install:
 
-### Phase C — Resilience and centralized rules (1 week) ✅ **code complete**
+- `install.sh` reattaches stdin to `/dev/tty` so prompts work under
+  `curl | bash`
+- single-WiFi-adapter detection — refuses to default WiFi/AirDrop on
+  when there's only one wireless interface that's also the default route
+- registration payload built via a quoted Python heredoc with env vars
+  to handle bash booleans and special characters cleanly
+- malware-hash DB now shipped to `/var/lib/honeyman/malware_hashes.db`
+- `aiohttp` declared as a setup.py dependency (was silently missing)
+- per-(rule, target) cooldown so the dashboard doesn't get flooded by
+  the same rule firing repeatedly on the same nearby device
+- Add Sensor page now leads with a red "you are deliberately inviting
+  attacks" safety callout, then the amber single-adapter hardware note
 
-Goal: a sensor on flaky WiFi doesn't lose data; you can change a rule without SSHing into every Pi.
+### Phase C — Resilience + central rule sync ✅ **deployed**
 
-1. ✅ SQLite offline buffer (`transport/offline_buffer.py`) — persistent FIFO at `/var/lib/honeyman/buffer.db`, 10k row cap, ack semantics. Wired into `ProtocolHandler` so it drains on reconnect and survives agent restarts.
-2. ✅ `GET /api/v2/rules?since_version=<hash>` — returns a manifest of all rule files with per-file SHA256 and a global version hash. Authenticated by sensor API key. Reads from `backend/rules/` (37 default rules seeded from the agent tree).
-3. ✅ Agent rule-poll (`core/rule_sync.py`) — runs every 5 min by default (configurable, disabled by default). Diffs remote vs local, writes new/changed YAML, preserves any rule with a `.local` marker file. Rule engine's inotify watcher reloads automatically.
-4. **Deferred for now** — admin rule-edit UI. Today's flow: edit YAML files in the backend's `rules/` dir (or a Git repo pointed at via `RULES_DIR` env), sensors pick up the change on next poll.
+SQLite offline buffer is in place. Rule sync endpoint is live; agent
+poller is opt-in (disabled by default) and isn't being exercised on the
+running Pi — that's expected: it should turn on once we have a rules Git
+repo to point at.
 
-### Phase D — Location upgrades (1 week) ✅ **code complete**
+### Phase D — Location chain ✅ **deployed**
 
-Goal: every threat on the map is in the right place, indoors and out.
+Manual override + GPS via gpsd + WiFi positioning (MLS / Google) + IP
+fallback. The Pi currently reports via the IP fallback path; the
+dashboard renders the right confidence circle for it (gray, ~5 km).
 
-1. ✅ GPS support via `gpsd` — `LocationService._get_gps_location()` connects to `127.0.0.1:2947`, requests JSON TPV reports, returns `{lat, lon, accuracy, source: "gps"}` when mode ≥ 2. Honours a 5s timeout.
-2. ✅ WiFi positioning — `_get_wifi_location()` scans nearby BSSIDs via `iw dev <iface> scan`, POSTs to Mozilla Location Service (free `?key=test`) by default; operators can set `wifi_positioning_api_key` to use Google's API instead.
-3. ✅ Operator-pinned override — `location.manual_latitude` + `location.manual_longitude` in `config.yaml` skip all dynamic methods and report exact coordinates. Optional `manual_label` and `manual_accuracy` (default 10m).
-4. ✅ Confidence indicator on the map — translucent `<Circle>` (radius = `accuracy_meters`, capped at 2km for display) under each marker, colour-coded by `location_method`. Legend updated.
+### Phase E — Canary network stack toggle ✅ **mostly deployed**
 
-Wire-level effect: every threat row now carries `accuracy_meters` + `location_method`, the backend migration creates those columns, the agent fills them via `BaseDetector.create_threat()`, and the dashboard renders the confidence circle.
+`NetworkDetector` is loaded and its OpenCanary webhook server is bound
+on port 8888 in production right now. The remaining bits:
 
-### Phase E — Canary network stack toggle (3–5 days)
-
-Goal: when a sensor has a network interface, optionally expose SSH/HTTP honeypots and report attempts as events.
-
-1. Verify OpenCanary integration in `network_detector` works end-to-end.
-2. Add `canary_network: enabled: false` to default config; document the security implications of turning it on.
-3. Add a frontend filter to view canary-only events.
+1. ⏳ Add an explicit `canary_network.enabled: false` top-level switch
+   to `config.yaml` so the OpenCanary server can be turned off without
+   disabling the whole network detector (today, disable = no detector
+   at all).
+2. ⏳ Document the legal/operational implications of running honeypots
+   on the network the sensor is on.
+3. ⏳ Add a frontend filter / chip on the threat feed to view
+   canary-derived events only.
 
 ### Phase F — Operability (ongoing)
 
-1. Systemd unit files for backend, MQTT subscriber-as-separate-service, broker.
-2. Let's Encrypt + nginx reverse proxy.
-3. Basic Prometheus metrics or a `/health` JSON with broker, DB, ingestion rate.
-4. Log rotation, error alerting (Slack webhook is enough).
+| Item | Status |
+|---|---|
+| systemd unit for backend (`honeyman-backend.service`) | ✅ Deployed |
+| systemd unit for agent (`honeyman-agent.service`) | ✅ Deployed by install.sh |
+| Nginx + Let's Encrypt | ✅ Deployed — config snapshot in `honeyman-v2/deployment/nginx/honeyman.conf` |
+| Mosquitto broker as separate service | ❌ Not deployed (HTTPS is primary) |
+| `/health` JSON with broker, DB, ingestion rate | ⚠️ Basic `/health` exists; doesn't yet expose ingestion rate |
+| Prometheus metrics | ❌ Not started |
+| Log rotation | ❌ Not started — `/var/log/honeyman-backend.log` grows unbounded |
+| Alerting (Slack webhook, email) | ❌ Not started |
 
-**Total realistic effort to hit Phase A through Phase E end-to-end: 5–6 weeks of focused work.**
+### Phase G — Rule quality & tuning (new, ongoing)
+
+Surfaced once we had a real sensor producing real data. The detectors
+work; some rules are over-eager.
+
+1. ⏳ Per-rule review — are the conditions specific enough that one
+   firing carries useful signal? `mac_randomization` is the obvious
+   example (matched every iPhone in BLE range until disabled).
+2. ⏳ Add `tuning.cooldown_seconds` (or a meaningful
+   `max_alerts_per_hour`) to every rule that's network/proximity-based.
+   The per-(rule, target) cooldown enforces whatever value is declared;
+   rules with neither field set are never throttled.
+3. ⏳ Consider tiering rules into "high-signal" (default on) and
+   "noisy" (default off, opt-in) sets.
+
+### Phase H — Security review (new, scheduled)
+
+See [`SECURITY.md`](SECURITY.md) for the full threat model and checklist.
+The review covers two surfaces:
+
+- **Dashboard / backend**: SQL injection (one `text(f"…")` usage with
+  regex-validated input), XSS via raw_event JSON, WebSocket auth,
+  sensor self-registration abuse, public read scope.
+- **Onboarding / sensor**: `curl | bash` integrity (TLS only, no
+  signature verification), system-wide pip install with
+  `--break-system-packages`, the `ProtectSystem=strict` systemd
+  hardening, malware-hash DB integrity.
 
 ---
 
@@ -277,7 +331,7 @@ A few things I've made implicit choices on but you should confirm:
 
 2. **WiFi positioning provider.** Mozilla Location Service is free and good but has been quietly deprecated/spun off; Google Geolocation costs money but is reliable. For now I'd default to MLS and let operators opt into Google with their own API key in `config.yaml`.
 
-3. **Public dashboard hostname.** Right now it's `http://72.60.25.24:3000`. For a public deployment we want `https://dashboard.honeymanproject.com` or similar. Need a domain and Let's Encrypt cert.
+3. ~~**Public dashboard hostname.** Right now it's `http://72.60.25.24:3000`. For a public deployment we want `https://dashboard.honeymanproject.com` or similar. Need a domain and Let's Encrypt cert.~~ **Resolved** — `dashboard.honeymanproject.com` and `api.honeymanproject.com` are live with Let's Encrypt certs; `honeymanproject.com` apex redirects to dashboard.
 
 4. **Sensor naming privacy.** Self-selected names with random suffixes (`defcon-hotel-7x9k`) — already designed. Operators may not want their physical location guessable. Consider letting operators flag a sensor as "hide exact location" — the map would show city-level only.
 

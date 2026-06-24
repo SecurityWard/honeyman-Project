@@ -37,8 +37,58 @@ export default function AddSensorPage() {
         </p>
       </header>
 
+      <section className="install-card danger">
+        <h2>Read this first &mdash; you are deliberately inviting attacks</h2>
+        <p>
+          <strong>
+            Honeyman sensors exist to attract and observe malicious activity.
+            That is the entire point. By installing one, you are knowingly
+            putting a device in a position to be probed, attacked, infected,
+            and used as a foothold.
+          </strong>
+        </p>
+        <p>Treat the sensor like a single-use tool, not a trusted endpoint:</p>
+        <ul>
+          <li>
+            <strong>Use a device you don&rsquo;t care about.</strong> No personal
+            data, no SSH keys for other systems, no cloud credentials, no
+            saved WiFi for your real network if you can avoid it.
+          </li>
+          <li>
+            <strong>Segment its network.</strong> Put it on a guest VLAN /
+            isolated SSID with no route to anything that matters. If the
+            sensor gets compromised, you want the blast radius to end at the
+            sensor.
+          </li>
+          <li>
+            <strong>Reimage on a schedule.</strong> Wipe the SD card and
+            reinstall every few weeks &mdash; or sooner after any event you
+            can&rsquo;t explain. The agent has no built-in integrity check
+            for itself.
+          </li>
+          <li>
+            <strong>Plugging hostile USB drives into a sensor is the test
+            scenario.</strong> The malware-hash scanner reads files to hash
+            them, which is enough to trigger many payloads. Assume the device
+            is compromised after every meaningful test and reimage.
+          </li>
+          <li>
+            <strong>Know your local law.</strong> Capturing wireless traffic,
+            running honeypots, and observing nearby Bluetooth devices is
+            regulated in some jurisdictions. Don&rsquo;t deploy where you
+            don&rsquo;t have the authority to.
+          </li>
+        </ul>
+        <p className="footnote">
+          Software is MIT-licensed and provided as-is. The maintainers accept
+          no liability for any damage to the host device, surrounding network,
+          or anything observed by the sensor. If those terms aren&rsquo;t
+          acceptable, don&rsquo;t install.
+        </p>
+      </section>
+
       <section className="install-card warning">
-        <h2>Before you run this</h2>
+        <h2>Hardware caveat &mdash; single-adapter Pis</h2>
         <p>
           <strong>If the device has only one wireless adapter, do not enable WiFi
           or AirDrop detection during install.</strong> Both put the adapter into
