@@ -1,6 +1,6 @@
-# Honeyman V2 — Deployment Guide
+# Honeyman — Deployment Guide
 
-This is the step-by-step deployment guide for Honeyman V2. It covers:
+This is the step-by-step deployment guide for Honeyman. It covers:
 
 1. [VPS first-time setup](#1-vps-first-time-setup) — bring up backend + dashboard from scratch
 2. [Deploying updates](#2-deploying-updates) — applying new code to an already-running VPS
@@ -85,11 +85,11 @@ CORS_ORIGINS=http://72.60.25.24:3000,https://dashboard.your-domain.tld
 MQTT_OFFERED=false
 ```
 
-V2 has **no `SECRET_KEY` and no JWT settings**. If you see those in `.env.example`, ignore them — they're from a previous version.
+The backend has **no `SECRET_KEY` and no JWT settings**. If you see those in `.env.example`, ignore them — they're from a previous version.
 
 ### Step 1.5 — Apply the schema
 
-V2 ships a single Phase A operator script that does this idempotently:
+A single Phase A operator script does this idempotently:
 
 ```bash
 cd /root/honeyman-Project/honeyman-v2/deployment
@@ -102,9 +102,9 @@ This script does all of:
 - Runs `timescaledb-tune` and restarts Postgres
 - `CREATE EXTENSION timescaledb` on the `honeyman_v2` DB
 - `pg_dump` of the current DB to `/root/honeyman_v2_pre_phase_a_<timestamp>.sql.gz` as a safety net
-- Drops any pre-existing schema (the V2 `users` table, old `threats`/`sensors` definitions)
+- Drops any pre-existing schema (legacy `users` table, old `threats`/`sensors` definitions)
 - Runs `alembic upgrade head` — creates `sensors` (with `api_key_hash`), `threats` (as a TimescaleDB hypertable with compression after 7 days, retention after 90 days), and the `threat_stats_hourly` continuous aggregate
-- Syncs your `.env` to V2 settings (removes JWT-era keys, ensures `MQTT_OFFERED` and `PUBLIC_API_BASE_URL` exist)
+- Syncs your `.env` (removes JWT-era keys, ensures `MQTT_OFFERED` and `PUBLIC_API_BASE_URL` exist)
 - Restarts the backend systemd service if it can find it
 - Runs an end-to-end smoke test: register a fake sensor, POST a threat, verify it appears, clean up
 
@@ -270,7 +270,7 @@ journalctl -u honeyman-backend -n 100
 |---|---|---|
 | `time_bucket does not exist` | TimescaleDB extension not enabled in `honeyman_v2` DB | `sudo -u postgres psql -d honeyman_v2 -c "CREATE EXTENSION timescaledb"` |
 | `password authentication failed for user "honeyman"` | `.env` `DATABASE_URL` password mismatches what Postgres knows | Reset: `sudo -u postgres psql -c "ALTER USER honeyman WITH PASSWORD '…'"` then update `.env` |
-| `pydantic.ValidationError: SECRET_KEY field required` | Stale `.env` from a pre-V2 deployment | Remove `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_*`, `REFRESH_TOKEN_*` lines — V2 doesn't use them |
+| `pydantic.ValidationError: SECRET_KEY field required` | Stale `.env` from a pre-API-key auth deployment | Remove `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_*`, `REFRESH_TOKEN_*` lines — they're no longer used |
 | `ConnectionRefusedError: [Errno 111]` to `mqtt.honeymanproject.com` | `MQTT_OFFERED=true` but no broker reachable | Set `MQTT_OFFERED=false` in `.env` |
 | `(psycopg2.OperationalError) FATAL: database "honeyman_v2" does not exist` | DB not created yet | Step 1.2 |
 
@@ -356,7 +356,7 @@ If you don't have one yet, drop this at `/etc/systemd/system/honeyman-backend.se
 
 ```ini
 [Unit]
-Description=Honeyman V2 dashboard backend (FastAPI)
+Description=Honeyman dashboard backend (FastAPI)
 After=network-online.target postgresql.service redis-server.service
 Wants=network-online.target postgresql.service redis-server.service
 
@@ -437,7 +437,7 @@ rm -rf /etc/honeyman /var/lib/honeyman /var/log/honeyman /opt/honeyman
 pip uninstall -y honeyman-agent
 ```
 
-If you want the sensor to disappear from the dashboard, the backend doesn't expose a public delete endpoint by design (no actions in V2). For now, drop it manually:
+If you want the sensor to disappear from the dashboard, the backend doesn't expose a public delete endpoint by design (no actions on the public surface). For now, drop it manually:
 
 ```bash
 sudo -u postgres psql -d honeyman_v2 -c "DELETE FROM sensors WHERE sensor_id='<the-id>'"
@@ -445,4 +445,4 @@ sudo -u postgres psql -d honeyman_v2 -c "DELETE FROM sensors WHERE sensor_id='<t
 
 ---
 
-*Last reviewed: 2026-05-09 against the V2 cleanup + Phase A/B/C code drop.*
+*Last reviewed: 2026-06-24 against the post-audit code drop.*

@@ -1,17 +1,17 @@
-# Honeyman V2 — Canonical Plan
+# Honeyman — Canonical Plan
 
-**Status:** This is the single source of truth for V2. Earlier design docs
-have been removed; `git log` has them if you need them.
+**Status:** This is the single source of truth for the project. Earlier
+design docs have been removed; `git log` has them if you need them.
 
-Last updated: 2026-06-23
+Last updated: 2026-06-24
 
 ---
 
 ## 1. Vision
 
-Honeyman V2 is a **mobile, multi-vector threat collection platform**. Pi-class portable sensors detect malicious activity across USB, WiFi, BLE, AirDrop, and (when networked) act as canary SSH/HTTP honeypots. Detections are pushed to a publicly accessible dashboard that visualizes threats on a map and offers filtering — no user accounts, no actions, just a viewing surface.
+Honeyman is a **mobile, multi-vector threat collection platform**. Pi-class portable sensors detect malicious activity across USB, WiFi, BLE, AirDrop, and (when networked) act as canary SSH/HTTP honeypots. Detections are pushed to a publicly accessible dashboard that visualizes threats on a map and offers filtering — no user accounts, no actions, just a viewing surface.
 
-**Three guiding principles for V2:**
+**Three guiding principles:**
 
 1. **Simple to deploy.** A single `curl | bash` puts a sensor on the air.
 2. **Simple to operate.** No accounts, no roles, no admin UI. Public dashboard. Sensor-side YAML rules can be hand-edited or pulled from a central endpoint.
@@ -294,7 +294,7 @@ Rules live in YAML files in `/etc/honeyman/rules/<category>/<rule-name>.yaml` on
 2. **Hand-edited locally** — operator SSHes in, edits a YAML file, the rule engine reloads on file-change (inotify on Linux).
 3. **Pulled from the dashboard backend** — `GET /v2/rules` returns the current rule manifest. The agent polls this every 5 minutes and writes any new/changed rules to disk. Hand-edited rules are never overwritten (tracked by a `local: true` marker file).
 
-Rule editing on the backend is intentionally low-tech for V2: a `rules/` directory in the backend's filesystem, version-controlled in a Git repo (e.g., `github.com/SecurityWard/honeyman-rules`). The backend serves whatever's in that directory. To change a rule, you `git push` to the rules repo. No web UI required for V2; one can be added later.
+Rule editing on the backend is intentionally low-tech: a `rules/` directory in the backend's filesystem, version-controlled in a Git repo (e.g., `github.com/SecurityWard/honeyman-rules`). The backend serves whatever's in that directory. To change a rule, you `git push` to the rules repo. No web UI required today; one can be added later.
 
 This means rule changes propagate without code redeployment, just as required.
 
@@ -339,9 +339,9 @@ A few things I've made implicit choices on but you should confirm:
 
 ---
 
-## 9. Out of scope for V2
+## 9. Out of scope
 
-Explicit no-goes for this version, to prevent scope creep:
+Explicit no-goes, to prevent scope creep:
 
 - Machine learning threat correlation
 - SIEM integrations (Splunk, ELK, etc.)
@@ -357,12 +357,14 @@ Explicit no-goes for this version, to prevent scope creep:
 
 ```
 README.md                    Public-facing intro + quick-start
-HONEYMAN-V2-PLAN.md          This file (canonical plan)
+PROJECT-PLAN.md              This file (canonical plan)
 ARCHITECTURE.mmd             Mermaid diagram of the system
 CAPABILITIES.md              What Honeyman detects, accuracy, limitations
 CHANGELOG.md                 Release notes
 LICENSE                      MIT
 TESTING.md                   How to run tests + integration scenarios
+RELEASE-CHECKLIST.md         Executable runbook for a release
+SECURITY.md                  Threat model + per-PR review checklist
 
 honeyman-v2/
 ├── agent/                   Sensor-side Python package

@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security audit & documentation pass — 2026-06
+
+- Pentester-style audit of the deployed surface produced 14 actionable
+  findings; fixes shipped in three commits:
+  - `POST /sensors/register` now rate-limited at 10/hour/IP via slowapi
+    with Redis-backed storage (multi-worker uvicorn was silently letting
+    through 4× the cap on in-memory counters).
+  - WebSocket endpoint caps total connections at `MAX_CONNECTIONS=500`,
+    refuses over-cap clients with a 1013 close. Inbound channel reads
+    and discards with a 1 KB cap, then closes 1009 on overflow.
+  - `/threats` `sort_by` constrained by regex allowlist; threat payload
+    schemas have `max_length` caps on list/string fields and `ge/le` on
+    ports.
+  - `nginx/honeyman.conf` sets `client_max_body_size 256k;` on the API
+    block.
+  - `agent/honeyman/core/rule_sync.py` validates rule paths by resolve +
+    `relative_to`, replacing the heuristic string check.
+  - `dashboard-v2/backend/app/api/rules.py` no longer echoes the
+    absolute rules-directory path back to the client on a 503.
+- Added `RELEASE-CHECKLIST.md` — executable runbook (MUST/SHOULD/NICE)
+  for onboarding, USB/BLE/network detection, backend ingest, dashboard
+  UI, persistence, operability, and detector tuning.
+- Renamed `HONEYMAN-V2-PLAN.md` → `PROJECT-PLAN.md`. Scrubbed
+  "V1 → V2 sequel" framing from `README.md`, `PROJECT-PLAN.md`,
+  `SECURITY.md`, and `CHANGELOG.md`. Real path/version strings
+  (`/api/v2/`, the `honeyman-v2/` directory, the `honeyman_v2` DB) are
+  untouched.
+
 ### Post-deploy fixes & UX polish — 2026-06
 
 A batch of fixes shaken out by the first real Pi onboarding and the first
@@ -66,7 +94,7 @@ real session of the public dashboard.
   the Redis `threats:realtime` channel after commit, so the WebSocket
   broadcast layer actually relays HTTPS-delivered threats. Only the MQTT
   subscriber was publishing before, which meant the live feed was
-  permanently empty under the V2 HTTPS-default transport.
+  permanently empty under the HTTPS-default transport.
 - `GET /api/v2/sensors` computes `total_threats_detected` and
   `threats_last_24h` with two bulk GROUP-BY queries instead of reading
   the never-updated counter columns on the sensors row.
@@ -96,7 +124,7 @@ real session of the public dashboard.
   attacks" callout before the amber single-adapter hardware note.
 - Sensors page no longer renders blank — was reading `sensorsData.items`
   but the API returns `sensorsData.sensors`. Same for `status`,
-  `location`, `total_threats`, `last_seen` (all renamed in V2 schema).
+  `location`, `total_threats`, `last_seen` (all renamed in the current schema).
 - BLE rule `mac_randomization` shipped `enabled: true` despite its own
   metadata declaring `false_positive_prone: true` and matching every
   randomized MAC; now `enabled: false`. Operators can opt in.
@@ -148,7 +176,7 @@ real session of the public dashboard.
 - Ops: `honeyman-v2/deployment/phase_a_apply.sh` — idempotent operator script for TimescaleDB install + schema reset + smoke test
 
 **Phase B — Self-register onboarding**
-- `install.sh` rewritten for the V2 self-register flow: calls `/api/v2/sensors/register`, captures one-time API key, drops V2 config + systemd unit
+- `install.sh` rewritten for the self-register flow: calls `/api/v2/sensors/register`, captures one-time API key, drops config + systemd unit
 - New `AddSensorPage` on the dashboard with a copy-able install command and non-interactive variant, wired into nav
 
 **Phase C — Resilience + central rule sync**
@@ -162,7 +190,7 @@ real session of the public dashboard.
 ### Removed
 - V1 monolithic codebase and one-shot V1 helpers (previously under `archive/v1/` and `archive/v1-scripts/`) — `git log` preserves the history
 - Pre-API-key auth code (JWT, User model, RBAC) and the duplicated standalone Flask `provisioning_api.py` (previously under `archive/v2-removed-*`)
-- Stale phase-completion and migration-status docs (`*-COMPLETE.md`, `CURRENT-STATUS.md`, `V2-MIGRATION-STATUS.md`, `IMPLEMENTATION-ROADMAP.md`, `dashboard-v2/DEPLOYMENT.md`, `docs/historical/`) — superseded by `HONEYMAN-V2-PLAN.md`
+- Stale phase-completion and migration-status docs (`*-COMPLETE.md`, `CURRENT-STATUS.md`, `V2-MIGRATION-STATUS.md`, `IMPLEMENTATION-ROADMAP.md`, `dashboard-v2/DEPLOYMENT.md`, `docs/historical/`) — superseded by `PROJECT-PLAN.md`
 
 ### Added
 - **Malware Hash Database**: Comprehensive 360+ signature database for USB threat detection

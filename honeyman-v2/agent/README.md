@@ -160,4 +160,4 @@ python test_airdrop_detector.py
 
 ## Status
 
-See `../HONEYMAN-V2-PLAN.md` at the repo root for current phase and roadmap.
+See `../../PROJECT-PLAN.md` at the repo root for current phase and roadmap.

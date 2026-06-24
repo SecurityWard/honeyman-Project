@@ -1,4 +1,4 @@
-# Honeyman V2 Dashboard Backend
+# Honeyman Dashboard Backend
 
 FastAPI-based REST API for the Honeyman threat detection platform.
 
@@ -36,7 +36,7 @@ $EDITOR .env
 alembic upgrade head
 ```
 
-There is no admin-user step in V2 — the system has no users.
+There is no admin-user step — the system has no users by design.
 
 ## Running
 
@@ -76,7 +76,7 @@ gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
 - `POST /api/v2/sensors/{sensor_id}/heartbeat` — health/location ping (key must match {sensor_id})
 - `POST /api/v2/threats` — push a detected threat (key must match `sensor_id` in payload)
 
-There are no acknowledge/delete/update endpoints in V2. The dashboard is a viewing surface; sensors are managed via SSH.
+There are no acknowledge/delete/update endpoints. The dashboard is a viewing surface; sensors are managed via SSH.
 
 ## Database Migrations
 

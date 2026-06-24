@@ -1,4 +1,4 @@
-# Honeyman V2 Dashboard Frontend
+# Honeyman Dashboard Frontend
 
 Real-time threat detection dashboard built with React 18, TypeScript, and Vite.
 
@@ -26,7 +26,7 @@ Real-time threat detection dashboard built with React 18, TypeScript, and Vite.
 
 - Node.js 18+
 - npm or yarn
-- Honeyman V2 Backend running (see [../backend/README.md](../backend/README.md))
+- Honeyman backend running (see [../backend/README.md](../backend/README.md))
 
 ## Quick Start
 
@@ -108,7 +108,7 @@ src/
 
 ## API Integration
 
-The dashboard integrates with the Honeyman V2 Backend API:
+The dashboard integrates with the Honeyman backend API:
 
 ### REST API
 - **Authentication**: JWT-based auth with auto-refresh

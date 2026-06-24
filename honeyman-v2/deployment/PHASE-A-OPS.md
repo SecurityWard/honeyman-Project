@@ -45,7 +45,7 @@ You should see a row with `timescaledb` and a version number.
 
 ---
 
-## 2. Reset the database to the new V2 schema
+## 2. Reset the database to the current schema
 
 The cleanup PR rewrote the Alembic migration to drop the `users` table and
 add `api_key_hash` to `sensors`. Since there's no production sensor data
@@ -65,7 +65,7 @@ DROP TABLE IF EXISTS users CASCADE;
 DROP TYPE IF EXISTS userrole;
 SQL
 
-# Apply the V2 migration (creates sensors + api_key_hash, threats hypertable,
+# Apply the Alembic migration (creates sensors + api_key_hash, threats hypertable,
 # compression after 7d, retention after 90d, continuous aggregate)
 alembic upgrade head
 ```
@@ -258,7 +258,7 @@ curl -X POST http://72.60.25.24:8000/api/v2/threats \
 On a Pi 4 or Pi Zero 2 W:
 
 ```bash
-# Install agent (manually for now until install.sh is updated for V2)
+# Install agent manually (this Phase A runbook predates install.sh)
 git clone https://github.com/SecurityWard/honeyman-Project.git /opt/honeyman-src
 cd /opt/honeyman-src/honeyman-v2/agent
 sudo pip install -e .

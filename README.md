@@ -4,11 +4,11 @@ Mobile, multi-vector threat collection for physical events.
 
 Honeyman puts a Raspberry Pi-class sensor in a backpack, on a hotel-room desk, or in a conference hall — and reports malicious USB, WiFi, BLE, and AirDrop activity in real time to a public map. When the sensor is on a network, it can also expose SSH and HTTP honeypots and report intrusion attempts as events.
 
-V1 launched at DefCon. The current build (V2) is a redesign: simpler to
-deploy, public read-only dashboard, no user accounts, central YAML rules
-that update without reflashing sensors.
+The design is deliberately small: a single `curl | bash` install,
+a public read-only dashboard with no user accounts, and YAML detection
+rules that update without reflashing sensors.
 
-> **For contributors:** the canonical plan, current state, and build order live in [`HONEYMAN-V2-PLAN.md`](HONEYMAN-V2-PLAN.md). The architecture diagram is in [`ARCHITECTURE.mmd`](ARCHITECTURE.mmd) (Mermaid; renders on GitHub).
+> **For contributors:** the canonical plan, current state, and build order live in [`PROJECT-PLAN.md`](PROJECT-PLAN.md). The architecture diagram is in [`ARCHITECTURE.mmd`](ARCHITECTURE.mmd) (Mermaid; renders on GitHub).
 
 ---
 
@@ -145,11 +145,13 @@ The default 35 rules live under [`honeyman-v2/agent/rules/`](honeyman-v2/agent/r
 
 ```
 README.md                    ← this file
-HONEYMAN-V2-PLAN.md          canonical V2 plan & status
-ARCHITECTURE.mmd             V2 architecture diagram (Mermaid)
-CAPABILITIES.md              what V2 detects, accuracy, limitations
+PROJECT-PLAN.md              canonical plan & status
+ARCHITECTURE.mmd             architecture diagram (Mermaid)
+CAPABILITIES.md              what Honeyman detects, accuracy, limitations
 CHANGELOG.md                 release notes
 TESTING.md                   how to run the test suites
+RELEASE-CHECKLIST.md         executable runbook for a release
+SECURITY.md                  threat model + per-PR review checklist
 LICENSE                      MIT
 
 data/                        malware hash database (used by agent)
@@ -162,9 +164,8 @@ honeyman-v2/
   readme/onboarding/         install.sh + Mosquitto + Compose configs
 ```
 
-The V1 codebase, removed-auth/onboarding chunks, and earlier V2 design docs
-have been deleted; `git log` preserves them if you ever need to fish one
-out.
+Historical / removed-auth / onboarding chunks have been deleted; `git log`
+preserves them if you ever need to fish one out.
 
 ---
 
@@ -184,11 +185,11 @@ alerting) and rule-quality tuning (Phase G).
 | D | Location chain — manual / GPS / WiFi / IP, with accuracy circles on the map | ✅ Deployed |
 | E | Optional SSH/HTTP canary + frontend filter | ✅ Mostly deployed (OpenCanary server running; explicit toggle + UI filter still to do) |
 | F | Operability — log rotation, Prometheus, alerting | ⏳ Partial (nginx+TLS done; metrics/alerting/logrotate not) |
-| G | Rule quality & tuning | ⏳ Open — see `HONEYMAN-V2-PLAN.md` §5 |
+| G | Rule quality & tuning | ⏳ Open — see `PROJECT-PLAN.md` §5 |
 | H | Security review | ⏳ Scheduled — see [`SECURITY.md`](SECURITY.md) |
 
 The full plan and per-phase notes live in
-[`HONEYMAN-V2-PLAN.md`](HONEYMAN-V2-PLAN.md); release notes are in
+[`PROJECT-PLAN.md`](PROJECT-PLAN.md); release notes are in
 [`CHANGELOG.md`](CHANGELOG.md); the test plan is in
 [`TESTING.md`](TESTING.md); the threat model + review checklist is in
 [`SECURITY.md`](SECURITY.md); deployment runbook is in
@@ -199,7 +200,7 @@ The full plan and per-phase notes live in
 ## Contributing
 
 - **Rules:** open PRs to the rules repo (link above). New detection signatures, MITRE ATT&CK mappings, false-positive tuning all welcome.
-- **Code:** open PRs to this repo. Please match the V2 design constraints in `HONEYMAN-V2-PLAN.md` — in particular: no user accounts, public read-only dashboard, sensors authenticate with API keys, rules are YAML-driven.
+- **Code:** open PRs to this repo. Please match the design constraints in `PROJECT-PLAN.md` — in particular: no user accounts, public read-only dashboard, sensors authenticate with API keys, rules are YAML-driven.
 - **Bug reports:** GitHub Issues. Include sensor model, agent version (`honeyman-agent --version`), and the relevant chunk of `/var/log/honeyman/agent.log`.
 
 ---

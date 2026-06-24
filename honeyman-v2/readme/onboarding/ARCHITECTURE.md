@@ -1,8 +1,8 @@
-# HONEYMAN V2 - Complete Architecture
+# Honeyman — Complete Architecture
 
 ## Overview
 
-Honeyman V2 is a portable, modular honeypot and threat detection system designed for Raspberry Pi. It features **zero-account sensor onboarding** — anyone can deploy a sensor with a single command, and it automatically registers with the global dashboard.
+Honeyman is a portable, modular honeypot and threat detection system designed for Raspberry Pi. It features **zero-account sensor onboarding** — anyone can deploy a sensor with a single command, and it automatically registers with the global dashboard.
 
 ---
 

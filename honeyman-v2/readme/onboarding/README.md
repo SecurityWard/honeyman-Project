@@ -1,8 +1,8 @@
-# Honeyman V2 - Zero-Account Sensor Onboarding Architecture
+# Honeyman — Zero-Account Sensor Onboarding Architecture
 
 ## Overview
 
-This directory contains the updated V2 architecture implementing **zero-account sensor onboarding**. Users can deploy sensors without creating accounts — sensors self-register with a single command.
+This directory contains the architecture implementing **zero-account sensor onboarding**. Users can deploy sensors without creating accounts — sensors self-register with a single command.
 
 ## Key Design Decisions
 

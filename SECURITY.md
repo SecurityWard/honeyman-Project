@@ -20,7 +20,7 @@ page](https://dashboard.honeymanproject.com/add-sensor) and the
 |---|---|---|
 | Per-sensor API keys (plaintext) | One-time response from `POST /sensors/register`; written to `/etc/honeyman/api_key` mode 0600 on the sensor | A leaked key lets an attacker push fake threats as that sensor. The hash on the backend is SHA-256-only, no salting — a leaked DB plus a key list could be correlated. |
 | Sensor metadata (location, capabilities, last seen) | `sensors` table on the backend, public via `GET /sensors` | Maps to the *operator's* approximate physical location. We accept this as the cost of a public viewing surface; operators are told to use coarse manual locations if they care. |
-| Threat events (raw_event, MAC addresses, hashes, MITRE tags) | `threats` hypertable on the backend, public via `GET /threats` | Includes BLE MAC addresses of devices observed nearby (people's phones, watches). Currently no PII filter; we accept this for V2 because the raw_event is the whole point of the dashboard. **Document this in the safety callout** and revisit if it becomes a complaint. |
+| Threat events (raw_event, MAC addresses, hashes, MITRE tags) | `threats` hypertable on the backend, public via `GET /threats` | Includes BLE MAC addresses of devices observed nearby (people's phones, watches). Currently no PII filter; we accept this because the raw_event is the whole point of the dashboard. **Document this in the safety callout** and revisit if it becomes a complaint. |
 | Backend admin credentials | Postgres password in `/root/honeyman-Project/honeyman-v2/dashboard-v2/backend/.env` on the **VPS only** (mode 0600, never committed — `.env` is gitignored, only `.env.example` with placeholders is in the repo). Root SSH password is a separate operator credential. | Direct DB access bypasses every public-read protection. Treat the VPS like any other production box. |
 | TLS private keys | Let's Encrypt managed | Standard rotation. Renew is automatic via certbot. |
 | The malware-hash database | `/var/lib/honeyman/malware_hashes.db` on each sensor, shipped from `data/malware_hashes.db` | Integrity matters: if an attacker tampers with this on a sensor they can blind the file-hash branch of the USB detector. |
@@ -115,9 +115,11 @@ Treat these as conscious decisions, not unmitigated risk:
    property today is TLS to nginx on the VPS. We accept this for a
    small operator base; revisit if we ever publish a release tag or
    want supply-chain claims.
-6. **No rate limiting on `POST /sensors/register`.** A bad actor can
-   register sensors and push junk threats. Mitigations live downstream
-   (rule tuning, operator triage), not upstream.
+6. **Bulk sensor registration even with rate limiting.** `POST
+   /sensors/register` is now rate-limited (10/hour/IP via slowapi +
+   Redis), but a distributed actor can still register junk sensors over
+   time. Downstream mitigations (rule tuning, operator triage) remain
+   the real defence.
 
 ---
 
@@ -129,7 +131,7 @@ Treat these as conscious decisions, not unmitigated risk:
 | **API-key replay if the DB leaks.** | Keys are SHA-256-hashed on the backend; plaintext is returned exactly once and never persisted. | No salt — SHA-256 of a key is the key's identity. If you suspect a leak, regenerate every key (currently a manual psql `UPDATE`). |
 | **SQL injection.** | All queries go through SQLAlchemy parameter binding **except** `/analytics/trends` which builds the `date_trunc` unit with f-string interpolation. | The `period` parameter is regex-validated to `^(hourly|daily|weekly)$` before interpolation and mapped through a lookup table, so this is safe. **Re-audit on every analytics change.** |
 | **XSS via `raw_event`.** | React escapes string children by default; we render `raw_event` via `JSON.stringify(...)` inside a `<pre>`, which is safe. We don't `dangerouslySetInnerHTML` anywhere. | If you ever add markdown / HTML rendering, sanitize. |
-| **WebSocket abuse.** | The WS endpoint accepts anonymous connections (it's public). Each client only receives broadcasts; there's no client-to-server channel except keepalive. | Cap on `len(active_connections)` is not enforced — DoS by opening many connections is plausible. |
+| **WebSocket abuse.** | The WS endpoint accepts anonymous connections (it's public). Each client only receives broadcasts; the client-to-server channel reads and discards with a 1 KB cap, then closes with 1009 if exceeded. Total connections capped at `MAX_CONNECTIONS=500`; over-cap clients get 1013 close. | A distributed actor with 500 IPs can still exhaust the cap. Reverse-proxy-level limits would be the next step. |
 | **Backend resource exhaustion via heartbeats.** | The heartbeat endpoint just `UPDATE`s the sensor row; cheap. | No per-sensor rate limit — a compromised key could send heartbeats in a tight loop. |
 | **Sensor compromise via the malware-hash scan.** | The agent reads files to hash them, doesn't execute. | Reading executables can still trigger antivirus-style hooks on some kernels. Documented on Add Sensor page. |
 | **TLS-MITM during install.** | Let's Encrypt + nginx default ciphers + HSTS from certbot. | No signature on the served `install.sh` body. A compromised CA or compromised nginx ships an arbitrary script. Mitigation if we ever want it: sign the script and have the README publish the public key. |
@@ -145,8 +147,8 @@ explicit so they don't drift.
 
 ### 5.1 Every change
 
-- [ ] No new auth surface (login, JWT, session) introduced — V2 stays
-      account-less by design.
+- [ ] No new auth surface (login, JWT, session) introduced — the
+      project stays account-less by design.
 - [ ] No write endpoint reachable without `authenticated_sensor`.
 - [ ] No write endpoint accepts data for a `sensor_id` other than the
       authenticated one.
@@ -231,8 +233,9 @@ Live list, kept honest:
   current ingest rate.
 - API-key hashing has no salt. Migrating to argon2 + per-key salt is
   reasonable; not yet scheduled.
-- WebSocket has no connection cap. Open issue.
 - `install.sh` has no signature. Open issue.
 - `data/malware_hashes.db` is shipped unsigned. We trust git for
   integrity at the source; the install copy is a verbatim cp from the
   cloned tree.
+- Heartbeat endpoint is not rate-limited (cheap UPDATE, but a
+  compromised key could spam it). Open issue.
