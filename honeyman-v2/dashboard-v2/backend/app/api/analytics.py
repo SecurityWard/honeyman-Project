@@ -118,18 +118,21 @@ async def get_threat_trends(
         else:  # weekly
             start_time = end_time - timedelta(days=90)
 
-    # Time bucket interval
-    interval_map = {
-        "hourly": "1 hour",
-        "daily": "1 day",
-        "weekly": "1 week"
+    # PostgreSQL date_trunc accepts 'hour' / 'day' / 'week' — NOT the API's
+    # 'hourly' / 'daily' / 'weekly'. Using the API names directly was raising
+    # InvalidParameterValueError ("unit 'hourly' not recognized") on every
+    # /analytics/trends request, which is why the trends chart was empty.
+    trunc_unit_map = {
+        "hourly": "hour",
+        "daily":  "day",
+        "weekly": "week",
     }
-    interval = interval_map[period]
+    trunc_unit = trunc_unit_map[period]  # safe — period is regex-validated
 
     # Build query using PostgreSQL date_trunc
     query = text(f"""
         SELECT
-            date_trunc('{period}', timestamp) AS bucket,
+            date_trunc('{trunc_unit}', timestamp) AS bucket,
             COUNT(*) as count,
             COUNT(CASE WHEN severity = 'critical' THEN 1 END) as critical,
             COUNT(CASE WHEN severity = 'high' THEN 1 END) as high,
