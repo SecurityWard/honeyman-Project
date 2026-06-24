@@ -64,6 +64,65 @@
   font-size: 16px;
 }
 
+.sensor-filter-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-left: 4px solid #2563eb;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1e3a8a;
+}
+
+.sensor-filter-banner code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: rgba(37, 99, 235, 0.08);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 13px;
+  color: #1e3a8a;
+}
+
+.sensor-filter-banner code.filter-id {
+  color: #4b5563;
+  margin-left: 4px;
+}
+
+.sensor-filter-banner .filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sensor-filter-banner .filter-link {
+  color: #1e40af;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.sensor-filter-banner .filter-link:hover {
+  text-decoration: underline;
+}
+
+.sensor-filter-banner .filter-clear {
+  padding: 4px 10px;
+  background: white;
+  border: 1px solid #93c5fd;
+  border-radius: 4px;
+  color: #1e3a8a;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.sensor-filter-banner .filter-clear:hover {
+  background: #dbeafe;
+}
+
 /* The feed row is a <details>; summary is the always-visible header. */
 .threat-item {
   margin-bottom: 8px;

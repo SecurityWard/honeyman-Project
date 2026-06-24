@@ -41,10 +41,24 @@
   background: #fffbeb;
   border-color: #f59e0b;
   border-left: 4px solid #f59e0b;
+  color: #1f2937; /* the root color is rgba(255,255,255,0.87) in dark mode;
+                     pin text dark so paragraphs render readably on the amber bg */
 }
 
 .install-card.warning h2 {
   color: #92400e;
+}
+
+.install-card.warning p,
+.install-card.warning li,
+.install-card.warning code,
+.install-card.warning strong {
+  color: #1f2937;
+}
+
+.install-card.warning p {
+  margin: 0.6rem 0;
+  line-height: 1.55;
 }
 
 .install-card.warning ul {
@@ -55,7 +69,6 @@
 .install-card.warning li {
   margin-bottom: 0.4rem;
   line-height: 1.55;
-  color: #1f2937;
 }
 
 .install-card.warning .footnote {

@@ -8,11 +8,18 @@ the required abstract methods.
 
 import asyncio
 import logging
+import time
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+# How far back to keep per-(rule, target) cooldown timestamps. Bigger than
+# any plausible rule cooldown, so it's effectively "long enough that nothing
+# can be wrongly de-throttled" but small enough that the cache stays bounded.
+_COOLDOWN_CACHE_MAX_AGE_SECONDS = 3600.0
+_COOLDOWN_PRUNE_EVERY_SECONDS = 300.0
 
 
 class BaseDetector(ABC):
@@ -46,6 +53,13 @@ class BaseDetector(ABC):
         self.detector_name = self.__class__.__name__
         self.event_count = 0
         self.threat_count = 0
+        self.throttled_count = 0
+
+        # Per-(rule_id, event-identity) timestamps of the last sent threat.
+        # See _filter_throttled — this is what stops the same rule from
+        # re-firing on the same nearby device dozens of times a minute.
+        self._cooldowns: Dict[Tuple[str, str], float] = {}
+        self._cooldowns_last_pruned: float = 0.0
 
         logger.info(f"Initialized {self.detector_name}")
 
@@ -145,13 +159,127 @@ class BaseDetector(ABC):
         matches = self.rule_engine.evaluate(event_data, rule_set=rule_category)
 
         if matches:
-            # Create and send threat
-            threat = await self.create_threat(event_data, matches)
+            # Per-(rule, target) cooldown so the same rule firing on the same
+            # observed device doesn't get pushed to the backend every scan.
+            survivors = self._filter_throttled(matches, event_data)
+            if not survivors:
+                return False
+
+            threat = await self.create_threat(event_data, survivors)
             await self.send_threat(threat)
             self.threat_count += 1
             return True
 
         return False
+
+    # ------------------------------------------------------------------ #
+    # Per-(rule, target) throttling — drops repeat alerts for the same   #
+    # rule/device pair inside a cooldown window. Honours either           #
+    # `tuning.cooldown_seconds` directly, or derives it from              #
+    # `tuning.max_alerts_per_hour` if present. No tuning → no throttle.   #
+    # ------------------------------------------------------------------ #
+
+    def _filter_throttled(
+        self,
+        rules: List[Any],
+        event: Dict[str, Any],
+    ) -> List[Any]:
+        """Return the subset of rules that aren't currently in cooldown for
+        this event's target identity. Updates the cooldown cache as a side
+        effect, so a rule that passes here gets re-throttled for next time."""
+        now = time.monotonic()
+        self._maybe_prune_cooldowns(now)
+        identity = self._event_identity(event)
+        survivors: List[Any] = []
+        for rule in rules:
+            rule_id = getattr(rule, "rule_id", None) or getattr(rule, "name", "anon")
+            cooldown = self._rule_cooldown_seconds(rule)
+            key = (rule_id, identity)
+            if cooldown <= 0:
+                # No tuning declared → never throttle, but still update the
+                # last-seen so observability stays accurate.
+                self._cooldowns[key] = now
+                survivors.append(rule)
+                continue
+            last = self._cooldowns.get(key)
+            if last is None or (now - last) >= cooldown:
+                self._cooldowns[key] = now
+                survivors.append(rule)
+            else:
+                self.throttled_count += 1
+                logger.debug(
+                    "Throttled rule %s for %s (last fired %.1fs ago, cooldown %.1fs)",
+                    rule_id, identity, now - last, cooldown,
+                )
+        return survivors
+
+    @staticmethod
+    def _event_identity(event: Dict[str, Any]) -> str:
+        """A stable string identifying *what* this event is about, so the
+        cooldown dedups one rule against the same observed device — not
+        against every event of that detector. Falls through several
+        common identifiers in priority order so each detector type lands
+        on a reasonable key."""
+        for key in (
+            "device_mac",
+            "src_host",
+            "service_name",
+            "device_id",
+            "ssid",
+            "bssid",
+            "file_hash",
+        ):
+            v = event.get(key)
+            if v:
+                return f"{key}={v}"
+        # USB-style triplet
+        parts = [str(event.get(k, "")) for k in ("vendor_id", "product_id", "serial")]
+        if any(parts):
+            return "usb=" + ":".join(parts)
+        return "anon"
+
+    @staticmethod
+    def _rule_cooldown_seconds(rule: Any) -> float:
+        """Read cooldown from rule metadata.
+
+        Preference order:
+            tuning.cooldown_seconds       — explicit per-rule
+            tuning.max_alerts_per_hour    — derive 3600/N as the spacing
+        Both absent → return 0 (no throttling)."""
+        tuning = getattr(rule, "tuning", None) or {}
+        cooldown = tuning.get("cooldown_seconds")
+        if cooldown is not None:
+            try:
+                return max(0.0, float(cooldown))
+            except (TypeError, ValueError):
+                return 0.0
+        per_hour = tuning.get("max_alerts_per_hour")
+        if per_hour:
+            try:
+                per_hour = float(per_hour)
+                if per_hour > 0:
+                    return 3600.0 / per_hour
+            except (TypeError, ValueError):
+                pass
+        return 0.0
+
+    def _maybe_prune_cooldowns(self, now: float) -> None:
+        """Drop entries older than _COOLDOWN_CACHE_MAX_AGE_SECONDS so the
+        cache stays bounded by 'unique (rule, target) pairs seen recently'
+        rather than 'unique pairs since process start'."""
+        if (now - self._cooldowns_last_pruned) < _COOLDOWN_PRUNE_EVERY_SECONDS:
+            return
+        cutoff = now - _COOLDOWN_CACHE_MAX_AGE_SECONDS
+        before = len(self._cooldowns)
+        self._cooldowns = {
+            k: ts for k, ts in self._cooldowns.items() if ts >= cutoff
+        }
+        self._cooldowns_last_pruned = now
+        after = len(self._cooldowns)
+        if before != after:
+            logger.debug(
+                "Cooldown cache pruned: %d → %d entries", before, after,
+            )
 
     async def create_threat(self, event: Dict[str, Any], rules: List[Any]) -> Dict[str, Any]:
         """

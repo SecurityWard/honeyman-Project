@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import DashboardOverview from '../components/dashboard/DashboardOverview';
 import DateRangeSelector, { type DateRange } from '../components/dashboard/DateRangeSelector';
 import ThreatMap from '../components/map/ThreatMap';
@@ -7,6 +8,7 @@ import TopThreatsChart from '../components/analytics/TopThreatsChart';
 import TopSensorsChart from '../components/analytics/TopSensorsChart';
 import { useDashboardOverview, useThreatTrends, useTopThreats, useTopSensors, useGeoMap } from '../hooks/useAnalytics';
 import { useThreats } from '../hooks/useThreats';
+import { useSensor } from '../hooks/useSensors';
 import type { Threat } from '../types';
 import websocketService from '../services/websocket';
 import './DashboardPage.css';
@@ -33,6 +35,12 @@ export default function DashboardPage() {
   const [recentThreats, setRecentThreats] = useState<Threat[]>([]);
   const [dateRange, setDateRange] = useState<DateRange>({ preset: '7d' });
 
+  // Optional ?sensor_id=… filter so the Sensors page can navigate here
+  // scoped to a specific sensor's events.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sensorFilter = searchParams.get('sensor_id') || undefined;
+  const { data: filteredSensor } = useSensor(sensorFilter || '');
+
   const hours = getHoursFromRange(dateRange);
 
   const { data: overview, isLoading: overviewLoading } = useDashboardOverview();
@@ -40,28 +48,53 @@ export default function DashboardPage() {
   const { data: topThreats, isLoading: topThreatsLoading } = useTopThreats(7, hours || undefined);
   const { data: topSensors, isLoading: topSensorsLoading } = useTopSensors(5, hours || undefined);
   const { data: geoData, isLoading: geoLoading } = useGeoMap(hours || undefined);
-  const { data: threatsData } = useThreats({ page: 1, page_size: FEED_MAX });
+  const { data: threatsData } = useThreats({
+    sensor_id: sensorFilter,
+    page: 1,
+    page_size: FEED_MAX,
+  });
+
+  // If we're filtering on a sensor, center the map on its registered location
+  // so the user lands on the right region instead of the default SF default.
+  const mapCenter = useMemo<[number, number] | undefined>(() => {
+    if (
+      sensorFilter &&
+      filteredSensor?.latitude != null &&
+      filteredSensor?.longitude != null
+    ) {
+      return [filteredSensor.latitude, filteredSensor.longitude];
+    }
+    return undefined;
+  }, [sensorFilter, filteredSensor?.latitude, filteredSensor?.longitude]);
 
   // Seed the feed from REST so it isn't empty until the next WebSocket frame.
   // Once a WS-delivered threat arrives the feed switches to "live" mode and
-  // new threats prepend; we keep the most recent FEED_MAX overall.
+  // new threats prepend; we keep the most recent FEED_MAX overall. Reseed
+  // whenever the sensor filter changes so the feed re-scopes to the filter.
   useEffect(() => {
-    if (recentThreats.length === 0 && threatsData?.items?.length) {
+    if (threatsData?.items) {
       setRecentThreats(threatsData.items.slice(0, FEED_MAX));
     }
-  }, [threatsData, recentThreats.length]);
+  }, [threatsData, sensorFilter]);
 
   // WebSocket real-time updates — dedupe by id in case a REST seed and the
-  // WS broadcast race each other for the same threat.
+  // WS broadcast race each other for the same threat. When a sensor filter
+  // is active, only accept broadcasts for that sensor.
   useEffect(() => {
     const unsubscribe = websocketService.onThreat((threat: Threat) => {
+      if (sensorFilter && threat.sensor_id !== sensorFilter) return;
       setRecentThreats(prev => {
         if (prev.some(t => t.id === threat.id)) return prev;
         return [threat, ...prev].slice(0, FEED_MAX);
       });
     });
     return () => unsubscribe();
-  }, []);
+  }, [sensorFilter]);
+
+  const clearSensorFilter = () => {
+    searchParams.delete('sensor_id');
+    setSearchParams(searchParams, { replace: true });
+  };
 
   if (overviewLoading) {
     return <div className="loading">Loading dashboard...</div>;
@@ -69,6 +102,28 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-page">
+      {sensorFilter && (
+        <div className="sensor-filter-banner">
+          <span>
+            Showing threats for sensor{' '}
+            <code>{filteredSensor?.name || sensorFilter}</code>
+            {filteredSensor?.sensor_id && filteredSensor.name && (
+              <code className="filter-id"> ({filteredSensor.sensor_id})</code>
+            )}
+          </span>
+          <div className="filter-actions">
+            <Link to="/sensors" className="filter-link">← all sensors</Link>
+            <button
+              type="button"
+              onClick={clearSensorFilter}
+              className="filter-clear"
+            >
+              clear filter
+            </button>
+          </div>
+        </div>
+      )}
+
       <DateRangeSelector value={dateRange} onChange={setDateRange} />
 
       {overview && <DashboardOverview overview={overview} />}
@@ -79,6 +134,8 @@ export default function DashboardPage() {
             <ThreatMap
               geoThreats={geoData}
               recentThreats={recentThreats.length > 0 ? recentThreats : threatsData?.items || []}
+              center={mapCenter}
+              zoom={mapCenter ? 12 : undefined}
             />
           )}
         </div>

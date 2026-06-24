@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SensorList from '../components/sensors/SensorList';
 import { useSensors } from '../hooks/useSensors';
 import type { Sensor } from '../types';
@@ -8,10 +9,14 @@ const PAGE_SIZE = 50;
 
 export default function SensorsPage() {
   const [page, setPage] = useState(1);
+  const navigate = useNavigate();
   const { data, isLoading, error } = useSensors(page, PAGE_SIZE);
 
   const handleSelectSensor = (sensor: Sensor) => {
-    console.log('Selected sensor:', sensor);
+    // Drop into the dashboard filtered to just this sensor's events. The
+    // dashboard reads sensor_id from the query string and scopes the threat
+    // feed + map view to it.
+    navigate(`/dashboard?sensor_id=${encodeURIComponent(sensor.sensor_id)}`);
   };
 
   if (isLoading) {
