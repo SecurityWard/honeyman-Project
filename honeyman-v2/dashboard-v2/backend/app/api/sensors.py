@@ -44,8 +44,44 @@ async def list_sensors(
     query = query.order_by(Sensor.created_at.desc())
     sensors = (await db.execute(query)).scalars().all()
 
+    # Live threat-count overlay. The Sensor table has columns for
+    # total_threats_detected and threats_last_24h, but nothing maintains
+    # them — they sit at 0 forever, which made the Sensors page report
+    # 0/0 for a sensor that had clearly fired alerts. Two cheap GROUP BY
+    # queries scoped to this page's sensor_ids give accurate counts every
+    # request without the drift risk of denormalized counters.
+    sensor_ids = [s.sensor_id for s in sensors]
+    total_counts: dict[str, int] = {}
+    counts_24h: dict[str, int] = {}
+    if sensor_ids:
+        last_24h = datetime.utcnow() - timedelta(hours=24)
+        total_rows = await db.execute(
+            select(Threat.sensor_id, func.count())
+            .where(Threat.sensor_id.in_(sensor_ids))
+            .group_by(Threat.sensor_id)
+        )
+        total_counts = {sid: cnt for sid, cnt in total_rows.all()}
+
+        recent_rows = await db.execute(
+            select(Threat.sensor_id, func.count())
+            .where(
+                and_(
+                    Threat.sensor_id.in_(sensor_ids),
+                    Threat.timestamp >= last_24h,
+                )
+            )
+            .group_by(Threat.sensor_id)
+        )
+        counts_24h = {sid: cnt for sid, cnt in recent_rows.all()}
+
+    responses = []
+    for s in sensors:
+        s.total_threats_detected = total_counts.get(s.sensor_id, 0)
+        s.threats_last_24h = counts_24h.get(s.sensor_id, 0)
+        responses.append(SensorResponse.from_orm(s))
+
     return SensorListResponse(
-        sensors=[SensorResponse.from_orm(s) for s in sensors],
+        sensors=responses,
         total=total,
         page=page,
         page_size=page_size,

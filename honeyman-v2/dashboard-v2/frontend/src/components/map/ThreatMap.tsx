@@ -131,26 +131,65 @@ export default function ThreatMap({
                 weight: 2,
               }}
             >
-              <Popup>
+              <Popup maxWidth={360}>
                 <div className="threat-popup">
                   <h3>{threat.threat_type}</h3>
-                  <p><strong>Severity:</strong> <span className={`severity-${threat.severity}`}>{threat.severity}</span></p>
-                  <p><strong>Detector:</strong> {threat.detector_type}</p>
-                  <p><strong>Sensor:</strong> {threat.sensor_name || threat.sensor_id}</p>
-                  {threat.device_name && <p><strong>Device:</strong> {threat.device_name}</p>}
-                  {threat.mac_address && <p><strong>MAC:</strong> {threat.mac_address}</p>}
-                  <p><strong>Time:</strong> {new Date(threat.timestamp).toLocaleString()}</p>
-                  <p><strong>Confidence:</strong> {(threat.confidence_score * 100).toFixed(0)}%</p>
+                  <p>
+                    <strong>Severity:</strong>{' '}
+                    <span className={`severity-${threat.severity}`}>{threat.severity}</span>
+                    {' · '}
+                    {threat.detector_type}
+                  </p>
+                  {threat.matched_rules?.[0] && (
+                    <p>
+                      <strong>Rule:</strong> {threat.matched_rules[0].name}
+                      <br />
+                      <code className="rule-id">{threat.matched_rules[0].rule_id}</code>
+                    </p>
+                  )}
+                  <p>
+                    <strong>Sensor:</strong> {threat.sensor_name || threat.sensor_id}
+                  </p>
+                  {threat.device_name && (
+                    <p><strong>Device:</strong> {threat.device_name}</p>
+                  )}
+                  {threat.device_mac && (
+                    <p><strong>MAC:</strong> <code>{threat.device_mac}</code></p>
+                  )}
+                  {threat.device_ip && (
+                    <p><strong>IP:</strong> <code>{threat.device_ip}</code></p>
+                  )}
+                  <p>
+                    <strong>Time:</strong> {new Date(threat.timestamp).toLocaleString()}
+                  </p>
+                  {(threat.confidence != null || threat.threat_score != null) && (
+                    <p>
+                      <strong>Confidence / Score:</strong>{' '}
+                      {threat.confidence != null
+                        ? `${Math.round(threat.confidence * 100)}%`
+                        : '—'}
+                      {' / '}
+                      {threat.threat_score != null
+                        ? `${Math.round(threat.threat_score * 100)}%`
+                        : '—'}
+                    </p>
+                  )}
                   {threat.location_method && (
                     <p>
                       <strong>Location:</strong>{' '}
                       <span className={`loc-${threat.location_method}`}>
                         {threat.location_method.toUpperCase()}
                       </span>
-                      {threat.accuracy_meters !== undefined && (
+                      {threat.accuracy_meters != null && (
                         <> &middot; ±{Math.round(threat.accuracy_meters)} m</>
                       )}
                     </p>
+                  )}
+                  {threat.raw_event && Object.keys(threat.raw_event).length > 0 && (
+                    <details className="raw-event-details">
+                      <summary>Raw event</summary>
+                      <pre>{JSON.stringify(threat.raw_event, null, 2)}</pre>
+                    </details>
                   )}
                 </div>
               </Popup>

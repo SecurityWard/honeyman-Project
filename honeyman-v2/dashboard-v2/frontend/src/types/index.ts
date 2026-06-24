@@ -35,28 +35,54 @@ export interface SensorListResponse {
   page_size: number;
 }
 
-// Threat types
+// Matches a single entry in ThreatResponse.matched_rules (see backend
+// schemas/threat.py). Whichever rule's evaluator fires for an event gets
+// summarised here so the dashboard can show *what* triggered, not just *that*
+// something triggered.
+export interface MatchedRule {
+  rule_id: string;
+  name: string;
+  severity: string;
+  confidence: number;
+}
+
+// Threat types — fields here mirror app/schemas/threat.py::ThreatResponse on
+// the backend. Don't add fields that aren't actually in the API response.
 export interface Threat {
   id: string;
   timestamp: string;
   sensor_id: string;
-  sensor_name?: string;
+  sensor_name?: string | null;
   detector_type: string;
   threat_type: string;
   severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
-  confidence_score: number;
-  device_identifier?: string;
-  device_name?: string;
-  manufacturer?: string;
-  ssid?: string;
-  mac_address?: string;
-  ip_address?: string;
-  latitude?: number;
-  longitude?: number;
-  // Phase D: location provenance + uncertainty for the map's accuracy circle
-  accuracy_meters?: number;
-  location_method?: 'gps' | 'wifi' | 'ip' | 'manual';
-  metadata?: Record<string, any>;
+  confidence?: number | null;
+  threat_score?: number | null;
+
+  // Device / network fingerprint
+  device_name?: string | null;
+  device_mac?: string | null;
+  device_ip?: string | null;
+  src_host?: string | null;
+  src_port?: number | null;
+  dst_host?: string | null;
+  dst_port?: number | null;
+
+  // Rules + raw event payload (the meat — what actually fired)
+  matched_rules?: MatchedRule[];
+  raw_event?: Record<string, any> | null;
+  mitre_tactics?: string[];
+  mitre_techniques?: string[];
+
+  // Location chain
+  latitude?: number | null;
+  longitude?: number | null;
+  city?: string | null;
+  country?: string | null;
+  accuracy_meters?: number | null;
+  location_method?: 'gps' | 'wifi' | 'ip' | 'manual' | null;
+
+  created_at?: string;
 }
 
 // Analytics types

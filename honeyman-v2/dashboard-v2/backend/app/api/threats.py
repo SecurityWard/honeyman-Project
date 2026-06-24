@@ -1,5 +1,6 @@
 """Threat endpoints. Reads are public; writes require the sensor's API key."""
 
+import logging
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
@@ -12,8 +13,10 @@ from ..db.base import get_db
 from ..models.sensor import Sensor
 from ..models.threat import Threat
 from ..schemas.threat import ThreatCreate, ThreatListResponse, ThreatResponse
+from ..services.redis_client import redis_client
 from .deps import authenticated_sensor
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -109,4 +112,16 @@ async def create_threat(
     await db.commit()
     await db.refresh(db_threat)
 
-    return ThreatResponse.from_orm(db_threat)
+    response = ThreatResponse.from_orm(db_threat)
+
+    # Broadcast to WebSocket subscribers via the Redis pub/sub channel that
+    # `services.websocket.ConnectionManager.start_redis_subscriber` is reading.
+    # Without this, HTTPS-delivered threats never appear in the live feed —
+    # only MQTT-delivered ones did, which is empty since V2 switched the
+    # default sensor transport to HTTPS.
+    try:
+        await redis_client.publish("threats:realtime", response.json())
+    except Exception as exc:  # never let a pubsub hiccup block ingestion
+        logger.warning("Failed to publish new threat to redis: %s", exc)
+
+    return response

@@ -24,6 +24,39 @@
   color: #1f2937;
 }
 
+.threat-popup code,
+.threat-popup .rule-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: #111827;
+}
+
+.threat-popup details.raw-event-details {
+  margin-top: 6px;
+}
+
+.threat-popup details.raw-event-details summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.threat-popup details.raw-event-details pre {
+  margin: 4px 0 0 0;
+  padding: 6px 8px;
+  background: #111827;
+  color: #d1d5db;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  max-height: 160px;
+  overflow: auto;
+}
+
 .severity-critical {
   color: #dc2626;
   font-weight: 600;
