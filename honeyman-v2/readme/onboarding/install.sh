@@ -238,55 +238,13 @@ install_system_deps() {
     success "System dependencies installed"
 }
 
-# ---------------------------------------------------------------------------
-# USB auto-mount (usbmount)
+# USB auto-mount note:
 #
-# The USB detector's file-hash branch scans files under the partition's
-# mount point. Debian doesn't auto-mount removable media for headless
-# devices out of the box, so without this every USB drive plugged into the
-# sensor stays unmounted and the malware-hash check is silently skipped.
-# (The volume-label rule still fires — that reads udev metadata directly.)
-#
-# usbmount on Bookworm needs an override to systemd-udevd's PrivateMounts=
-# so the mount it makes from a udev rule is visible to other processes.
-#
-# Set USBMOUNT_ENABLED=0 to skip this — only sensible for sensors where
-# auto-mounting hostile media is not what you want (which is normally
-# exactly what you want on a Honeyman sensor).
-# ---------------------------------------------------------------------------
-install_usbmount() {
-    if [[ "${USBMOUNT_ENABLED:-1}" != "1" ]]; then
-        step "Skipping usbmount (USBMOUNT_ENABLED=0)"
-        return
-    fi
-    step "Installing usbmount for USB auto-mount..."
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get install -y -qq usbmount >/dev/null 2>&1 || {
-        warn "usbmount package not available — USB file-hash scanning will be limited to drives the operator mounts manually"
-        return
-    }
-
-    # Bookworm fix: systemd-udevd runs with PrivateMounts=yes, which means
-    # mounts created from a udev rule are not visible outside the udev
-    # namespace. Override locally so usbmount's mounts land where the agent
-    # can see them (/media/usb0, /media/usb1, …).
-    local override_dir=/etc/systemd/system/systemd-udevd.service.d
-    mkdir -p "$override_dir"
-    cat > "$override_dir/00-honeyman-usbmount.conf" <<'OVERRIDE'
-# Installed by Honeyman. usbmount needs systemd-udevd's mount namespace
-# to be shared with the host so the resulting /media/usb? mounts are
-# visible to the honeyman-agent process. Remove this drop-in (and
-# `systemctl daemon-reload && systemctl restart systemd-udevd`) if you
-# stop using usbmount for any reason.
-[Service]
-PrivateMounts=no
-MountFlags=shared
-OVERRIDE
-
-    systemctl daemon-reload
-    systemctl restart systemd-udevd
-    success "usbmount installed and configured (drives will auto-mount at /media/usb0, /media/usb1, ...)"
-}
+# Earlier installs tried to install usbmount + a systemd-udevd PrivateMounts
+# override. That doesn't work on Debian Bookworm — the usbmount package was
+# removed from the official repos. The agent now mounts USB partitions
+# itself (read-only, into /run/honeyman/usb/) when it scans them, so no
+# system-level auto-mount package is needed.
 
 # ---------------------------------------------------------------------------
 # Registration (self-register flow)
@@ -552,7 +510,6 @@ main() {
     echo
     echo -e "${BOLD}Installing...${NC}"
     install_system_deps
-    install_usbmount
     make_directories
     register_sensor
     write_credentials

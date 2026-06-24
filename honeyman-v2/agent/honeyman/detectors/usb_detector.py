@@ -14,6 +14,7 @@ Detects malicious USB devices including:
 import asyncio
 import logging
 import os
+import time
 import hashlib
 import sqlite3
 import pyudev
@@ -83,16 +84,30 @@ class UsbDetector(BaseDetector):
             self.hash_db = None
 
     async def initialize(self):
-        """Initialize USB monitoring via pyudev"""
-        try:
-            # Create udev context
-            self.context = pyudev.Context()
+        """Initialize USB monitoring via pyudev.
 
-            # Create monitor for USB devices
+        Subscribes to TWO subsystems on the same Monitor:
+
+          - 'usb'   — USB-device-level events that carry VID/PID, vendor,
+                     product, manufacturer, ID_USB_INTERFACES, etc. Used
+                     by the VID/PID and product-name rules
+                     (rubber_ducky, bash_bunny, omg_cable, …).
+          - 'block' — block-device events for /dev/sd[a-z][0-9] and the
+                     parent disks. Partition events here carry ID_FS_LABEL
+                     populated by udev's blkid probe, so the
+                     suspicious_volume_label rule (STARKILLER, PWNED,
+                     BADUSB, etc.) sees them without needing a mount.
+
+        Subscribing to 'usb' only — what we used to do — meant block
+        events never reached us at all, so any rule that fields on
+        `volume_label` or `filename` was dead from the start.
+        """
+        try:
+            self.context = pyudev.Context()
             self.monitor = pyudev.Monitor.from_netlink(self.context)
             self.monitor.filter_by('usb')
-
-            logger.info("USB detector initialized successfully")
+            self.monitor.filter_by('block')
+            logger.info("USB detector initialized (subsystems: usb, block)")
 
         except Exception as e:
             logger.error(f"Failed to initialize USB detector: {e}")
@@ -197,53 +212,174 @@ class UsbDetector(BaseDetector):
             await self._analyze_storage_device(device, device_data)
 
     async def _analyze_partition(self, device: pyudev.Device):
-        """Run rule evaluation against a partition's filesystem label.
+        """Run rule evaluation against a USB partition's filesystem label
+        and (if mountable) scan its files against the malware-hash DB.
 
-        Partition events fire as soon as udev probes the filesystem, which
-        happens at insertion time — no mount required. That makes them the
-        right place to catch volume-label rules like `STARKILLER`, `PWNED`,
-        `BADUSB`, etc., regardless of whether usbmount is installed.
+        We subscribe to the `block` subsystem in addition to `usb` so we
+        see partition events — that's the only place ID_FS_LABEL lives,
+        and it's populated by udev's blkid probe the moment the partition
+        appears (no mount required for the label check).
 
-        We walk up to the parent USB device so the threat carries proper
-        VID/PID, manufacturer, and product context.
+        Scope: this handler must only fire for USB-backed block devices.
+        Without that check we'd also react to the Pi's own SD card and
+        any internal storage. We use `find_parent('usb', 'usb_device')` —
+        if it returns None, the partition isn't on the USB bus and we
+        skip it.
+
+        For the file-hash scan we mount the partition ourselves rather
+        than rely on usbmount (which was removed from Debian Bookworm's
+        repos). Read-only, nodev, noexec, nosuid, into /run/honeyman/usb-N
+        with N picked to avoid collisions.
         """
-        volume_label = device.get('ID_FS_LABEL') or device.get('ID_FS_LABEL_ENC')
-        if not volume_label:
+        parent = device.find_parent('usb', 'usb_device')
+        if parent is None:
+            # Not a USB-backed partition — Pi SD card, NVMe, etc. Ignore.
             return
 
-        parent = device.find_parent('usb', 'usb_device')
+        volume_label = device.get('ID_FS_LABEL') or device.get('ID_FS_LABEL_ENC')
+
         device_data: Dict[str, Any] = {
-            'timestamp': datetime.utcnow().isoformat(),
-            'device_path': device.device_path,
-            'fs_type': device.get('ID_FS_TYPE'),
-            'fs_uuid': device.get('ID_FS_UUID'),
-            'volume_label': volume_label,
-            'filename': volume_label,        # alias — the volume-label rule
-                                             # uses field=volume_label, but
-                                             # other file-pattern rules use
-                                             # field=filename; cover both.
-            'is_storage': True,
+            'timestamp':     datetime.utcnow().isoformat(),
+            'device_path':   device.device_path,
+            'device_node':   device.device_node,
+            'fs_type':       device.get('ID_FS_TYPE'),
+            'fs_uuid':       device.get('ID_FS_UUID'),
+            'is_storage':    True,
+            'vid':           parent.get('ID_VENDOR_ID', 'unknown'),
+            'pid':           parent.get('ID_MODEL_ID', 'unknown'),
+            'vid_pid':       f"{parent.get('ID_VENDOR_ID', 'unknown')}:{parent.get('ID_MODEL_ID', 'unknown')}",
+            'vendor':        parent.get('ID_VENDOR', 'unknown'),
+            'manufacturer':  parent.get('ID_VENDOR', 'unknown'),
+            'model':         parent.get('ID_MODEL', 'unknown'),
+            'product_name':  parent.get('ID_MODEL', 'unknown'),
+            'serial':        parent.get('ID_SERIAL_SHORT', 'unknown'),
+            'usb_interfaces': parent.get('ID_USB_INTERFACES'),
         }
-        if parent is not None:
-            device_data.update({
-                'vid':           parent.get('ID_VENDOR_ID', 'unknown'),
-                'pid':           parent.get('ID_MODEL_ID', 'unknown'),
-                'vid_pid':       f"{parent.get('ID_VENDOR_ID', 'unknown')}:{parent.get('ID_MODEL_ID', 'unknown')}",
-                'vendor':        parent.get('ID_VENDOR', 'unknown'),
-                'manufacturer':  parent.get('ID_VENDOR', 'unknown'),
-                'model':         parent.get('ID_MODEL', 'unknown'),
-                'product_name':  parent.get('ID_MODEL', 'unknown'),
-                'serial':        parent.get('ID_SERIAL_SHORT', 'unknown'),
-                'usb_interfaces': parent.get('ID_USB_INTERFACES'),
-            })
+        if volume_label:
+            device_data['volume_label'] = volume_label
+            device_data['filename'] = volume_label  # alias for file_pattern rules
 
         logger.info(
-            f"Partition mounted/probed: label={volume_label!r} "
-            f"vid_pid={device_data.get('vid_pid', 'unknown')} "
-            f"vendor={device_data.get('vendor', 'unknown')}"
+            f"USB partition: dev={device.device_node} label={volume_label!r} "
+            f"vid_pid={device_data['vid_pid']} vendor={device_data['vendor']}"
         )
 
-        await self.evaluate_event(device_data)
+        # 1) Volume-label / metadata-based rule eval (no mount required).
+        if volume_label:
+            await self.evaluate_event(device_data)
+
+        # 2) File-hash scan — needs the partition mounted. The agent does
+        #    the mount itself: read-only, on a private path, unmounted after.
+        await self._scan_partition_files(device, device_data)
+
+    async def _scan_partition_files(
+        self,
+        device: pyudev.Device,
+        device_data: Dict[str, Any],
+    ):
+        """Mount a USB partition read-only, walk it, and unmount.
+
+        We do this in-process rather than relying on usbmount because (a)
+        usbmount was removed from Debian Bookworm's repos and (b) the
+        agent already runs as root, so the mount syscall is cheap and the
+        sandboxing concerns that motivated usbmount don't apply here.
+        """
+        node = device.device_node
+        if not node:
+            return
+
+        # Already mounted somewhere by an external auto-mounter? Just use that.
+        existing = self._get_mount_point_for_node(node)
+        if existing:
+            logger.info(f"Partition {node} already mounted at {existing}; scanning")
+            await self._scan_files(existing, device_data)
+            return
+
+        fstype = device.get('ID_FS_TYPE')
+        if not fstype:
+            logger.debug(f"No ID_FS_TYPE on {node}; skipping file scan")
+            return
+
+        mount_root = Path('/run/honeyman/usb')
+        try:
+            mount_root.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logger.warning(f"Could not create mount root {mount_root}: {exc}")
+            return
+
+        # Pick a per-event mount path so concurrent inserts don't collide.
+        mount_path = mount_root / f"{Path(node).name}-{os.getpid()}-{int(time.time())}"
+        try:
+            mount_path.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logger.warning(f"Could not create mount path {mount_path}: {exc}")
+            return
+
+        # ro,nodev,noexec,nosuid — we're reading files to hash them, never
+        # executing them. uid=0,gid=0 keeps FAT/exfat from rejecting root.
+        cmd = [
+            "mount", "-t", fstype, "-o",
+            "ro,nodev,noexec,nosuid,sync,uid=0,gid=0",
+            node, str(mount_path),
+        ]
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=15.0)
+        except asyncio.TimeoutError:
+            logger.warning(f"mount {node} timed out after 15s; abandoning")
+            return
+        except Exception as exc:
+            logger.warning(f"mount {node} failed: {exc}")
+            return
+
+        if proc.returncode != 0:
+            err = (stderr or b"").decode("utf-8", "replace").strip()
+            logger.warning(
+                f"mount {node} returned {proc.returncode}: {err or '(no stderr)'}"
+            )
+            try:
+                mount_path.rmdir()
+            except OSError:
+                pass
+            return
+
+        try:
+            logger.info(f"Mounted {node} at {mount_path} (ro); scanning")
+            await self._scan_files(str(mount_path), device_data)
+        finally:
+            await self._unmount(mount_path)
+
+    async def _unmount(self, mount_path: Path) -> None:
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "umount", str(mount_path),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=10.0)
+        except Exception as exc:
+            logger.warning(f"umount {mount_path} failed: {exc}")
+        try:
+            mount_path.rmdir()
+        except OSError:
+            pass
+
+    @staticmethod
+    def _get_mount_point_for_node(device_node: str) -> Optional[str]:
+        """Look up the current mount point for a /dev path in /proc/mounts."""
+        try:
+            with open("/proc/mounts", "r") as f:
+                for line in f:
+                    parts = line.split()
+                    if len(parts) >= 2 and parts[0] == device_node:
+                        return parts[1]
+        except OSError:
+            pass
+        return None
 
     def _extract_device_info(self, device: pyudev.Device) -> Dict[str, Any]:
         """
