@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A minimum CI surface, intentionally cheap. Catches the foot-guns we've
+# actually hit in this repo: bash heredoc parse errors in install.sh,
+# Python import-time failures in the backend after a refactor, agent test
+# regressions, and TypeScript drift in the frontend.
+#
+# Things this does NOT do (intentional):
+#   - run backend integration tests (those need Postgres + Redis services)
+#   - run shellcheck (the install script trips its style rules; bash -n
+#     is the cheaper "does it parse" gate)
+#   - lint Python (black/flake8 are dev tools, not CI gates here)
+
+jobs:
+  backend-syntax:
+    name: backend / py_compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile-check all backend modules
+        run: python -m compileall -q honeyman-v2/dashboard-v2/backend/app
+
+  agent:
+    name: agent / py_compile + setup.py
+    runs-on: ubuntu-latest
+    # We don't run pytest here yet — the existing test scripts are
+    # standalone async print-driven probes (not assertion-based), and
+    # adding a real test fixture is its own piece of work. Compile +
+    # install validates the import graph, which is what we keep
+    # breaking.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile-check agent modules
+        working-directory: honeyman-v2/agent
+        run: python -m compileall -q honeyman
+      - name: setup.py installs cleanly (catches missing deps)
+        working-directory: honeyman-v2/agent
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+  frontend:
+    name: frontend / build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: honeyman-v2/dashboard-v2/frontend/package-lock.json
+      - name: Install
+        working-directory: honeyman-v2/dashboard-v2/frontend
+        run: npm ci
+      - name: Build (tsc -b + vite build)
+        working-directory: honeyman-v2/dashboard-v2/frontend
+        run: npm run build
+
+  shell-syntax:
+    name: shell / bash -n
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install.sh parses
+        run: bash -n honeyman-v2/readme/onboarding/install.sh
+      - name: deployment shell scripts parse
+        run: |
+          set -e
+          while IFS= read -r f; do
+            echo "-- $f"
+            bash -n "$f"
+          done < <(find honeyman-v2/deployment -name '*.sh')
