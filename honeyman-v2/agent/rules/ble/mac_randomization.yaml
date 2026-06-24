@@ -1,12 +1,18 @@
 rule_id: ble_mac_random_001
 name: "Suspicious MAC Address Randomization Detection"
 version: 2.0
-enabled: true
+enabled: false   # off by default — modern phones randomize MACs constantly
+                 # for privacy, so the static-pattern clause matches every
+                 # iPhone/Android nearby. Opt in if you're investigating a
+                 # specific scenario where rapid MAC churn matters.
 severity: low
 threat_type: mac_randomization
 category: ble
 
-# Detect suspicious MAC address randomization patterns
+# NOTE: the locally-administered bit (first clause) is set on every
+# privacy-randomized MAC, so that clause alone produces noise from any
+# phone in BLE range. Re-enable only after tuning — for example, dropping
+# the static clause and keeping just the behavioral rapid-churn signal.
 conditions:
   operator: OR
   clauses:
@@ -14,7 +20,7 @@ conditions:
     - type: mac_address
       field: mac_address
       operator: regex
-      pattern: "^[0-9A-F][26AE]:.*"  # Local bit set
+      pattern: "^[0-9A-F][26AE]:.*"  # Local bit set — matches all randomized MACs
 
     # Behavioral: rapid MAC changes
     - type: behavioral
