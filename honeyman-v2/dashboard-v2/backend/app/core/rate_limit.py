@@ -41,10 +41,34 @@ class _NullLimiter:
 
 
 def _real_limiter():  # pragma: no cover - exercised at import time
-    """Build a slowapi Limiter keyed on remote IP."""
+    """Build a slowapi Limiter keyed on remote IP.
+
+    Storage backend matters when the API runs with >1 uvicorn worker (the
+    production unit uses 4). In-memory counters are per-process, so a
+    "10/hour" cap actually lets through 40/hour with 4 workers — the
+    cap is silently 4x what the operator declared. We force a Redis-backed
+    storage so the cap means what it says.
+    """
     from slowapi import Limiter
     from slowapi.util import get_remote_address
-    return Limiter(key_func=get_remote_address)
+
+    # Use Redis DB 1 to keep counter keys separate from the WS pub/sub
+    # channel that lives on DB 0. If the REDIS_URL has its own db suffix,
+    # honour it — operators may be deliberately co-locating.
+    redis_url = settings.REDIS_URL
+    # If the URL has no /N segment, append /1 for the limiter.
+    if redis_url.rstrip("/").rsplit("/", 1)[-1].isdigit():
+        storage_uri = redis_url
+    else:
+        storage_uri = redis_url.rstrip("/") + "/1"
+
+    return Limiter(
+        key_func=get_remote_address,
+        storage_uri=storage_uri,
+        # Default per-IP minute cap from settings. Per-endpoint decorators
+        # can override; nothing else relies on the default today.
+        default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"],
+    )
 
 
 if settings.RATE_LIMIT_ENABLED:
