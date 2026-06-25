@@ -1,0 +1,13 @@
+[Unit]
+Description=Run honeyman Postgres backup nightly
+
+[Timer]
+# 03:17 UTC daily — deliberately off the hour to dodge top-of-hour
+# traffic spikes. Run on boot if the previous fire was missed.
+OnCalendar=*-*-* 03:17:00 UTC
+Persistent=true
+AccuracySec=1min
+Unit=honeyman-backup.service
+
+[Install]
+WantedBy=timers.target

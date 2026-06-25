@@ -13,7 +13,9 @@ per host; they're idempotent.
 | File | Install to | Purpose |
 |---|---|---|
 | `postgres-backup.sh` | `/usr/local/sbin/honeyman-postgres-backup.sh` (mode 0755, owned by root) | Nightly `pg_dump` of the `honeyman_v2` DB, gzipped, written to `/var/backups/honeyman/`. Prunes anything older than `RETENTION_DAYS` (default 14). |
-| `honeyman-backup.cron` | `/etc/cron.d/honeyman-backup` (mode 0644) | Cron entry that runs the backup script at 03:17 UTC daily. |
+| `honeyman-backup.service` | `/etc/systemd/system/honeyman-backup.service` (mode 0644) | systemd unit for one-shot backup. |
+| `honeyman-backup.timer` | `/etc/systemd/system/honeyman-backup.timer` (mode 0644) | Fires the backup at 03:17 UTC daily. **This is the canonical path** — modern Debian/Ubuntu images don't ship `cron`. |
+| `honeyman-backup.cron` | `/etc/cron.d/honeyman-backup` (mode 0644) | *Alternative* for hosts that already run `cron`. Don't install alongside the systemd timer — pick one. |
 | `honeyman.logrotate` | `/etc/logrotate.d/honeyman` (mode 0644) | Rotates `/var/log/honeyman-backend.log` daily, keeps 14 compressed copies, uses `copytruncate` so the running uvicorn process keeps writing. |
 | `healthcheck.sh` | `/usr/local/sbin/honeyman-healthcheck.sh` (mode 0755) | Hits `${API_BASE}/health` plus a public read endpoint, logs to syslog, exits non-zero on failure. Optional webhook notification. |
 | `honeyman-healthcheck.service` | `/etc/systemd/system/honeyman-healthcheck.service` (mode 0644) | systemd unit for one-shot probe. |
@@ -25,15 +27,20 @@ per host; they're idempotent.
 # 0. Clone the repo (or pull the latest)
 cd /root/honeyman-Project
 
-# 1. Backups
+# 1. Backups (systemd timer — canonical path)
 install -m 0755 honeyman-v2/deployment/ops/postgres-backup.sh \
     /usr/local/sbin/honeyman-postgres-backup.sh
-install -m 0644 honeyman-v2/deployment/ops/honeyman-backup.cron \
-    /etc/cron.d/honeyman-backup
+install -m 0644 honeyman-v2/deployment/ops/honeyman-backup.service \
+    /etc/systemd/system/honeyman-backup.service
+install -m 0644 honeyman-v2/deployment/ops/honeyman-backup.timer \
+    /etc/systemd/system/honeyman-backup.timer
 
-# Confirm cron picks it up — and run once now to seed /var/backups/honeyman.
-systemctl reload cron      # or `systemctl restart cron` on older distros
-/usr/local/sbin/honeyman-postgres-backup.sh
+systemctl daemon-reload
+systemctl enable --now honeyman-backup.timer
+
+# Seed /var/backups/honeyman now so we don't have to wait until 03:17 UTC.
+systemctl start honeyman-backup.service
+journalctl -u honeyman-backup.service -n 20 --no-pager
 
 # 2. Log rotation
 install -m 0644 honeyman-v2/deployment/ops/honeyman.logrotate \

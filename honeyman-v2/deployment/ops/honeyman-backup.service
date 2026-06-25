@@ -1,0 +1,12 @@
+[Unit]
+Description=Honeyman Postgres backup (one shot)
+Documentation=https://github.com/SecurityWard/honeyman-Project
+After=postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/honeyman-postgres-backup.sh
+# Override RETENTION_DAYS or BACKUP_DIR via an env file at
+# /etc/honeyman/backup.env if you don't want the defaults.
+EnvironmentFile=-/etc/honeyman/backup.env
