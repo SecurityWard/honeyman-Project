@@ -184,7 +184,7 @@ alerting) and rule-quality tuning (Phase G).
 | C | Resilience + central rule sync (SQLite offline buffer, `GET /api/v2/rules`) | ✅ Deployed (poller opt-in) |
 | D | Location chain — manual / GPS / WiFi / IP, with accuracy circles on the map | ✅ Deployed |
 | E | Optional SSH/HTTP canary + frontend filter | ✅ Mostly deployed (OpenCanary server running; explicit toggle + UI filter still to do) |
-| F | Operability — log rotation, Prometheus, alerting | ⏳ Partial (nginx+TLS done; metrics/alerting/logrotate not) |
+| F | Operability — log rotation, Prometheus, alerting | ⏳ Partial (nginx+TLS done; logrotate + nightly Postgres dump + 5-min uptime probe shipped as installable artifacts under `honeyman-v2/deployment/ops/`; Prometheus/alerting still open) |
 | G | Rule quality & tuning | ⏳ Open — see `PROJECT-PLAN.md` §5 |
 | H | Security review | ⏳ Scheduled — see [`SECURITY.md`](SECURITY.md) |
 

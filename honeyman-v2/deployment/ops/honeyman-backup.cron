@@ -1,0 +1,14 @@
+# /etc/cron.d/honeyman-backup
+#
+# Daily Postgres dump of the Honeyman DB. Output goes to syslog via the
+# `logger -t honeyman-backup` calls in the script; cron will also email
+# root on a non-zero exit.
+#
+# Install: cp this file to /etc/cron.d/honeyman-backup ; chmod 0644
+#
+# Adjust the time below if 03:17 UTC clashes with anything else on the
+# host (it's deliberately off the hour to dodge top-of-hour traffic).
+
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+17 3 * * *  root  /usr/local/sbin/honeyman-postgres-backup.sh

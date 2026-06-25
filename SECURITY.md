@@ -228,9 +228,6 @@ include "URGENT" in the subject.
 
 Live list, kept honest:
 
-- Backend `/var/log/honeyman-backend.log` grows unbounded — no
-  logrotate. Practical impact: disk fills eventually, but not soon at
-  current ingest rate.
 - API-key hashing has no salt. Migrating to argon2 + per-key salt is
   reasonable; not yet scheduled.
 - `install.sh` has no signature. Open issue.
@@ -239,3 +236,6 @@ Live list, kept honest:
   cloned tree.
 - Heartbeat endpoint is not rate-limited (cheap UPDATE, but a
   compromised key could spam it). Open issue.
+- Logrotate config + nightly Postgres dump + 5-min uptime probe are
+  available under `honeyman-v2/deployment/ops/` but install separately
+  per host — they are not wired into `phase_a_apply.sh`.

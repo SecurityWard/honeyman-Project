@@ -1,0 +1,11 @@
+[Unit]
+Description=Honeyman uptime probe (one shot)
+Documentation=https://github.com/SecurityWard/honeyman-Project
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/honeyman-healthcheck.sh
+# Override API_BASE or HEALTHCHECK_WEBHOOK by dropping an
+# EnvironmentFile= line pointing at /etc/honeyman/healthcheck.env
+# with KEY=value pairs. Kept out of this unit so the same systemd
+# file works for any deployment.

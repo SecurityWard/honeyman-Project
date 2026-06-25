@@ -1,0 +1,15 @@
+[Unit]
+Description=Run honeyman uptime probe every 5 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+# We want the probe to fire even if the system was suspended; backups
+# laptops aren't relevant for the VPS use case, but `Persistent=true`
+# is harmless and makes the timer behave under DST shifts.
+Persistent=true
+Unit=honeyman-healthcheck.service
+
+[Install]
+WantedBy=timers.target

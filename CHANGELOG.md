@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Operations hygiene — 2026-06
+
+- `.github/workflows/ci.yml` — minimum push/PR pipeline: backend
+  modules compile, agent installs cleanly + compiles, frontend builds
+  via `tsc -b && vite build`, and `install.sh` + deployment shell
+  scripts parse via `bash -n`. Intentionally excludes Postgres/Redis
+  integration tests and lint gates.
+- `honeyman-v2/deployment/ops/` — installable artifacts for the things
+  every production deploy needs but the app doesn't ship by default:
+  - `postgres-backup.sh` + `honeyman-backup.cron` — nightly
+    `pg_dump` of `honeyman_v2` to `/var/backups/honeyman/`, 14-day
+    retention, logs to syslog, cron emails root on non-zero exit.
+  - `honeyman.logrotate` — daily rotation of
+    `/var/log/honeyman-backend.log`, 14 compressed copies,
+    `copytruncate` so uvicorn doesn't need a reload. Closes the
+    "log grows unbounded" item from SECURITY.md §7.
+  - `healthcheck.sh` + `honeyman-healthcheck.service` +
+    `honeyman-healthcheck.timer` — every 5 minutes, probe
+    `${API_BASE}/health` and a public read endpoint, log to syslog
+    on success, exit non-zero (and optionally POST a webhook) on
+    failure. No external SaaS dependency.
+- README operability row updated; SECURITY.md §7 trimmed.
+
 ### Security audit & documentation pass — 2026-06
 
 - Pentester-style audit of the deployed surface produced 14 actionable

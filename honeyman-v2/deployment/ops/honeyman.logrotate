@@ -1,0 +1,20 @@
+# /etc/logrotate.d/honeyman
+#
+# Rotates the FastAPI backend log (the systemd unit appends to the same
+# file via StandardOutput=append:/var/log/honeyman-backend.log — see
+# DEPLOY.md §5.) Without this rotation the log grows unbounded; we flagged
+# this as an open item in SECURITY.md §7.
+#
+# We use `copytruncate` so the running uvicorn process keeps writing to
+# the same file descriptor — no need to signal or restart the service.
+
+/var/log/honeyman-backend.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    create 0640 root adm
+}
