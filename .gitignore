@@ -99,7 +99,8 @@ dist/
 build/
 *.egg-info/
 
-# Test files
-test_*.py
-test_*.sh
+# Test runner state (NOT the test files themselves — those should be tracked)
+.pytest_cache/
+.coverage
+htmlcov/
 *.test

@@ -144,7 +144,7 @@ and rule-quality tuning. Numbers from production right now:
 | Frontend "Real-time Threat Feed" | ✅ Deployed — expandable details for matched rule, hashes, MITRE, raw_event |
 | Trends chart (`/analytics/trends`) | ✅ Deployed — fixed `date_trunc('hour'/'day'/'week')` (was raising on every call) |
 | Sensor edit/detail UI | ❌ Not built — the click-filter dashboard view replaces the immediate need |
-| Mosquitto broker on VPS | ⚠️ Configs in repo (`honeyman-v2/readme/onboarding/`), not deployed |
+| Mosquitto broker on VPS | ❌ Not deployed; HTTPS is the canonical transport |
 
 **No known integration bugs as of `dd87307`.** The four that were in this
 section at the start of Phase A (MQTT topic mismatch, location field-name
@@ -376,5 +376,5 @@ honeyman-v2/
 │   └── frontend/            React app
 │       └── README.md        Frontend dev + deploy
 ├── deployment/              VPS deployment configs (compose, nginx, etc.)
-└── readme/onboarding/       install.sh, Mosquitto, Compose configs
+└── readme/onboarding/       install.sh (served at /install)
 ```

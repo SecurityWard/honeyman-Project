@@ -161,7 +161,7 @@ honeyman-v2/
     backend/                 FastAPI app
     frontend/                React + TypeScript dashboard
   deployment/                DEPLOY.md, phase_a_apply.sh, ops scripts
-  readme/onboarding/         install.sh + Mosquitto + Compose configs
+  readme/onboarding/         install.sh (served at /install)
 ```
 
 Historical / removed-auth / onboarding chunks have been deleted; `git log`
