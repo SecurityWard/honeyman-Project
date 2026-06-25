@@ -47,6 +47,11 @@ setup(
         # HTTPS transport (sensor -> backend) and central rule sync
         'aiohttp>=3.9.0',
 
+        # Hot-reload of rules when YAML files change (rule_watcher.py).
+        # Optional at runtime — agent degrades gracefully if missing —
+        # but declaring it here makes `pip install .` pull it down.
+        'watchdog>=3.0.0',
+
         # MQTT transport (optional; only used when transport.protocol == "mqtt")
         'paho-mqtt>=1.6.1',
 

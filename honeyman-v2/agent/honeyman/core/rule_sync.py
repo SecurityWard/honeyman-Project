@@ -4,8 +4,8 @@ Central rule sync.
 
 Polls the backend's GET /api/v2/rules every N seconds. When the manifest
 version differs from the local cached version, writes new or changed rule
-files into the on-disk rules directory. The rule engine's existing
-inotify watcher picks the change up and reloads — no restart needed.
+files into the on-disk rules directory. The rule watcher (rule_watcher.py)
+picks the change up and reloads — no restart needed.
 
 Locally-edited rules are preserved: if a marker file with suffix `.local`
 exists next to a rule (e.g. usb/badusb_detection.yaml.local), the remote

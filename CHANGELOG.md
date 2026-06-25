@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Rule hot-reload actually works now — 2026-06
+
+The agent README, `example_config.yaml`, and the rule_engine /
+rule_sync docstrings all claimed "edit a YAML, the inotify watcher
+picks it up, no restart needed." There was no watcher. `reload_rules()`
+existed as a method but nothing called it — every rule edit on a
+live sensor required `systemctl restart honeyman-agent`.
+
+- New `honeyman/core/rule_watcher.py` — `watchdog`-backed file
+  watcher running in its own thread, marshalling `reload_rules()`
+  callbacks back to the asyncio loop via `call_soon_threadsafe`,
+  with a 1-second debounce so editors that write+rename-save don't
+  trigger five reloads in a row. Triggers on create/modify/delete/
+  move of any `.yaml` or `.yml` under `rules_dir`.
+- Wired into the agent lifecycle next to `rule_sync`. `get_status()`
+  reports its state for diagnostics.
+- Graceful degradation: if `watchdog` isn't installed (older sensors
+  that pre-date this change), the service logs one warning and
+  becomes a no-op. The agent still runs; rule edits just need a
+  restart, same as before.
+- `watchdog>=3.0.0` added to `setup.py`. New `rule_watcher` block in
+  example_config.yaml; defaults are safe so existing configs need no
+  edits.
+- Docs corrected — README, example_config.yaml comments, and
+  rule_sync.py docstring no longer lie.
+
 ### Operations hygiene — 2026-06
 
 - `.github/workflows/ci.yml` — minimum push/PR pipeline: backend
