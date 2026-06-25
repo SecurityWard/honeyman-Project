@@ -4,6 +4,10 @@
 .env.*.local
 *.env
 
+# Local deploy / one-shot scratch scripts — these get fed via `ssh root@vps bash -s < ...`
+# and shouldn't be tracked.
+.deploy-*.sh
+
 # Logs
 logs/
 *.log
