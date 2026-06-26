@@ -356,6 +356,30 @@ sudo iptables -D OUTPUT -d $(getent hosts api.honeymanproject.com | awk '{print 
 - [ ] After the block: `Flushing N queued messages`
 - [ ] `/api/v2/sensors/$SID` reports `is_online=True` again within ~2 minutes
 
+### G3 — Rule hot-reload picks up local edits
+
+**One-time activation on a sensor that pre-dates the rule_watcher commit:**
+
+```bash
+ssh $PI 'sudo pip install --break-system-packages watchdog && sudo systemctl restart honeyman-agent'
+ssh $PI 'sudo journalctl -u honeyman-agent -n 5 --no-pager | grep "Rule watcher started"'
+```
+
+- [ ] Agent log shows `Rule watcher started on /etc/honeyman/rules (debounce=1.0s)`
+
+**Per-release verification — edit a rule, no restart, watch reload:**
+
+```bash
+# In one terminal, tail the agent log
+ssh $PI 'sudo tail -F /var/log/honeyman/agent.log'
+
+# In another, touch a rule
+ssh $PI 'sudo touch /etc/honeyman/rules/usb/badusb_detection.yaml'
+```
+
+- [ ] Within ~1.5s of the `touch`, the log shows `Reloading detection rules...` followed by `Loaded N detection rules ...` and `Rules reloaded successfully`
+- [ ] Rule count after reload matches rule count before (regression guard — a YAML edit that ships broken syntax should log the parse error, not silently drop everything)
+
 ---
 
 ## H. Operability (SHOULD)

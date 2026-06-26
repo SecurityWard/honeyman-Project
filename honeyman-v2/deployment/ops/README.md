@@ -18,8 +18,9 @@ per host; they're idempotent.
 | `honeyman-backup.cron` | `/etc/cron.d/honeyman-backup` (mode 0644) | *Alternative* for hosts that already run `cron`. Don't install alongside the systemd timer — pick one. |
 | `honeyman.logrotate` | `/etc/logrotate.d/honeyman` (mode 0644) | Rotates `/var/log/honeyman-backend.log` daily, keeps 14 compressed copies, uses `copytruncate` so the running uvicorn process keeps writing. |
 | `healthcheck.sh` | `/usr/local/sbin/honeyman-healthcheck.sh` (mode 0755) | Hits `${API_BASE}/health` plus a public read endpoint, logs to syslog, exits non-zero on failure. Optional webhook notification. |
-| `honeyman-healthcheck.service` | `/etc/systemd/system/honeyman-healthcheck.service` (mode 0644) | systemd unit for one-shot probe. |
+| `honeyman-healthcheck.service` | `/etc/systemd/system/honeyman-healthcheck.service` (mode 0644) | systemd unit for one-shot probe. Reads optional `/etc/honeyman/healthcheck.env`. |
 | `honeyman-healthcheck.timer` | `/etc/systemd/system/honeyman-healthcheck.timer` (mode 0644) | Fires the probe every 5 min. |
+| `healthcheck.env.example` | Copy to `/etc/honeyman/healthcheck.env` (mode 0600) | Operator-edited overrides. Most important: `HEALTHCHECK_WEBHOOK=...` to actually get notified on failure. |
 
 ## Installing on a fresh VPS
 
@@ -68,22 +69,22 @@ journalctl -u honeyman-healthcheck.service -n 20 --no-pager
 
 ## Optional webhook for the uptime probe
 
-Drop `/etc/honeyman/healthcheck.env` with:
+The service unit already references `/etc/honeyman/healthcheck.env`
+(`EnvironmentFile=-/etc/honeyman/healthcheck.env` with the leading `-`
+so the unit still starts on hosts that haven't configured one). To
+turn on notifications, copy the example and edit:
 
 ```bash
-HEALTHCHECK_WEBHOOK=https://discord.com/api/webhooks/...
-# or any URL that accepts a POST with {status,host,detail}
+sudo install -m 0600 -o root -g root \
+    honeyman-v2/deployment/ops/healthcheck.env.example \
+    /etc/honeyman/healthcheck.env
+sudo $EDITOR /etc/honeyman/healthcheck.env   # uncomment HEALTHCHECK_WEBHOOK=
+sudo systemctl restart honeyman-healthcheck.service
+sudo systemctl start honeyman-healthcheck.service   # fire one probe now
 ```
 
-…and reference it from the service unit:
-
-```ini
-[Service]
-EnvironmentFile=-/etc/honeyman/healthcheck.env
-```
-
-(The leading `-` means "ignore if missing", so the unit still starts on
-hosts that don't define a webhook.)
+Without `HEALTHCHECK_WEBHOOK`, the probe still logs to syslog and the
+systemd unit still goes red on failure — you just don't get pinged.
 
 ## Verifying the backups
 

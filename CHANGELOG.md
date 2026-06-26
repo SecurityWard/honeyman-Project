@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### P0 follow-ups — 2026-06
+
+- **Backend integration smoke tests in CI.** New `backend-tests` job in
+  `.github/workflows/ci.yml` spins up TimescaleDB + Redis service
+  containers, runs `alembic upgrade head`, then exercises the
+  `register → POST threat → GET sensors → GET threats` flow plus
+  the four most expensive auth/validation failure modes (missing
+  Bearer → 401, cross-sensor write → 403, sort_by outside allowlist
+  → 422, payload over `matched_rules` cap → 422). Lives at
+  `backend/tests/{conftest.py,test_smoke.py}` with a `pytest.ini`.
+- **Healthcheck webhook wiring.** The systemd service unit now
+  references `/etc/honeyman/healthcheck.env` (with the `-` prefix so
+  it stays optional). New `healthcheck.env.example` template ships
+  in the repo — operators copy it, paste a webhook URL, and the
+  probe pings them on failure. Ops README updated.
+- **RELEASE-CHECKLIST.md §G3** — runbook for the one-time hot-reload
+  activation on existing sensors (`pip install watchdog && systemctl
+  restart`) and the per-release verification (touch a rule, see
+  reload in the log within ~1.5s).
+
 ### Rule hot-reload actually works now — 2026-06
 
 The agent README, `example_config.yaml`, and the rule_engine /
