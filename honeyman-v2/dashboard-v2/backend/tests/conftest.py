@@ -30,11 +30,27 @@ os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 # field_validator runs; the CSV form fails here. Use JSON-array form.
 os.environ.setdefault("CORS_ORIGINS", '["http://localhost:3000"]')
 
+import asyncio
 from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Session-wide event loop.
+
+    Default pytest-asyncio gives each test a fresh loop. async_engine
+    (and asyncpg's connection pool under it) is created lazily on
+    first use and pinned to that loop — second test on a fresh loop
+    then explodes with `Future ... attached to a different loop`.
+    Sharing one loop across the session keeps the pool happy.
+    """
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
 
 
 def _sync_db_url() -> str:
