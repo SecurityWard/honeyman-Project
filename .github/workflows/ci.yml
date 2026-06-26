@@ -7,15 +7,11 @@ on:
     branches: [main]
 
 # A minimum CI surface, intentionally cheap. Catches the foot-guns we've
-# actually hit in this repo: bash heredoc parse errors in install.sh,
-# Python import-time failures in the backend after a refactor, agent test
-# regressions, and TypeScript drift in the frontend.
-#
-# Things this does NOT do (intentional):
-#   - run shellcheck (the install script trips its style rules; bash -n
-#     is the cheaper "does it parse" gate)
-#   - lint Python (black/flake8 are dev tools, not CI gates here)
-#   - run frontend behaviour tests (we don't have any yet)
+# actually hit: bash heredoc parse errors in install.sh, import-graph
+# breaks in the backend after a refactor, agent setup.py vs runtime
+# dependency drift, TypeScript drift in the frontend, and the smoke
+# flow (register → POST threat → GET sensors/threats + the four most
+# expensive auth/validation failure modes).
 
 jobs:
   backend-syntax:
@@ -26,27 +22,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Compile-check all backend modules
-        run: python -m compileall -q honeyman-v2/dashboard-v2/backend/app
+      - run: python -m compileall -q backend/app
 
   agent:
     name: agent / py_compile + setup.py
     runs-on: ubuntu-latest
-    # We don't run pytest here yet — the existing test scripts are
-    # standalone async print-driven probes (not assertion-based), and
-    # adding a real test fixture is its own piece of work. Compile +
-    # install validates the import graph, which is what we keep
-    # breaking.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Compile-check agent modules
-        working-directory: honeyman-v2/agent
+      - working-directory: agent
         run: python -m compileall -q honeyman
-      - name: setup.py installs cleanly (catches missing deps)
-        working-directory: honeyman-v2/agent
+      - working-directory: agent
         run: |
           python -m pip install --upgrade pip
           pip install -e .
@@ -60,20 +48,15 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: honeyman-v2/dashboard-v2/frontend/package-lock.json
-      - name: Install
-        working-directory: honeyman-v2/dashboard-v2/frontend
+          cache-dependency-path: frontend/package-lock.json
+      - working-directory: frontend
         run: npm ci
-      - name: Build (tsc -b + vite build)
-        working-directory: honeyman-v2/dashboard-v2/frontend
+      - working-directory: frontend
         run: npm run build
 
   backend-tests:
     name: backend / pytest smoke
     runs-on: ubuntu-latest
-    # Service containers run alongside the job container — Postgres
-    # (with TimescaleDB so the alembic migration's CREATE EXTENSION works)
-    # and Redis. Both are accessible at localhost from the job step.
     services:
       postgres:
         image: timescale/timescaledb:latest-pg15
@@ -81,11 +64,7 @@ jobs:
           POSTGRES_USER: honeyman
           POSTGRES_PASSWORD: honeyman
           POSTGRES_DB: honeyman_test
-        ports:
-          - 5432:5432
-        # Wait for the DB to actually accept connections before we run
-        # `alembic upgrade head` — without this the job race-loses on
-        # the first push of the day when the image is cold.
+        ports: ['5432:5432']
         options: >-
           --health-cmd "pg_isready -U honeyman -d honeyman_test"
           --health-interval 5s
@@ -93,8 +72,7 @@ jobs:
           --health-retries 10
       redis:
         image: redis:7-alpine
-        ports:
-          - 6379:6379
+        ports: ['6379:6379']
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s
@@ -104,9 +82,8 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://honeyman:honeyman@localhost:5432/honeyman_test
       REDIS_URL: redis://localhost:6379/0
       RATE_LIMIT_ENABLED: "false"
-      # pydantic-settings 2.1 eager-json-decodes List[str] fields before
-      # our field_validator runs — CSV form ("http://a,http://b") raises
-      # before the validator sees it. Use the JSON-array form here.
+      # pydantic-settings 2.1 eager-json-decodes List[str] before our
+      # field_validator runs — the CSV form raises. Use JSON array.
       CORS_ORIGINS: '["http://localhost:3000"]'
     steps:
       - uses: actions/checkout@v4
@@ -114,48 +91,23 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: honeyman-v2/dashboard-v2/backend/requirements.txt
-      - name: Install backend deps
-        working-directory: honeyman-v2/dashboard-v2/backend
+          cache-dependency-path: backend/requirements.txt
+      - working-directory: backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      # Each diagnostic isolates one failure mode in the run log. Without
-      # them, a pytest collection error just shows "smoke tests failed"
-      # which is useless from outside the repo.
-      - name: Diagnostic — import app
-        working-directory: honeyman-v2/dashboard-v2/backend
-        run: python -c "from app.main import app; print('app imported, routes:', len(app.routes))"
-      - name: Diagnostic — postgres + alembic upgrade
-        working-directory: honeyman-v2/dashboard-v2/backend
-        run: |
-          python <<'PY'
-          import os, psycopg2
-          url = os.environ["DATABASE_URL"].replace("+asyncpg", "")
-          c = psycopg2.connect(url); c.autocommit = True
-          with c.cursor() as cur:
-              cur.execute("SELECT version()")
-              print("postgres:", cur.fetchone()[0])
-              cur.execute("SHOW shared_preload_libraries")
-              print("shared_preload:", cur.fetchone()[0])
-          c.close()
-          PY
-          alembic upgrade head
-      - name: Run smoke tests
-        working-directory: honeyman-v2/dashboard-v2/backend
-        run: pytest -v --tb=long
+      - working-directory: backend
+        run: pytest -v --tb=short
 
   shell-syntax:
     name: shell / bash -n
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: install.sh parses
-        run: bash -n honeyman-v2/readme/onboarding/install.sh
-      - name: deployment shell scripts parse
-        run: |
+      - run: bash -n deployment/install.sh
+      - run: |
           set -e
           while IFS= read -r f; do
             echo "-- $f"
             bash -n "$f"
-          done < <(find honeyman-v2/deployment -name '*.sh')
+          done < <(find deployment -name '*.sh')

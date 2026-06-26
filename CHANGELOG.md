@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Repo cleanup — flatten layout, dedupe rules, consolidate docs — 2026-06
+
+The `honeyman-v2/dashboard-v2/...` recursive nesting was hard to read,
+hard to grep, and made every doc reference brittle. Big-bang rename
+plus three other cuts.
+
+**Layout (top-level → at repo root)**
+
+```
+agent/        ← was honeyman-v2/agent/
+backend/      ← was honeyman-v2/dashboard-v2/backend/
+frontend/     ← was honeyman-v2/dashboard-v2/frontend/
+deployment/   ← was honeyman-v2/deployment/
+docs/         ← new — moved PROJECT-PLAN, CAPABILITIES, TESTING,
+                 RELEASE-CHECKLIST, ARCHITECTURE.mmd off the repo root
+```
+
+`install.sh` moved from `honeyman-v2/readme/onboarding/install.sh` to
+`deployment/install.sh` (one folder, one purpose). nginx alias + the
+install script's clone paths updated to match.
+
+**Dedup**
+
+`backend/rules/` deleted. Was a 33-file duplicate of `agent/rules/`
+that had drifted — `mac_randomization.yaml` and `rubber_ducky.yaml`
+in the backend tree were stale, meaning any sensor that turned on
+`rule_sync` would have its updated rules silently overwritten with
+the old ones. Single source of truth now lives at `agent/rules/`;
+the backend's `RULES_DIR` default (`backend/app/api/rules.py`) points
+there. Operators can override via `RULES_DIR=...` in `backend/.env`.
+
+**Other deletes**
+
+- `PHASE-A-OPS.md` — one-time May 2026 migration runbook; the
+  migration happened
+- `deployment/ops/honeyman-backup.cron` — alternative cron path for
+  the backup; we ship the systemd timer as canonical (modern Debian
+  images don't include cron), the cron file was a "which do I
+  install?" footgun
+
+**Paths updated in lockstep**
+
+- `.github/workflows/ci.yml` (simplified — diagnostic steps from the
+  debugging round folded back)
+- `deployment/nginx/honeyman.conf` (root + /install alias)
+- `deployment/install.sh` (clone target paths)
+- `deployment/phase_a_apply.sh` (BACKEND_DIR default)
+- `backend/app/api/rules.py` (RULES_DIR default → agent/rules)
+- `backend/.env.example` (added RULES_DIR placeholder)
+- `frontend/src/pages/AddSensorPage.tsx` (manual-install GitHub link)
+- README.md (repo layout, doc cross-references)
+- All sub-READMEs (`agent/`, `backend/`, `frontend/`, `deployment/`)
+- All moved docs (`docs/*.md`)
+
+CHANGELOG keeps its historical path references — those refer to the
+state at the time and rewriting them would be lying about history.
+
 ### P0 follow-ups — 2026-06
 
 - **Backend integration smoke tests in CI.** New `backend-tests` job in

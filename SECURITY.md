@@ -21,7 +21,7 @@ page](https://dashboard.honeymanproject.com/add-sensor) and the
 | Per-sensor API keys (plaintext) | One-time response from `POST /sensors/register`; written to `/etc/honeyman/api_key` mode 0600 on the sensor | A leaked key lets an attacker push fake threats as that sensor. The hash on the backend is SHA-256-only, no salting — a leaked DB plus a key list could be correlated. |
 | Sensor metadata (location, capabilities, last seen) | `sensors` table on the backend, public via `GET /sensors` | Maps to the *operator's* approximate physical location. We accept this as the cost of a public viewing surface; operators are told to use coarse manual locations if they care. |
 | Threat events (raw_event, MAC addresses, hashes, MITRE tags) | `threats` hypertable on the backend, public via `GET /threats` | Includes BLE MAC addresses of devices observed nearby (people's phones, watches). Currently no PII filter; we accept this because the raw_event is the whole point of the dashboard. **Document this in the safety callout** and revisit if it becomes a complaint. |
-| Backend admin credentials | Postgres password in `/root/honeyman-Project/honeyman-v2/dashboard-v2/backend/.env` on the **VPS only** (mode 0600, never committed — `.env` is gitignored, only `.env.example` with placeholders is in the repo). Root SSH password is a separate operator credential. | Direct DB access bypasses every public-read protection. Treat the VPS like any other production box. |
+| Backend admin credentials | Postgres password in `/root/honeyman-Project/backend/.env` on the **VPS only** (mode 0600, never committed — `.env` is gitignored, only `.env.example` with placeholders is in the repo). Root SSH password is a separate operator credential. | Direct DB access bypasses every public-read protection. Treat the VPS like any other production box. |
 | TLS private keys | Let's Encrypt managed | Standard rotation. Renew is automatic via certbot. |
 | The malware-hash database | `/var/lib/honeyman/malware_hashes.db` on each sensor, shipped from `data/malware_hashes.db` | Integrity matters: if an attacker tampers with this on a sensor they can blind the file-hash branch of the USB detector. |
 
@@ -193,7 +193,7 @@ explicit so they don't drift.
 - [ ] Server names are exhaustive (`dashboard`, `api`, apex, `www`);
       no other vhost falls through to the dashboard root.
 - [ ] No alias / try_files exposes a path outside the
-      `dashboard-v2/frontend/dist` directory except the deliberate
+      `frontend/dist` directory except the deliberate
       `location = /install`.
 - [ ] HSTS / TLS settings unchanged from certbot defaults (or
       explicitly stricter).
@@ -237,5 +237,5 @@ Live list, kept honest:
 - Heartbeat endpoint is not rate-limited (cheap UPDATE, but a
   compromised key could spam it). Open issue.
 - Logrotate config + nightly Postgres dump + 5-min uptime probe are
-  available under `honeyman-v2/deployment/ops/` but install separately
+  available under `deployment/ops/` but install separately
   per host — they are not wired into `phase_a_apply.sh`.

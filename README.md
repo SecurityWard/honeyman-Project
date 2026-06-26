@@ -8,7 +8,7 @@ The design is deliberately small: a single `curl | bash` install,
 a public read-only dashboard with no user accounts, and YAML detection
 rules that update without reflashing sensors.
 
-> **For contributors:** the canonical plan, current state, and build order live in [`PROJECT-PLAN.md`](PROJECT-PLAN.md). The architecture diagram is in [`ARCHITECTURE.mmd`](ARCHITECTURE.mmd) (Mermaid; renders on GitHub).
+> **For contributors:** the canonical plan, current state, and build order live in [`docs/PROJECT-PLAN.md`](docs/PROJECT-PLAN.md). The architecture diagram is in [`docs/ARCHITECTURE.mmd`](docs/ARCHITECTURE.mmd) (Mermaid; renders on GitHub).
 
 ---
 
@@ -24,7 +24,7 @@ rules that update without reflashing sensors.
 
 Every threat carries a location (GPS → WiFi-positioning → IP → operator-pinned), so events appear on the dashboard map at the right place, indoors or out.
 
-For accuracy expectations and the explicit list of what Honeyman does *not* detect, see [`CAPABILITIES.md`](CAPABILITIES.md).
+For accuracy expectations and the explicit list of what Honeyman does *not* detect, see [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md).
 
 ---
 
@@ -38,7 +38,7 @@ Sensor (Pi)  ──HTTPS──▶  Backend (FastAPI + TimescaleDB)  ──REST/W
                               └── optional: MQTT/TLS
 ```
 
-See [`ARCHITECTURE.mmd`](ARCHITECTURE.mmd) for the detailed diagram.
+See [`docs/ARCHITECTURE.mmd`](docs/ARCHITECTURE.mmd) for the detailed diagram.
 
 ---
 
@@ -97,7 +97,7 @@ There is no login. There are no actions. It's a viewing surface.
 
 Detection rules are YAML files. Each sensor ships with the default rule set under `/etc/honeyman/rules/<category>/`. To add or modify rules:
 
-**Locally on a sensor** — edit any YAML file in `/etc/honeyman/rules/`. The rule engine reloads on file change (inotify); no restart needed.
+**Locally on a sensor** — edit any YAML file in `/etc/honeyman/rules/`. The `watchdog`-backed rule watcher in the agent reloads on file change with a 1-second debounce; no restart needed.
 
 **Centrally** — open a PR against the public rules repo at [`github.com/SecurityWard/honeyman-rules`](https://github.com/SecurityWard/honeyman-rules) *(planned)*. Sensors poll `GET /api/v2/rules` every 5 minutes and write any new/changed rules to disk; locally-edited rules are never overwritten.
 
@@ -137,35 +137,30 @@ metadata:
   confidence: 0.98
 ```
 
-The default 35 rules live under [`honeyman-v2/agent/rules/`](honeyman-v2/agent/rules/).
+The default 35 rules live under [`agent/rules/`](agent/rules/).
 
 ---
 
 ## Repository layout
 
 ```
-README.md                    ← this file
-PROJECT-PLAN.md              canonical plan & status
-ARCHITECTURE.mmd             architecture diagram (Mermaid)
-CAPABILITIES.md              what Honeyman detects, accuracy, limitations
-CHANGELOG.md                 release notes
-TESTING.md                   how to run the test suites
-RELEASE-CHECKLIST.md         executable runbook for a release
-SECURITY.md                  threat model + per-PR review checklist
-LICENSE                      MIT
+README.md                ← this file
+CHANGELOG.md             release notes
+SECURITY.md              threat model + per-PR review checklist
+LICENSE                  MIT
 
-data/                        malware hash database (used by agent)
-honeyman-v2/
-  agent/                     sensor-side Python package + 35 default rules
-  dashboard-v2/
-    backend/                 FastAPI app
-    frontend/                React + TypeScript dashboard
-  deployment/                DEPLOY.md, phase_a_apply.sh, ops scripts
-  readme/onboarding/         install.sh (served at /install)
+agent/                   sensor-side Python package + 35 default rules
+backend/                 FastAPI app (Pydantic 2, SQLAlchemy async)
+frontend/                React + TypeScript dashboard
+deployment/              nginx config, install.sh, ops timers, DEPLOY.md
+docs/                    PROJECT-PLAN, CAPABILITIES, TESTING,
+                         RELEASE-CHECKLIST, ARCHITECTURE.mmd
+data/                    malware hash database (used by agent)
 ```
 
-Historical / removed-auth / onboarding chunks have been deleted; `git log`
-preserves them if you ever need to fish one out.
+There is exactly one rule manifest tracked, under `agent/rules/`. The
+backend serves it to sensors via `GET /api/v2/rules`; on the VPS, set
+`RULES_DIR` in `backend/.env` if you need to point at something else.
 
 ---
 
@@ -184,23 +179,23 @@ alerting) and rule-quality tuning (Phase G).
 | C | Resilience + central rule sync (SQLite offline buffer, `GET /api/v2/rules`) | ✅ Deployed (poller opt-in) |
 | D | Location chain — manual / GPS / WiFi / IP, with accuracy circles on the map | ✅ Deployed |
 | E | Optional SSH/HTTP canary + frontend filter | ✅ Mostly deployed (OpenCanary server running; explicit toggle + UI filter still to do) |
-| F | Operability — log rotation, Prometheus, alerting | ⏳ Partial (nginx+TLS done; logrotate + nightly Postgres dump + 5-min uptime probe shipped as installable artifacts under `honeyman-v2/deployment/ops/`; Prometheus/alerting still open) |
-| G | Rule quality & tuning | ⏳ Open — see `PROJECT-PLAN.md` §5 |
+| F | Operability — log rotation, Prometheus, alerting | ⏳ Partial (nginx+TLS done; logrotate + nightly Postgres dump + 5-min uptime probe shipped as installable artifacts under `deployment/ops/`; Prometheus/alerting still open) |
+| G | Rule quality & tuning | ⏳ Open — see [`docs/PROJECT-PLAN.md`](docs/PROJECT-PLAN.md) §5 |
 | H | Security review | ⏳ Scheduled — see [`SECURITY.md`](SECURITY.md) |
 
-The full plan and per-phase notes live in
-[`PROJECT-PLAN.md`](PROJECT-PLAN.md); release notes are in
-[`CHANGELOG.md`](CHANGELOG.md); the test plan is in
-[`TESTING.md`](TESTING.md); the threat model + review checklist is in
-[`SECURITY.md`](SECURITY.md); deployment runbook is in
-[`honeyman-v2/deployment/DEPLOY.md`](honeyman-v2/deployment/DEPLOY.md).
+The full plan lives in [`docs/PROJECT-PLAN.md`](docs/PROJECT-PLAN.md);
+release notes in [`CHANGELOG.md`](CHANGELOG.md); the test plan in
+[`docs/TESTING.md`](docs/TESTING.md); the release-time runbook in
+[`docs/RELEASE-CHECKLIST.md`](docs/RELEASE-CHECKLIST.md); the threat
+model + per-PR checklist in [`SECURITY.md`](SECURITY.md); deployment
+in [`deployment/DEPLOY.md`](deployment/DEPLOY.md).
 
 ---
 
 ## Contributing
 
 - **Rules:** open PRs to the rules repo (link above). New detection signatures, MITRE ATT&CK mappings, false-positive tuning all welcome.
-- **Code:** open PRs to this repo. Please match the design constraints in `PROJECT-PLAN.md` — in particular: no user accounts, public read-only dashboard, sensors authenticate with API keys, rules are YAML-driven.
+- **Code:** open PRs to this repo. Please match the design constraints in [`docs/PROJECT-PLAN.md`](docs/PROJECT-PLAN.md) — in particular: no user accounts, public read-only dashboard, sensors authenticate with API keys, rules are YAML-driven.
 - **Bug reports:** GitHub Issues. Include sensor model, agent version (`honeyman-agent --version`), and the relevant chunk of `/var/log/honeyman/agent.log`.
 
 ---
