@@ -104,7 +104,10 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://honeyman:honeyman@localhost:5432/honeyman_test
       REDIS_URL: redis://localhost:6379/0
       RATE_LIMIT_ENABLED: "false"
-      CORS_ORIGINS: http://localhost:3000
+      # pydantic-settings 2.1 eager-json-decodes List[str] fields before
+      # our field_validator runs — CSV form ("http://a,http://b") raises
+      # before the validator sees it. Use the JSON-array form here.
+      CORS_ORIGINS: '["http://localhost:3000"]'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

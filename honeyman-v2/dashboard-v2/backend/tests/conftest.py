@@ -26,7 +26,9 @@ os.environ.setdefault(
 )
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
-os.environ.setdefault("CORS_ORIGINS", "http://localhost:3000")
+# pydantic-settings 2.1 eager-json-decodes List[str] env vars before the
+# field_validator runs; the CSV form fails here. Use JSON-array form.
+os.environ.setdefault("CORS_ORIGINS", '["http://localhost:3000"]')
 
 from typing import AsyncGenerator
 
