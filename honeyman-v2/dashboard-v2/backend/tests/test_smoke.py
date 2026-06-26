@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import pytest
 
-from .conftest import register_sensor
+from .helpers import register_sensor
 
 
 pytestmark = pytest.mark.asyncio

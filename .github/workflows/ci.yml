@@ -120,9 +120,30 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+      # Each diagnostic isolates one failure mode in the run log. Without
+      # them, a pytest collection error just shows "smoke tests failed"
+      # which is useless from outside the repo.
+      - name: Diagnostic — import app
+        working-directory: honeyman-v2/dashboard-v2/backend
+        run: python -c "from app.main import app; print('app imported, routes:', len(app.routes))"
+      - name: Diagnostic — postgres + alembic upgrade
+        working-directory: honeyman-v2/dashboard-v2/backend
+        run: |
+          python <<'PY'
+          import os, psycopg2
+          url = os.environ["DATABASE_URL"].replace("+asyncpg", "")
+          c = psycopg2.connect(url); c.autocommit = True
+          with c.cursor() as cur:
+              cur.execute("SELECT version()")
+              print("postgres:", cur.fetchone()[0])
+              cur.execute("SHOW shared_preload_libraries")
+              print("shared_preload:", cur.fetchone()[0])
+          c.close()
+          PY
+          alembic upgrade head
       - name: Run smoke tests
         working-directory: honeyman-v2/dashboard-v2/backend
-        run: pytest -x
+        run: pytest -v --tb=long
 
   shell-syntax:
     name: shell / bash -n

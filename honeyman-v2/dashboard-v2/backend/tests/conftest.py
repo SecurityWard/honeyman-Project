@@ -93,18 +93,5 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
         yield ac
 
 
-async def register_sensor(client: AsyncClient, requested_name: str = "ci-sensor") -> tuple[str, str]:
-    """Register a sensor; return (sensor_id, api_key). Used by most tests."""
-    resp = await client.post(
-        "/api/v2/sensors/register",
-        json={
-            "requested_name": requested_name,
-            "capabilities": {"usb": True, "ble": True},
-            "enabled_detectors": ["usb", "ble"],
-            "platform": "ci",
-            "agent_version": "test",
-        },
-    )
-    assert resp.status_code == 201, resp.text
-    body = resp.json()
-    return body["sensor_id"], body["api_key"]
+# Helpers live in tests/helpers.py — see the note there about why we
+# don't import them from this conftest module.
