@@ -53,8 +53,8 @@ async def register_sensor(
     Self-register a new sensor. Returns a one-time plaintext API key.
 
     The install script captures the api_key from this response and writes
-    it to /etc/honeyman/credentials. The plaintext is never retrievable
-    again — only its SHA256 hash is stored.
+    it to /etc/honeyman/api_key (mode 0600). The plaintext is never
+    retrievable again — only its SHA256 hash is stored.
     """
 
     base_name = _normalize_name(registration.requested_name)

@@ -33,7 +33,6 @@ LOG_DIR="/var/log/honeyman"
 DATA_DIR="/var/lib/honeyman"
 RULES_DIR="${CONFIG_DIR}/rules"
 API_KEY_FILE="${CONFIG_DIR}/api_key"
-CREDS_FILE="${CONFIG_DIR}/credentials"   # legacy alias, written for back-compat
 AGENT_REPO="${AGENT_REPO:-https://github.com/SecurityWard/honeyman-Project.git}"
 AGENT_REF="${AGENT_REF:-main}"
 
@@ -341,12 +340,6 @@ write_credentials() {
     umask 077
     printf '%s' "$SENSOR_API_KEY" > "$API_KEY_FILE"
     chmod 0600 "$API_KEY_FILE"
-    # legacy 'credentials' file kept for systems that look there
-    {
-        printf 'sensor_id=%s\n'  "$SENSOR_ID"
-        printf 'api_key=%s\n'    "$SENSOR_API_KEY"
-    } > "$CREDS_FILE"
-    chmod 0600 "$CREDS_FILE"
     success "API key written to $API_KEY_FILE (mode 0600)"
 }
 

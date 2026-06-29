@@ -41,7 +41,7 @@ class SensorRegistration(BaseModel):
 class SensorRegistrationResponse(BaseModel):
     """
     Returned exactly once. The plaintext api_key is never retrievable again -
-    the install script writes it to /etc/honeyman/credentials.
+    the install script writes it to /etc/honeyman/api_key (mode 0600).
     """
 
     sensor_id: str = Field(..., description='e.g. "defcon-hotel-7x9k"')

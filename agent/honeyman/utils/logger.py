@@ -1,5 +1,12 @@
-#!/usr/bin/env python3
-"""Logging configuration"""
+"""Logging configuration.
+
+The file handler is the primary log surface — operators read
+/var/log/honeyman/agent.log. The console handler stays at WARNING so
+systemd's journal only sees real problems (startup, errors, restarts),
+not every threat detection at INFO. Without that cap, every USB plug-in
+and BLE match would land in `journalctl -u honeyman-agent`, drowning
+the lifecycle signal in detection noise.
+"""
 
 import logging
 import logging.handlers
@@ -8,44 +15,32 @@ from typing import Dict, Any
 
 
 def setup_logger(config: Dict[str, Any]):
-    """
-    Setup logging configuration
-
-    Args:
-        config: Logging configuration
-    """
     level = config.get('level', 'INFO')
     log_file = config.get('file', '/var/log/honeyman/agent.log')
-    max_bytes = config.get('max_bytes', 10 * 1024 * 1024)  # 10MB
+    max_bytes = config.get('max_bytes', 10 * 1024 * 1024)
     backup_count = config.get('backup_count', 5)
 
-    # Create log directory if needed
     log_path = Path(log_file)
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Setup root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(getattr(logging, level.upper()))
 
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_format = logging.Formatter(
+    fmt = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        datefmt='%Y-%m-%d %H:%M:%S',
     )
-    console_handler.setFormatter(console_format)
+
+    # Console / systemd-journal handler: warnings and above only.
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.WARNING)
+    console_handler.setFormatter(fmt)
     root_logger.addHandler(console_handler)
 
-    # File handler (rotating)
+    # File handler honours the configured level (INFO by default).
     file_handler = logging.handlers.RotatingFileHandler(
-        log_file,
-        maxBytes=max_bytes,
-        backupCount=backup_count
+        log_file, maxBytes=max_bytes, backupCount=backup_count,
     )
     file_handler.setLevel(getattr(logging, level.upper()))
-    file_format = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    file_handler.setFormatter(file_format)
+    file_handler.setFormatter(fmt)
     root_logger.addHandler(file_handler)

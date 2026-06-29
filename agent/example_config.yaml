@@ -4,41 +4,36 @@
 # Override with: honeyman-agent --config /path/to/config.yaml
 
 # --- Sensor identity -------------------------------------------------
-# Both of these are written by install.sh after the sensor self-registers.
+# Written by install.sh after the sensor self-registers with the backend.
 sensor_id: "<assigned-by-server>"   # e.g. defcon-hotel-7x9k
 sensor_name: "Honeyman Sensor"
 
-# Detection rules directory. The agent loads everything under this
-# tree at startup, so to pick up an edit:
+# Detection rules directory. The agent loads everything under this tree
+# at startup. To pick up an edit:
 #     sudo systemctl restart honeyman-agent
-# To customise rules per sensor, drop new YAML files here or edit
-# the shipped ones; create a `<rule>.yaml.local` marker file next to
-# any rule you don't want central rule_sync (below) to overwrite.
+# To customise rules on a single sensor, drop new YAML files here or
+# edit the shipped ones. Create a `<rule>.yaml.local` marker file next
+# to any rule you don't want central rule_sync (below) to overwrite.
 rules_dir: /etc/honeyman/rules
 
-# Heartbeat interval in seconds. Heartbeats also carry the current location
-# so idle sensors stay visible on the dashboard map.
+# How often the sensor reports liveness + location to the backend.
 heartbeat_interval: 60
 
 # --- Transport -------------------------------------------------------
-# Default: HTTPS + per-sensor API key. The key lives in a separate file
-# (mode 0600) so the YAML config can be safely shared/version-controlled.
-#
-# To opt into MQTT instead, set transport.protocol: mqtt and fill in the
-# mqtt block below. HTTPS is the recommended default — no broker needed.
+# HTTPS is the default. The plaintext API key lives in a separate file
+# (mode 0600) so this config can be shared freely. To use MQTT instead,
+# set protocol: mqtt and fill in the mqtt block.
 transport:
-  protocol: https      # https (default) | mqtt
-  fallback: none       # none (default) | https | mqtt
+  protocol: https      # https | mqtt
+  fallback: none       # none | https | mqtt
 
   https:
     base_url: https://api.honeymanproject.com
     api_prefix: /api/v2
-    api_key_file: /etc/honeyman/api_key   # contains the plaintext key, mode 0600
-    # api_key: "hms_..."                  # uncomment to override the file (testing only)
+    api_key_file: /etc/honeyman/api_key
     timeout: 30
     verify_ssl: true
 
-  # Optional. Only used when protocol or fallback references mqtt.
   mqtt:
     broker: ""           # e.g. mqtt.honeymanproject.com
     port: 8883
@@ -47,8 +42,8 @@ transport:
     use_tls: true
     qos: 1
 
-  # Phase C: persistent FIFO buffer for outbound messages when the
-  # backend is unreachable. Survives agent restarts.
+  # SQLite FIFO for outbound messages when the backend is unreachable.
+  # Survives agent restarts; bounded at offline_buffer_max_rows.
   offline_buffer_path: /var/lib/honeyman/buffer.db
   offline_buffer_max_rows: 10000
 
@@ -56,10 +51,10 @@ transport:
 # install.sh sets these based on detected hardware.
 detectors:
   usb: true
-  wifi: false       # requires monitor-mode capable WiFi adapter
-  ble: false        # requires BLE hardware (bluez running)
+  wifi: false       # needs a monitor-mode capable WiFi adapter
+  ble: false        # needs BLE hardware + bluez
   network: true     # OpenCanary integration
-  airdrop: false    # requires avahi-utils (Linux) or dns-sd (macOS)
+  airdrop: false    # needs avahi-utils (Linux) or dns-sd (macOS)
 
 # --- Per-detector settings -----------------------------------------
 usb:
@@ -67,62 +62,64 @@ usb:
   scan_storage_devices: true
   max_file_size_mb: 100
 
-# --- Location service (Phase D) -------------------------------------
-# Resolution order (skipped on a miss, falls through to the next):
-#   1. Operator-pinned manual coordinates (if both lat+lon set below)
-#   2. GPS via gpsd                       (gps_enabled: true)
+# --- Location --------------------------------------------------------
+# Resolution order (next source is tried on a miss):
+#   1. Operator-pinned manual coordinates (manual_latitude + manual_longitude)
+#   2. GPS via gpsd (gps_enabled: true)
 #   3. WiFi positioning (Mozilla Location Service or Google)
-#   4. IP geolocation via ipapi.co        (always available, ~5km accuracy)
+#   4. IP geolocation via ipapi.co (~5km accuracy)
 #
-# The dashboard map draws a confidence circle around each threat marker
-# whose radius equals accuracy_meters, colour-coded by which method won.
+# Every threat carries `accuracy_meters` and `location_method` so the
+# dashboard map can draw a confidence circle, colour-coded by method.
 location:
   enabled: true
 
-  # Operator-pinned override. If both manual_latitude and manual_longitude
-  # are set, all dynamic methods are skipped and these are reported as
-  # ground truth on every threat + heartbeat.
+  # Operator-pinned override. If both lat+lon are set, the dynamic
+  # methods are skipped and these coordinates are reported as ground
+  # truth on every threat + heartbeat.
   # manual_latitude: 37.7749
   # manual_longitude: -122.4194
-  # manual_label: "DefCon 32 hotel lobby"   # optional free-text label
-  # manual_accuracy: 10                     # metres; defaults to 10m for manual
+  # manual_label: "DefCon 32 hotel lobby"
+  # manual_accuracy: 10                     # metres; default 10 for manual
 
-  # GPS via gpsd (apt install gpsd gpsd-clients on the Pi). Listens on
-  # 127.0.0.1:2947 by default. Only effective when a GPS receiver is attached.
+  # GPS via gpsd (apt install gpsd gpsd-clients). Listens on
+  # 127.0.0.1:2947 by default. Only effective with a GPS receiver attached.
   gps_enabled: false
   # gpsd_host: 127.0.0.1
   # gpsd_port: 2947
   # gpsd_timeout: 5
 
-  # WiFi positioning. With no api key set, the agent uses Mozilla Location
-  # Service's free ?key=test endpoint (rate-limited but works). To use Google
-  # Geolocation API, drop your key here:
+  # WiFi positioning. With no key set, falls back to Mozilla Location
+  # Service's free ?key=test endpoint (rate-limited). For Google's API:
   # wifi_positioning_api_key: "AIza..."
   # wifi_interface: wlan0     # autodetected via `iw dev` if omitted
   # wifi_max_aps: 12
 
-  # How long to cache a successful resolution before re-querying any source.
+  # How long to cache a successful resolution before re-querying.
   # cache_ttl_seconds: 300
 
-# --- Central rule sync (Phase C) ------------------------------------
+# --- Central rule sync -----------------------------------------------
 # When enabled, the agent polls GET /api/v2/rules every interval_seconds
-# and writes new/changed YAML rules into rules_dir. The rule watcher
-# below picks the change up and reloads without a restart.
+# and writes new/changed YAML rules into rules_dir. Pulled changes take
+# effect after the next agent restart.
 #
-# To pin a locally-edited rule against being overwritten by remote pushes,
-# create a marker file next to it, e.g.
+# To pin a locally-customised rule against being overwritten by a remote
+# push, create a marker file next to it:
 #     touch /etc/honeyman/rules/usb/badusb_detection.yaml.local
 #
-# Disabled by default — opt in by setting enabled: true.
+# Disabled by default — opt in with enabled: true.
 rule_sync:
   enabled: false
   interval_seconds: 300                    # 5 minutes
-  # backend_base_url, api_prefix, api_key_file all default to the values
-  # under transport.https above. Override here only if rules live somewhere
-  # different than threats.
+  # backend_base_url, api_prefix, and api_key_file default to the
+  # values under transport.https above. Only override if the rule
+  # manifest is served from a different backend than threats.
   state_file: /var/lib/honeyman/rules_version
 
 # --- Logging ---------------------------------------------------------
+# `file` is the full log surface (the level below applies). systemd's
+# journal only gets WARNING and above, so `journalctl -u honeyman-agent`
+# stays clean and detection chatter lives in /var/log/honeyman/agent.log.
 logging:
   level: INFO     # DEBUG | INFO | WARNING | ERROR
   file: /var/log/honeyman/agent.log
