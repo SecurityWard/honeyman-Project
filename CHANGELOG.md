@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Revert rule hot-reload — keep it simple — 2026-06
+
+Pulled `rule_watcher.py` and its dependency on `watchdog`. The agent
+already loads every rule under `/etc/honeyman/rules/` at startup, so
+the simple flow is enough:
+
+    sudo systemctl restart honeyman-agent
+
+A `watchdog`-backed file watcher with debouncing + asyncio plumbing was
+strictly nicer ergonomically ("no restart needed") but added a runtime
+dep, a thread, and a class to debug. Rule edits don't happen often
+enough to justify the moving part — and we want to focus on detection
+quality, not infrastructure cleverness.
+
+What this changes:
+- `agent/honeyman/core/rule_watcher.py` deleted
+- `agent/honeyman/agent.py` no longer imports / wires the watcher
+- `agent/setup.py` drops the `watchdog>=3.0.0` dep
+- `agent/example_config.yaml` drops the `rule_watcher:` block; the
+  `rules_dir` comment now points at `systemctl restart` as the canonical
+  way to pick up edits
+- `agent/README.md` updated likewise
+- `docs/RELEASE-CHECKLIST.md` §G3 rewritten — instead of "touch a file,
+  watch reload", it's "add a YAML, restart, see count tick"
+- New §G4 covers the `.yaml.local` marker guarding against rule_sync
+  overwriting locally-customised rules. That mechanism survives the
+  watcher removal and is the canonical answer to "I want my own rules
+  that won't get clobbered."
+
+Local rules still work exactly the same way:
+- Drop YAML in `/etc/honeyman/rules/<category>/`
+- Optionally `touch <rule>.yaml.local` to pin against central sync
+- `sudo systemctl restart honeyman-agent`
+
 ### Repo cleanup — flatten layout, dedupe rules, consolidate docs — 2026-06
 
 The `honeyman-v2/dashboard-v2/...` recursive nesting was hard to read,

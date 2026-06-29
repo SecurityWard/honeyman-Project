@@ -14,7 +14,6 @@ from .core.config_manager import ConfigManager
 from .core.plugin_manager import PluginManager
 from .core.heartbeat import HeartbeatService
 from .core.rule_sync import RuleSyncService
-from .core.rule_watcher import RuleWatcherService
 from .transport.protocol_handler import ProtocolHandler
 from .rules.rule_engine import RuleEngine
 from .services.location_service import LocationService
@@ -46,7 +45,6 @@ class HoneymanAgent:
         self.transport = None
         self.heartbeat = None
         self.rule_sync = None
-        self.rule_watcher = None
         self.location_service = None
 
         # Setup signal handlers
@@ -123,16 +121,6 @@ class HoneymanAgent:
             transport_config=self.config.get('transport', {}),
         )
 
-        # Rule hot-reload. Watches rules_dir and calls reload_rules()
-        # on YAML change. No-op if `watchdog` isn't installed (older
-        # sensors) — agent still runs, edits just need a restart.
-        watcher_config = self.config.get('rule_watcher', {}) or {}
-        self.rule_watcher = RuleWatcherService(
-            rules_dir=rules_dir,
-            rule_engine=self.rule_engine,
-            debounce_seconds=float(watcher_config.get('debounce_seconds', 1.0)),
-        )
-
         logger.info(f"Agent initialized with {len(self.detectors)} detectors")
 
     async def start(self):
@@ -152,10 +140,6 @@ class HoneymanAgent:
         # Start rule-sync poller (no-op if rule_sync.enabled is false)
         if self.rule_sync:
             await self.rule_sync.start()
-
-        # Start file watcher for hot-reload of local rule edits
-        if self.rule_watcher:
-            await self.rule_watcher.start()
 
         # Start all detectors
         tasks = []
@@ -185,10 +169,6 @@ class HoneymanAgent:
         if self.heartbeat:
             await self.heartbeat.stop()
 
-        # Stop file watcher
-        if self.rule_watcher:
-            await self.rule_watcher.stop()
-
         # Stop rule-sync poller
         if self.rule_sync:
             await self.rule_sync.stop()
@@ -214,7 +194,6 @@ class HoneymanAgent:
             },
             'transport': self.transport.get_status() if self.transport else {},
             'rule_sync': self.rule_sync.get_status() if self.rule_sync else {},
-            'rule_watcher': self.rule_watcher.get_status() if self.rule_watcher else {},
             'rules_loaded': len(self.rule_engine.rules) if self.rule_engine else 0,
         }
 

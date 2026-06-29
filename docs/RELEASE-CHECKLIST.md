@@ -356,29 +356,35 @@ sudo iptables -D OUTPUT -d $(getent hosts api.honeymanproject.com | awk '{print 
 - [ ] After the block: `Flushing N queued messages`
 - [ ] `/api/v2/sensors/$SID` reports `is_online=True` again within ~2 minutes
 
-### G3 — Rule hot-reload picks up local edits
+### G3 — Local rule edits load after restart
 
-**One-time activation on a sensor that pre-dates the rule_watcher commit:**
-
-```bash
-ssh $PI 'sudo pip install --break-system-packages watchdog && sudo systemctl restart honeyman-agent'
-ssh $PI 'sudo journalctl -u honeyman-agent -n 5 --no-pager | grep "Rule watcher started"'
-```
-
-- [ ] Agent log shows `Rule watcher started on /etc/honeyman/rules (debounce=1.0s)`
-
-**Per-release verification — edit a rule, no restart, watch reload:**
+Operators can add or edit YAML rules in `/etc/honeyman/rules/<category>/`
+and pick them up with a service restart. (We deliberately don't run an
+inotify watcher — the dependency + threading-to-asyncio plumbing isn't
+worth the "no restart needed" win for a config that changes rarely.)
 
 ```bash
-# In one terminal, tail the agent log
-ssh $PI 'sudo tail -F /var/log/honeyman/agent.log'
-
-# In another, touch a rule
-ssh $PI 'sudo touch /etc/honeyman/rules/usb/badusb_detection.yaml'
+# Add a test rule and restart
+ssh $PI 'sudo cp /etc/honeyman/rules/usb/rubber_ducky.yaml /etc/honeyman/rules/usb/test_local.yaml'
+ssh $PI 'sudo systemctl restart honeyman-agent && sleep 3'
+ssh $PI 'sudo journalctl -u honeyman-agent --since "10 seconds ago" --no-pager | grep "detection rules"'
 ```
 
-- [ ] Within ~1.5s of the `touch`, the log shows `Reloading detection rules...` followed by `Loaded N detection rules ...` and `Rules reloaded successfully`
-- [ ] Rule count after reload matches rule count before (regression guard — a YAML edit that ships broken syntax should log the parse error, not silently drop everything)
+- [ ] Log shows `Loaded N detection rules` with `N` one higher than before
+- [ ] Removing `test_local.yaml` and restarting drops the count back
+
+### G4 — `.yaml.local` marker survives a rule_sync round
+
+```bash
+# Pin a local edit
+ssh $PI 'sudo touch /etc/honeyman/rules/usb/badusb_detection.yaml.local'
+# Trigger a sync (only relevant if rule_sync.enabled=true)
+ssh $PI 'sudo systemctl restart honeyman-agent && sleep 10'
+ssh $PI 'sudo journalctl -u honeyman-agent --since "30 seconds ago" --no-pager | grep -i "preserved\|skipped_local"'
+```
+
+- [ ] If rule_sync is enabled, log shows `skipped_local=1` (or similar). If
+      disabled, this check is a no-op — note that on the runbook.
 
 ---
 

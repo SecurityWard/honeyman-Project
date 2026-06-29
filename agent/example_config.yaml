@@ -8,10 +8,12 @@
 sensor_id: "<assigned-by-server>"   # e.g. defcon-hotel-7x9k
 sensor_name: "Honeyman Sensor"
 
-# Detection rules directory. The rule watcher (see rule_watcher below)
-# watches this dir and reloads on file change — no restart needed.
-# If rule_sync (below) is enabled, the directory is also kept in sync
-# with the backend.
+# Detection rules directory. The agent loads everything under this
+# tree at startup, so to pick up an edit:
+#     sudo systemctl restart honeyman-agent
+# To customise rules per sensor, drop new YAML files here or edit
+# the shipped ones; create a `<rule>.yaml.local` marker file next to
+# any rule you don't want central rule_sync (below) to overwrite.
 rules_dir: /etc/honeyman/rules
 
 # Heartbeat interval in seconds. Heartbeats also carry the current location
@@ -119,14 +121,6 @@ rule_sync:
   # under transport.https above. Override here only if rules live somewhere
   # different than threats.
   state_file: /var/lib/honeyman/rules_version
-
-# --- Rule hot-reload -------------------------------------------------
-# Watches rules_dir for any .yaml/.yml change and reloads the rule
-# engine after debounce_seconds of quiet. Powered by `watchdog`; if
-# the package is missing the agent still runs but hot-reload is off
-# and rule edits need a `systemctl restart honeyman-agent`.
-rule_watcher:
-  debounce_seconds: 1.0
 
 # --- Logging ---------------------------------------------------------
 logging:
