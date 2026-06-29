@@ -33,7 +33,7 @@ async def test_usb_detector():
         'sensor_name': 'Test Sensor',
         'rules_dir': 'rules',
         'usb': {
-            'hash_database_path': '/etc/honeyman/data/malware_hashes.db'
+            'hash_database_path': '/var/lib/honeyman/malware_hashes.db'
         },
         'transport': {
             'protocol': 'http',

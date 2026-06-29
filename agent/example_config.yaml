@@ -58,7 +58,9 @@ detectors:
 
 # --- Per-detector settings -----------------------------------------
 usb:
-  hash_database_path: /etc/honeyman/data/malware_hashes.db
+  # install.sh ships this DB from the cloned source tree's data/ dir
+  # to /var/lib/honeyman/ at install time. ~360 malware signatures.
+  hash_database_path: /var/lib/honeyman/malware_hashes.db
   scan_storage_devices: true
   max_file_size_mb: 100
 

@@ -63,7 +63,7 @@ class UsbDetector(BaseDetector):
         """Initialize connection to malware hash database"""
         try:
             db_path = self.config.get('usb.hash_database_path',
-                                     '/etc/honeyman/data/malware_hashes.db')
+                                     '/var/lib/honeyman/malware_hashes.db')
 
             if os.path.exists(db_path):
                 self.hash_db = sqlite3.connect(db_path, check_same_thread=False)
