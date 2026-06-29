@@ -15,6 +15,7 @@
 set -uo pipefail
 
 API_BASE="${API_BASE:-https://api.honeymanproject.com}"
+DASH_BASE="${DASH_BASE:-https://dashboard.honeymanproject.com}"
 TIMEOUT="${TIMEOUT:-10}"
 WEBHOOK="${HEALTHCHECK_WEBHOOK:-}"
 LOG_TAG="honeyman-healthcheck"
@@ -44,6 +45,15 @@ fi
 #    "backend running but nginx misconfigured" failure mode).
 if ! curl -fsS -m "$TIMEOUT" -o /dev/null "${API_BASE}/api/v2/sensors"; then
     fail "/api/v2/sensors unreachable"
+fi
+
+# 3. The dashboard SPA's root resolves to a real HTML body. Catches
+#    the "frontend/dist/ missing or nginx pointed at the wrong dir"
+#    failure mode that bit us during the directory-flatten migration:
+#    /health stayed green because the API was fine, but the SPA itself
+#    was a 500 cycle and nobody was alerted.
+if ! curl -fsS -m "$TIMEOUT" "${DASH_BASE}/" 2>/dev/null | grep -q '<title'; then
+    fail "${DASH_BASE}/ did not return an HTML page (likely frontend/dist/ missing or nginx misrouted)"
 fi
 
 logger -t "$LOG_TAG" "ok"
