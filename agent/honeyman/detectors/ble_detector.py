@@ -236,21 +236,26 @@ class BleDetector(BaseDetector):
         # Track appearance
         self.device_appearances[mac].append(now)
 
-        # Track name changes
+        # Track name + manufacturer-data changes. Modern BLE devices
+        # (anything Apple Continuity, audio devices re-advertising,
+        # randomised MACs cycling identifiers) change these constantly,
+        # so this is normal background chatter, not a signal. We surface
+        # the *count* to the rule engine below via
+        # device_data['name_changes'] / ['manufacturer_changes'] so
+        # behavioural rules can still act on it; the log line is DEBUG
+        # so it doesn't fill the console.
         if mac in self.device_history:
             old_name = self.device_history[mac].get('device_name')
             if old_name and old_name != name and name != 'Unknown':
                 if name not in self.device_name_changes[mac]:
                     self.device_name_changes[mac].append(name)
-                    logger.warning(f"BLE device {mac} changed name: {old_name} -> {name}")
+                    logger.debug("BLE %s name change: %s -> %s", mac, old_name, name)
 
-        # Track manufacturer changes
-        if mac in self.device_history:
             old_manufacturer = self.device_history[mac].get('manufacturer_data')
             if old_manufacturer and old_manufacturer != manufacturer and manufacturer:
                 if manufacturer not in self.device_manufacturer_changes[mac]:
                     self.device_manufacturer_changes[mac].append(manufacturer)
-                    logger.warning(f"BLE device {mac} changed manufacturer: {old_manufacturer} -> {manufacturer}")
+                    logger.debug("BLE %s manufacturer change", mac)
 
         # Update history
         self.device_history[mac] = device_data
