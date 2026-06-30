@@ -104,3 +104,6 @@ build/
 .coverage
 htmlcov/
 *.test
+# Local presentation artifacts (generated, not tracked)
+*.pptx
+~$*
