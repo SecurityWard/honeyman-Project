@@ -9,7 +9,7 @@ checklist for reviewing each surface before a release that touches it.
 If you're trying to *use* Honeyman safely, the right starting point is
 the red "Read this first" callout on the [Add Sensor
 page](https://dashboard.honeymanproject.com/add-sensor) and the
-[CAPABILITIES.md](CAPABILITIES.md) document. This file is the
+[docs/CAPABILITIES.md](docs/CAPABILITIES.md) document. This file is the
 *operator/maintainer* view.
 
 ---
@@ -202,7 +202,7 @@ explicit so they don't drift.
 
 ### 5.6 Before a release tag
 
-- [ ] Smoke flow in [`TESTING.md`](TESTING.md) §3.2 passes against
+- [ ] Smoke flow in [`docs/TESTING.md`](docs/TESTING.md) §3.2 passes against
       staging.
 - [ ] Auth regression tests in §3.3 pass.
 - [ ] WS broadcast test in §3.4 sees the event for a freshly POSTed

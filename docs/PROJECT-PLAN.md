@@ -291,8 +291,8 @@ The review covers two surfaces:
 Rules live in YAML files in `/etc/honeyman/rules/<category>/<rule-name>.yaml` on the sensor. There are three ways a rule gets there:
 
 1. **Shipped with the agent** — packaged in the install script. The 35 default rules.
-2. **Hand-edited locally** — operator SSHes in, edits a YAML file, the rule engine reloads on file-change (inotify on Linux).
-3. **Pulled from the dashboard backend** — `GET /v2/rules` returns the current rule manifest. The agent polls this every 5 minutes and writes any new/changed rules to disk. Hand-edited rules are never overwritten (tracked by a `local: true` marker file).
+2. **Hand-edited locally** — operator SSHes in, edits a YAML file, `sudo systemctl restart honeyman-agent` to pick up the change. The agent loads everything under the rules tree at startup.
+3. **Pulled from the dashboard backend** — `GET /v2/rules` returns the current rule manifest. Sensors with `rule_sync.enabled: true` poll every 5 minutes and write any new/changed rules to disk; the change takes effect on the next agent restart. Hand-edited rules are protected by a sibling marker file (`<rule>.yaml.local`) — if it's present, central sync skips that file.
 
 Rule editing on the backend is intentionally low-tech: a `rules/` directory in the backend's filesystem, version-controlled in a Git repo (e.g., `github.com/SecurityWard/honeyman-rules`). The backend serves whatever's in that directory. To change a rule, you `git push` to the rules repo. No web UI required today; one can be added later.
 

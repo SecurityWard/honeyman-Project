@@ -49,7 +49,8 @@ class RuleEngine:
     Rule evaluation engine
 
     Loads YAML rules from directory and evaluates events against them.
-    Supports hot-reload via reload_rules() method.
+    Rules are loaded once at agent startup; reload_rules() is a no-op
+    callable left here for tests and future use.
     """
 
     def __init__(self, rules_dir: str):

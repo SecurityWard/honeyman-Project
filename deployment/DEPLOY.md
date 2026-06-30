@@ -89,7 +89,7 @@ The backend has **no `SECRET_KEY` and no JWT settings**. If you see those in `.e
 
 ### Step 1.5 — Apply the schema
 
-A single Phase A operator script does this idempotently:
+A single operator script (`phase_a_apply.sh`, named historically — it's the schema bootstrap) does this idempotently:
 
 ```bash
 cd /root/honeyman-Project/deployment
@@ -312,7 +312,7 @@ sudo -u postgres psql -d honeyman_v2 -c "SELECT id, threat_type, latitude, longi
 If `latitude` and `longitude` are `null`:
 
 - Sensor has no GPS, no WiFi positioning API key, and `ipapi.co` returned nothing (or rate-limited)
-- Fix: pin the location at install time with `LOCATION="<city>"` — or once Phase D ships, set `location.manual_latitude` and `location.manual_longitude` in `/etc/honeyman/config.yaml`
+- Fix: pin the location at install time with `LOCATION="<city>"`, or set `location.manual_latitude` and `location.manual_longitude` in `/etc/honeyman/config.yaml`
 
 ---
 

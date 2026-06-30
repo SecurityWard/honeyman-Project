@@ -78,7 +78,8 @@ class Settings(BaseSettings):
     DATA_RETENTION_DAYS: int = 90
     CLEANUP_INTERVAL_HOURS: int = 24
 
-    # Rule distribution (Phase C)
+    # Rule manifest source dir served via GET /api/v2/rules.
+    # If unset, defaults to <repo>/agent/rules (sibling of backend/).
     RULES_DIR: Optional[str] = None
 
     # Geolocation

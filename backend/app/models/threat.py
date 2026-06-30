@@ -51,7 +51,8 @@ class Threat(Base):
     longitude = Column(Float, nullable=True)
     city = Column(String(100), nullable=True)
     country = Column(String(100), nullable=True)
-    # Phase D: accuracy + how the sensor derived the coordinates.
+    # Accuracy + how the sensor derived the coordinates. Used by the
+    # dashboard map to draw a confidence circle around each marker.
     # location_method in {'gps','wifi','ip','manual'}; accuracy_meters in metres.
     accuracy_meters = Column(Float, nullable=True)
     location_method = Column(String(20), nullable=True)

@@ -102,7 +102,8 @@ class NetworkDetector(BaseDetector):
 
             await self.site.start()
 
-            logger.info(f"✅ OpenCanary webhook server running on http://{self.webhook_host}:{self.webhook_port}")
+            logger.info("OpenCanary webhook server running on http://%s:%s",
+                        self.webhook_host, self.webhook_port)
 
             # Keep running
             while self.running:

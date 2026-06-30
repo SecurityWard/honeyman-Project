@@ -11,7 +11,7 @@ Topic semantics:
     'heartbeat'     - POST sensor health + location
     'registration'  - sensor self-register (onboarding only)
 
-Offline queue (Phase C): SQLite-backed FIFO at the path configured under
+Offline queue: SQLite-backed FIFO at the path configured under
 transport.offline_buffer_path (default /var/lib/honeyman/buffer.db).
 Survives agent restarts. Falls back to an in-memory deque if SQLite init
 fails (e.g. in unit tests).
@@ -68,8 +68,8 @@ class ProtocolHandler:
         self.active_client = None
         self.connected = False
 
-        # Phase C: persistent FIFO buffer for outbound messages when the
-        # active client cannot reach the backend. Falls back to an in-memory
+        # Persistent FIFO buffer for outbound messages when the active
+        # client cannot reach the backend. Falls back to an in-memory
         # deque if the SQLite file cannot be opened.
         self.buffer: OfflineBuffer | None = None
         self.fallback_queue: deque = deque(maxlen=DEFAULT_BUFFER_MAX_ROWS)

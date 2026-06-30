@@ -2,7 +2,7 @@
 """
 Location service.
 
-Resolution order (Phase D):
+Resolution order:
 
     1. Operator-pinned manual location
         Read from config: location.manual_latitude / .manual_longitude.
@@ -72,8 +72,8 @@ class LocationService:
         self.gps_port = int(self.config.get("gpsd_port", DEFAULT_GPSD_PORT))
         self.gps_timeout = float(self.config.get("gpsd_timeout", DEFAULT_GPSD_TIMEOUT))
 
-        # Operator override (Phase D). If both lat+lon set, all dynamic
-        # sources are skipped — the value is treated as ground truth.
+        # Operator override. If both lat+lon set, all dynamic sources
+        # are skipped — the value is treated as ground truth.
         self.manual_lat = self.config.get("manual_latitude")
         self.manual_lon = self.config.get("manual_longitude")
         self.manual_label = self.config.get("manual_label")

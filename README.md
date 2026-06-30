@@ -58,11 +58,10 @@ The installer will:
 2. Refuse to default WiFi/AirDrop on if the device has only one wireless adapter (would disconnect the installer from itself mid-run)
 3. Ask you for a sensor name and (optional) location label
 4. Install Python deps + the `honeyman-agent` package
-5. Install `usbmount` so plugged-in USB drives auto-mount for filesystem scanning (set `USBMOUNT_ENABLED=0` to skip)
-6. Ship the malware-hash DB (~360 signatures) to `/var/lib/honeyman/malware_hashes.db`
-7. Call `POST /api/v2/sensors/register` to claim a sensor ID and receive a one-time API key
-8. Write the API key to `/etc/honeyman/api_key` (mode 0600, owner root)
-9. Drop a systemd unit at `/etc/systemd/system/honeyman-agent.service` and start it
+5. Ship the malware-hash DB (~360 signatures) to `/var/lib/honeyman/malware_hashes.db` so the USB detector can scan files on plugged drives (it self-mounts read-only — no `usbmount` package needed)
+6. Call `POST /api/v2/sensors/register` to claim a sensor ID and receive a one-time API key
+7. Write the API key to `/etc/honeyman/api_key` (mode 0600, owner root)
+8. Drop a systemd unit at `/etc/systemd/system/honeyman-agent.service` and start it
 
 Within a minute or two, the sensor appears on the public dashboard.
 
@@ -97,9 +96,9 @@ There is no login. There are no actions. It's a viewing surface.
 
 Detection rules are YAML files. Each sensor ships with the default rule set under `/etc/honeyman/rules/<category>/`. To add or modify rules:
 
-**Locally on a sensor** — edit any YAML file in `/etc/honeyman/rules/`. The `watchdog`-backed rule watcher in the agent reloads on file change with a 1-second debounce; no restart needed.
+**Locally on a sensor** — drop a YAML file into `/etc/honeyman/rules/<category>/` or edit an existing one, then `sudo systemctl restart honeyman-agent`. The agent loads everything under that tree at startup.
 
-**Centrally** — open a PR against the public rules repo at [`github.com/SecurityWard/honeyman-rules`](https://github.com/SecurityWard/honeyman-rules) *(planned)*. Sensors poll `GET /api/v2/rules` every 5 minutes and write any new/changed rules to disk; locally-edited rules are never overwritten.
+**Centrally** — open a PR against this repo's `agent/rules/` directory. Sensors with `rule_sync.enabled: true` poll `GET /api/v2/rules` every 5 minutes and write any new/changed rules to disk; the change takes effect on the next agent restart. A `<rule>.yaml.local` marker file next to any rule pins it against being overwritten by central sync.
 
 A rule looks like:
 
@@ -166,24 +165,20 @@ backend serves it to sensors via `GET /api/v2/rules`; on the VPS, set
 
 ## Status
 
-Phases A–D and most of E are deployed. A Pi Zero 2 W is running the
-agent against the production backend right now; the dashboard, API,
-WebSocket live feed, and per-sensor click-through views are all live.
-Remaining work is operability polish (Phase F: log rotation, metrics,
-alerting) and rule-quality tuning (Phase G).
+**Live:** Pi sensors running against the production backend; the
+dashboard, API, WebSocket feed, per-sensor click-through views, central
+rule sync (opt-in poll), and the location chain (manual / GPS / WiFi /
+IP with accuracy circles on the map) are all deployed. Nightly
+Postgres backups, log rotation, and a 5-minute uptime probe are
+running as systemd timers on the VPS.
 
-| Phase | What | Status |
-|---|---|---|
-| A | Sensor ↔ backend end-to-end (HTTPS + per-sensor API key) | ✅ Deployed |
-| B | Self-register onboarding (`install.sh` + Add Sensor page) | ✅ Deployed |
-| C | Resilience + central rule sync (SQLite offline buffer, `GET /api/v2/rules`) | ✅ Deployed (poller opt-in) |
-| D | Location chain — manual / GPS / WiFi / IP, with accuracy circles on the map | ✅ Deployed |
-| E | Optional SSH/HTTP canary + frontend filter | ✅ Mostly deployed (OpenCanary server running; explicit toggle + UI filter still to do) |
-| F | Operability — log rotation, Prometheus, alerting | ⏳ Partial (nginx+TLS done; logrotate + nightly Postgres dump + 5-min uptime probe shipped as installable artifacts under `deployment/ops/`; Prometheus/alerting still open) |
-| G | Rule quality & tuning | ⏳ Open — see [`docs/PROJECT-PLAN.md`](docs/PROJECT-PLAN.md) §5 |
-| H | Security review | ⏳ Scheduled — see [`SECURITY.md`](SECURITY.md) |
+**Open:** rule-quality tuning against real-world traffic, multi-sensor
+deployments (one Pi in production today), end-to-end testing of the
+WiFi and AirDrop detectors on a Pi 4 with a USB WiFi dongle, and
+per-detector supervision so one crashing detector doesn't take the
+agent down.
 
-The full plan lives in [`docs/PROJECT-PLAN.md`](docs/PROJECT-PLAN.md);
+The canonical plan lives in [`docs/PROJECT-PLAN.md`](docs/PROJECT-PLAN.md);
 release notes in [`CHANGELOG.md`](CHANGELOG.md); the test plan in
 [`docs/TESTING.md`](docs/TESTING.md); the release-time runbook in
 [`docs/RELEASE-CHECKLIST.md`](docs/RELEASE-CHECKLIST.md); the threat

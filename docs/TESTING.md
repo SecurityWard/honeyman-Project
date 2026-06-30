@@ -74,8 +74,8 @@ would have caught the regression:
 
 ### 1.3 Manual smoke — on a real Pi (Pi Zero 2 W or better)
 
-These are the tests that broke on Phase B. Run them on any sensor that
-just installed.
+Run these on any sensor that just installed. They cover the failure
+modes the onboarding flow has historically hit.
 
 | # | What | How | Pass criteria |
 |---|---|---|---|

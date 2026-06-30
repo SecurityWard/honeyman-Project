@@ -136,14 +136,14 @@ async def send_test_events(webhook_url: str):
 
                 async with session.post(webhook_url, json=event) as response:
                     if response.status == 200:
-                        logger.info(f"  ✅ Event sent successfully")
+                        logger.info("  event sent successfully")
                     else:
-                        logger.warning(f"  ⚠️ Event failed: {response.status}")
+                        logger.warning("  event failed: %s", response.status)
 
                 await asyncio.sleep(1)
 
             except Exception as e:
-                logger.error(f"  ❌ Error sending event: {e}")
+                logger.error("  error sending event: %s", e)
 
 
 async def test_network_detector():

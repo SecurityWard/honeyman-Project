@@ -30,7 +30,7 @@ class HoneymanAgent:
     - Rule engine
     - Transport layer
     - Heartbeat / health reporting
-    - Central rule sync (Phase C)
+    - Central rule sync (opt-in poll of GET /api/v2/rules)
     """
 
     def __init__(self, config_path: Optional[str] = None):
@@ -113,8 +113,8 @@ class HoneymanAgent:
             interval=heartbeat_interval,
         )
 
-        # Phase C: central rule-sync poller. Disabled by default;
-        # enable via rule_sync.enabled in config.
+        # Central rule-sync poller. Disabled by default; enable via
+        # rule_sync.enabled in config.
         rule_sync_config = self.config.get('rule_sync', {}) or {}
         self.rule_sync = RuleSyncService(
             config=rule_sync_config,

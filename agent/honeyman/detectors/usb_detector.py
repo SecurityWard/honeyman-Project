@@ -479,8 +479,7 @@ class UsbDetector(BaseDetector):
                 mount_point = self._get_mount_point(device)
             if not mount_point:
                 logger.info(
-                    "Storage device %s not mounted; skipping filesystem scan. "
-                    "Install usbmount on the sensor for auto-mount.",
+                    "Storage device %s did not mount; skipping filesystem scan.",
                     device.device_node or device.device_path,
                 )
                 return
@@ -589,7 +588,8 @@ class UsbDetector(BaseDetector):
                 malware_info = self._lookup_hash(hashes['sha256'], hashes['md5'])
 
                 if malware_info:
-                    logger.warning(f"⚠️ KNOWN MALWARE DETECTED: {malware_info['malware_name']}")
+                    logger.warning("Known malware detected: %s",
+                                   malware_info['malware_name'])
 
                     file_data_with_hash['malware_name'] = malware_info['malware_name']
                     file_data_with_hash['malware_family'] = malware_info.get('family', 'unknown')

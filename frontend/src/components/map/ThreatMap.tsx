@@ -20,8 +20,8 @@ const severityColors: Record<string, string> = {
   info: '#6b7280',
 };
 
-// Phase D — colour the accuracy circle by location method so operators can
-// see at a glance whether a marker is GPS-precise or IP-coarse. The hex
+// Colour the accuracy circle by location method so operators can see
+// at a glance whether a marker is GPS-precise or IP-coarse. The hex
 // values intentionally pair with the severity palette.
 const locationMethodColors: Record<string, string> = {
   gps:    '#16a34a',   // green   — most precise
@@ -86,9 +86,9 @@ export default function ThreatMap({
           </CircleMarker>
         ))}
 
-        {/* Phase D — accuracy ring underneath each real-time threat marker.
-            Drawn first so the marker dot sits on top. Only rendered when the
-            agent reported a confidence radius. */}
+        {/* Accuracy ring underneath each real-time threat marker.
+            Drawn first so the marker dot sits on top. Only rendered when
+            the agent reported a confidence radius. */}
         {recentThreats
           .filter(t => t.latitude && t.longitude && (t.accuracy_meters ?? 0) > 0)
           .map((t, idx) => {

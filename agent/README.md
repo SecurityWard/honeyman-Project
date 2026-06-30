@@ -160,4 +160,4 @@ python test_airdrop_detector.py
 
 ## Status
 
-See `../../PROJECT-PLAN.md` at the repo root for current phase and roadmap.
+See [`../docs/PROJECT-PLAN.md`](../docs/PROJECT-PLAN.md) for the canonical plan and roadmap.

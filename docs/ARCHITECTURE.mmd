@@ -1,6 +1,6 @@
 %% Honeyman Architecture
 %% See PROJECT-PLAN.md for the canonical plan.
-%% Last updated: 2026-06-24
+%% Last updated: 2026-06-30
 
 graph TB
     %% =========================================================
@@ -17,7 +17,7 @@ graph TB
             CANARY[Canary Network Stack<br/>SSH + HTTP honeypots<br/>(toggleable, off by default)]
         end
 
-        RULES[Rule Engine<br/>loads /etc/honeyman/rules/*.yaml<br/>hot-reload on file change]
+        RULES[Rule Engine<br/>loads /etc/honeyman/rules/*.yaml<br/>at agent startup]
         LOC[Location Service<br/>GPS → WiFi-positioning → IP<br/>operator-pin override]
 
         DETECTORS --> RULES
@@ -26,8 +26,8 @@ graph TB
         TRANSPORT[Transport Layer<br/>HTTPS + API key (default)<br/>MQTT + creds (optional)<br/>SQLite offline buffer]
         LOC --> TRANSPORT
 
-        RULEPULL[Rule Sync Poller<br/>GET /v2/rules every 5 min<br/>writes new/changed YAML to disk]
-        RULEPULL -.->|reload| RULES
+        RULEPULL[Rule Sync Poller<br/>GET /v2/rules every 5 min<br/>opt-in, writes YAML to disk<br/>takes effect on next restart]
+        RULEPULL -.->|on next start| RULES
     end
 
     %% =========================================================
@@ -51,7 +51,7 @@ graph TB
         MQTTSUB[MQTT Subscriber<br/>only started if MQTT_OFFERED=true]
         REDIS[(Redis<br/>cache + pub/sub)]
         DB[(Postgres + TimescaleDB<br/>threats hypertable<br/>90d retention<br/>compression after 7d)]
-        RULESREPO[(Git: honeyman-rules<br/>backend serves what's checked in)]
+        RULESREPO[(Rule manifest<br/>RULES_DIR → agent/rules/<br/>single source of truth)]
 
         HTTPS --> FASTAPI
         MQTT -.-> MQTTSUB

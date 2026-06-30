@@ -83,32 +83,19 @@ class MQTTClient:
             logger.info("MQTT disconnected")
 
     def _on_message(self, client, userdata, msg):
-        """Handle incoming messages"""
+        """Handle incoming messages.
+
+        The agent doesn't act on inbound control messages today —
+        rule updates flow via the HTTPS rule_sync poller (see
+        core/rule_sync.py), and there's no command channel. We just
+        log receipt and drop the payload so a broker that's
+        publishing to honeyman/control/# doesn't blow up the client.
+        """
         try:
             payload = json.loads(msg.payload.decode())
-            logger.info(f"Received message on {msg.topic}: {payload.get('type', 'unknown')}")
-
-            # Handle different message types
-            if 'rule_update' in msg.topic or payload.get('type') == 'rule_update':
-                self._handle_rule_update(payload)
-            elif 'command' in msg.topic:
-                self._handle_command(payload)
-
-        except Exception as e:
-            logger.error(f"Error handling MQTT message: {e}")
-
-    def _handle_rule_update(self, payload: Dict[str, Any]):
-        """Handle rule update messages"""
-        logger.info("Received rule update notification")
-        # TODO: Trigger rule reload in agent
-        pass
-
-    def _handle_command(self, payload: Dict[str, Any]):
-        """Handle command messages"""
-        command = payload.get('command')
-        logger.info(f"Received command: {command}")
-        # TODO: Implement command handling
-        pass
+            logger.debug("MQTT %s ← %s", msg.topic, payload.get("type", "unknown"))
+        except Exception as exc:
+            logger.error("Error decoding MQTT message: %s", exc)
 
     async def connect(self):
         """Establish MQTT connection"""

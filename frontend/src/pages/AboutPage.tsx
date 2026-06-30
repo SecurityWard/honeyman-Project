@@ -173,7 +173,7 @@ export default function AboutPage() {
           <p>
             The installer detects available hardware, asks for a sensor name and optional
             location, registers the sensor with the backend, writes the returned API key to{' '}
-            <code>/etc/honeyman/credentials</code>, and starts the systemd unit. The sensor
+            <code>/etc/honeyman/api_key</code> (mode 0600), and starts the systemd unit. The sensor
             usually appears on the map within a minute or two.
           </p>
           <p>

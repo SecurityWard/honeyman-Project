@@ -271,17 +271,16 @@ class MQTTSubscriber:
             self.errors += 1
 
     async def _handle_control(self, topic: str, payload: Dict[str, Any]):
-        """Handle control message (rule updates, configuration changes)"""
-        try:
-            logger.info(f"Control message received: {topic}")
-            # TODO: Implement control message handling
-            # - Rule updates
-            # - Configuration changes
-            # - Sensor commands
+        """Receive but don't act on control messages.
 
-        except Exception as e:
-            logger.error(f"Error handling control message: {e}", exc_info=True)
-            self.errors += 1
+        The backend doesn't publish anything to /control/ today —
+        rule distribution is over HTTPS (GET /api/v2/rules). This
+        handler stays here so an inbound message on a control topic
+        is logged at DEBUG and dropped instead of warned about as
+        an unknown topic. If MQTT control becomes a feature, this is
+        where the dispatch lands.
+        """
+        logger.debug("MQTT control %s ← %s", topic, payload.get("type", "?"))
 
     async def _update_sensor_stats(self, db: AsyncSession, sensor_id: str):
         """Update sensor threat statistics"""

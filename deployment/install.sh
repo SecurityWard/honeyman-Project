@@ -326,7 +326,7 @@ PY
 }
 
 # ---------------------------------------------------------------------------
-# Filesystem layout + config + credentials
+# Filesystem layout + config + API key
 # ---------------------------------------------------------------------------
 make_directories() {
     step "Creating directories..."
