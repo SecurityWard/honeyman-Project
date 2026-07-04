@@ -583,17 +583,28 @@ class UsbDetector(BaseDetector):
                 'md5': hashes['md5']
             }
 
-            # Check against hash database
+            # Check against hash database. The malware_hashes table has
+            # columns: sha256_hash, md5_hash, malware_family, threat_type,
+            # severity (1-10), description. There is no `malware_name`
+            # column — earlier code read one and KeyError'd on every hit,
+            # silently swallowed by the except below, so hash matches never
+            # produced a threat. Map the real columns onto the event fields
+            # the rule engine and dashboard expect.
             if self.hash_db:
                 malware_info = self._lookup_hash(hashes['sha256'], hashes['md5'])
 
                 if malware_info:
-                    logger.warning("Known malware detected: %s",
-                                   malware_info['malware_name'])
+                    family = malware_info.get('malware_family') or 'unknown'
+                    logger.warning("Known malware detected: %s (%s)",
+                                   family, malware_info.get('threat_type', '?'))
 
-                    file_data_with_hash['malware_name'] = malware_info['malware_name']
-                    file_data_with_hash['malware_family'] = malware_info.get('family', 'unknown')
-                    file_data_with_hash['severity'] = malware_info.get('severity', 5)
+                    # malware_name is what usb/malware_hash.yaml matches on
+                    # (regex `.+`), so it must be a non-empty string.
+                    file_data_with_hash['malware_name'] = family
+                    file_data_with_hash['malware_family'] = family
+                    file_data_with_hash['malware_threat_type'] = malware_info.get('threat_type')
+                    file_data_with_hash['malware_description'] = malware_info.get('description')
+                    file_data_with_hash['malware_db_severity'] = malware_info.get('severity')
 
             # Evaluate with hash data
             await self.evaluate_event(file_data_with_hash)
