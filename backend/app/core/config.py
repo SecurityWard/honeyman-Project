@@ -43,10 +43,12 @@ class Settings(BaseSettings):
     #   JSON array:  CORS_ORIGINS=["http://localhost:3000","https://example.com"]
     # Either parses to List[str]. CSV is friendlier when operators are editing
     # .env by hand; the field_validator below normalises both shapes.
+    # Committed default is dev + the public dashboard only. The VPS sets
+    # its own CORS_ORIGINS in .env; no deployment-specific IPs belong in
+    # the tracked source.
     CORS_ORIGINS: _CORS_ORIGINS_TYPE = [
         "http://localhost:3000",
         "http://localhost:5173",
-        "http://72.60.25.24:3000",
         "https://dashboard.honeymanproject.com",
     ]
 

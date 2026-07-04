@@ -5,10 +5,11 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.rate_limit import THREATS_CAP, limiter, sensor_rate_key
 from ..db.base import get_db
 from ..models.sensor import Sensor
 from ..models.threat import Threat
@@ -96,7 +97,11 @@ async def get_threat(threat_id: UUID, db: AsyncSession = Depends(get_db)):
     response_model=ThreatResponse,
     status_code=status.HTTP_201_CREATED,
 )
+# Ingest cap keyed per-sensor (not per-IP) so one runaway sensor can't
+# flood the DB unbounded. No-op when rate limiting is disabled.
+@limiter.limit(THREATS_CAP, key_func=sensor_rate_key)
 async def create_threat(
+    request: Request,                            # required by slowapi keyfunc
     threat: ThreatCreate,
     db: AsyncSession = Depends(get_db),
     sensor: Sensor = Depends(authenticated_sensor),

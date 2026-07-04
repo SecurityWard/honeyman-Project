@@ -104,7 +104,9 @@ class OfflineBuffer:
             )
             """
         )
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_outbox_id ON outbox(id)")
+        # No index on id: it's INTEGER PRIMARY KEY, i.e. an alias for the
+        # rowid, so it's already the table's b-tree. A separate index would
+        # be a redundant duplicate.
         logger.info(
             "Offline buffer ready at %s (max_rows=%d, depth=%d)",
             self.path,

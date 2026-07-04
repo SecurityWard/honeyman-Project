@@ -6,8 +6,9 @@ type ThreatHandler = (threat: Threat) => void;
 class WebSocketService {
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
+  private maxReconnectDelay = 30000; // cap backoff at 30s
+  private shouldReconnect = true;
   private messageHandlers: Set<MessageHandler> = new Set();
   private threatHandlers: Set<ThreatHandler> = new Set();
   private isConnecting = false;
@@ -22,6 +23,7 @@ class WebSocketService {
     }
 
     this.isConnecting = true;
+    this.shouldReconnect = true;
     const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/api/v2/ws';
 
     try {
@@ -67,15 +69,23 @@ class WebSocketService {
   }
 
   private attemptReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached');
+    // Retry indefinitely with exponential backoff capped at
+    // maxReconnectDelay. If the backend restarts (or the network blips)
+    // while a dashboard is open, the live feed recovers on its own
+    // instead of going dead until a manual refresh. reconnectAttempts is
+    // reset to 0 on a successful open (see onopen), so the backoff
+    // restarts from 1s after each recovery.
+    if (!this.shouldReconnect) {
       return;
     }
 
+    const delay = Math.min(
+      this.reconnectDelay * Math.pow(2, this.reconnectAttempts),
+      this.maxReconnectDelay,
+    );
     this.reconnectAttempts++;
-    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
 
-    console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    console.log(`WebSocket reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
 
     setTimeout(() => {
       this.connect();
@@ -83,11 +93,11 @@ class WebSocketService {
   }
 
   disconnect() {
+    this.shouldReconnect = false; // explicit close — don't auto-reconnect
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
-    this.reconnectAttempts = this.maxReconnectAttempts; // Prevent auto-reconnect
   }
 
   send(message: any) {

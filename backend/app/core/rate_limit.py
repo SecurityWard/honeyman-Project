@@ -16,6 +16,7 @@ endpoints stay reachable.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from typing import Any, Awaitable, Callable
 
@@ -24,6 +25,23 @@ from fastapi import Request
 from .config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def sensor_rate_key(request: Request) -> str:
+    """Rate-limit key for authenticated ingest.
+
+    Keyed on the sensor's API key (SHA-256, truncated) rather than the
+    client IP, so a single looping or buggy sensor can't flood the DB —
+    and can't take the cap down for every other sensor sharing its
+    egress IP (a whole conference behind one NAT). Falls back to the
+    remote address when there's no bearer token.
+    """
+    auth = request.headers.get("authorization", "")
+    token = auth[7:].strip() if auth[:7].lower() == "bearer " else ""
+    if token:
+        return "sensor:" + hashlib.sha256(token.encode()).hexdigest()[:24]
+    from slowapi.util import get_remote_address
+    return get_remote_address(request)
 
 
 class _NullLimiter:
@@ -52,11 +70,12 @@ def _real_limiter():  # pragma: no cover - exercised at import time
     from slowapi import Limiter
     from slowapi.util import get_remote_address
 
-    # Use Redis DB 1 to keep counter keys separate from the WS pub/sub
-    # channel that lives on DB 0. If the REDIS_URL has its own db suffix,
-    # honour it — operators may be deliberately co-locating.
+    # If REDIS_URL already names a db (…/0, …/1), honour it — so the
+    # default redis://localhost:6379/0 puts the limiter's counters on the
+    # same DB as the WS pub/sub channel. That's safe: slowapi namespaces
+    # its keys ("LIMITER/…") and pub/sub uses channel names, so they can't
+    # collide. Only when the URL has no db segment do we append /1.
     redis_url = settings.REDIS_URL
-    # If the URL has no /N segment, append /1 for the limiter.
     if redis_url.rstrip("/").rsplit("/", 1)[-1].isdigit():
         storage_uri = redis_url
     else:
@@ -95,7 +114,12 @@ else:
 
 # Per-endpoint cap strings. Kept here so each endpoint pulls a named limit
 # rather than repeating magic numbers.
-REGISTER_CAP = "10/hour"                                   # sensor self-register
+REGISTER_CAP = "10/hour"                                   # sensor self-register (per IP)
+# Ingest cap, keyed per-sensor (see sensor_rate_key). Generous for real
+# use — detections are episodic and the agent already applies a
+# per-(rule, target) cooldown — but bounds a runaway sensor that would
+# otherwise write to the DB in a tight loop unbounded.
+THREATS_CAP = "120/minute"
 DEFAULT_CAP = f"{settings.RATE_LIMIT_PER_MINUTE}/minute"   # blanket per-IP
 
 
@@ -113,6 +137,8 @@ __all__ = [
     "limiter",
     "rate_limiting_active",
     "REGISTER_CAP",
+    "THREATS_CAP",
     "DEFAULT_CAP",
+    "sensor_rate_key",
     "attach_rate_limit_handler",
 ]

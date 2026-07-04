@@ -32,11 +32,14 @@ app = FastAPI(
     openapi_url=f"{settings.API_PREFIX}/openapi.json"
 )
 
-# CORS middleware
+# CORS middleware. allow_credentials is False: the API takes no cookies
+# or browser-auth — sensors authenticate with a Bearer header and the
+# dashboard reads are public — so credentialed CORS buys nothing and only
+# adds risk (and would forbid a future allow_origins=["*"]).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
