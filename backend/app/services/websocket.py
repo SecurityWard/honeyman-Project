@@ -7,7 +7,7 @@ import json
 import logging
 from typing import Set, Dict, Any
 from fastapi import WebSocket, WebSocketDisconnect
-from datetime import datetime
+from datetime import datetime, timezone
 
 from .redis_client import redis_client
 
@@ -112,7 +112,7 @@ class ConnectionManager:
                         event = {
                             'type': 'threat',
                             'data': data,
-                            'timestamp': datetime.utcnow().isoformat()
+                            'timestamp': datetime.now(timezone.utc).isoformat()
                         }
 
                         # Broadcast to all WebSocket clients
@@ -144,7 +144,7 @@ class ConnectionManager:
             try:
                 heartbeat = {
                     'type': 'heartbeat',
-                    'timestamp': datetime.utcnow().isoformat(),
+                    'timestamp': datetime.now(timezone.utc).isoformat(),
                     'connections': len(self.active_connections)
                 }
 

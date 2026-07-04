@@ -118,7 +118,7 @@ async def get_threat_trends(
 
     # Default time range
     if not end_time:
-        end_time = datetime.utcnow()
+        end_time = datetime.now(timezone.utc)
 
     if not start_time:
         if period == "hourly":
@@ -195,9 +195,9 @@ async def get_top_threats(
 
     # Calculate time range from hours/days if provided
     if hours and not start_time:
-        start_time = datetime.utcnow() - timedelta(hours=hours)
+        start_time = datetime.now(timezone.utc) - timedelta(hours=hours)
     elif days and not start_time:
-        start_time = datetime.utcnow() - timedelta(days=days)
+        start_time = datetime.now(timezone.utc) - timedelta(days=days)
 
     # Build query
     query = select(
@@ -245,9 +245,9 @@ async def get_top_sensors(
 
     # Calculate time range from hours/days if provided
     if hours and not start_time:
-        start_time = datetime.utcnow() - timedelta(hours=hours)
+        start_time = datetime.now(timezone.utc) - timedelta(hours=hours)
     elif days and not start_time:
-        start_time = datetime.utcnow() - timedelta(days=days)
+        start_time = datetime.now(timezone.utc) - timedelta(days=days)
 
     # Build subquery for threat counts
     threat_counts = select(
@@ -298,15 +298,28 @@ async def get_threat_map(
     severity: Optional[List[str]] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get geographic threat distribution for map visualization"""
+    """Get geographic threat distribution for map visualization.
 
-    # Build WHERE conditions dynamically
-    conditions = ["s.latitude IS NOT NULL", "s.longitude IS NOT NULL"]
+    Plots each threat at the coordinates the sensor reported *when the
+    threat happened* (t.latitude/t.longitude), not the sensor's current
+    position. The whole premise is a mobile sensor — a backpack at a con —
+    so grouping historical threats by the Pi's current location would snap
+    every past detection to wherever it is now. Falls back to the sensor's
+    coords when a threat has none of its own.
+    """
+
+    # Coordinate to plot at: the threat's own, else the sensor's.
+    lat_expr = "COALESCE(t.latitude, s.latitude)"
+    lon_expr = "COALESCE(t.longitude, s.longitude)"
+    city_expr = "COALESCE(t.city, s.city)"
+    country_expr = "COALESCE(t.country, s.country)"
+
+    conditions = [f"{lat_expr} IS NOT NULL", f"{lon_expr} IS NOT NULL"]
     params = {}
 
     if hours:
         conditions.append("t.timestamp >= :start_time")
-        params["start_time"] = datetime.utcnow() - timedelta(hours=hours)
+        params["start_time"] = datetime.now(timezone.utc) - timedelta(hours=hours)
     elif start_time:
         conditions.append("t.timestamp >= :start_time")
         params["start_time"] = start_time
@@ -320,10 +333,10 @@ async def get_threat_map(
     query_str = f"""
         SELECT
             t.sensor_id,
-            s.latitude,
-            s.longitude,
-            s.city,
-            s.country,
+            {lat_expr}   AS lat,
+            {lon_expr}   AS lon,
+            {city_expr}  AS city,
+            {country_expr} AS country,
             COUNT(*) as threat_count,
             COUNT(CASE WHEN t.severity = 'critical' THEN 1 END) as critical,
             COUNT(CASE WHEN t.severity = 'high' THEN 1 END) as high,
@@ -332,7 +345,7 @@ async def get_threat_map(
         FROM threats t
         JOIN sensors s ON t.sensor_id = s.sensor_id
         WHERE {where_clause}
-        GROUP BY t.sensor_id, s.latitude, s.longitude, s.city, s.country
+        GROUP BY t.sensor_id, {lat_expr}, {lon_expr}, {city_expr}, {country_expr}
         ORDER BY threat_count DESC
     """
 
@@ -364,7 +377,7 @@ async def get_threat_velocity(
 ):
     """Get threat velocity metrics"""
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     last_hour = now - timedelta(hours=1)
     last_24h = now - timedelta(hours=24)
     last_7d = now - timedelta(days=7)

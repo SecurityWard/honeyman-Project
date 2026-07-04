@@ -6,7 +6,7 @@ import asyncio
 import json
 import logging
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import paho.mqtt.client as mqtt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
@@ -185,7 +185,7 @@ class MQTTSubscriber:
             # Create threat in database
             async with AsyncSessionLocal() as db:
                 threat = Threat(
-                    timestamp=datetime.fromisoformat(payload['timestamp']) if 'timestamp' in payload else datetime.utcnow(),
+                    timestamp=datetime.fromisoformat(payload['timestamp']) if 'timestamp' in payload else datetime.now(timezone.utc),
                     sensor_id=sensor_id,
                     threat_type=payload.get('threat_type'),
                     detector_type=payload.get('detector_type'),
@@ -243,7 +243,7 @@ class MQTTSubscriber:
                 sensor = result.scalar_one_or_none()
 
                 if sensor:
-                    sensor.last_heartbeat = datetime.utcnow()
+                    sensor.last_heartbeat = datetime.now(timezone.utc)
                     sensor.is_online = payload.get('is_online', True)
 
                     # Update location if provided
@@ -289,7 +289,7 @@ class MQTTSubscriber:
             from sqlalchemy import func
             from datetime import timedelta
 
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             last_24h = now - timedelta(hours=24)
 
             result = await db.execute(

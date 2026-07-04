@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -134,7 +134,7 @@ def _build_manifest(root: Path) -> RuleManifest:
     return RuleManifest(
         version=global_hasher.hexdigest(),
         count=len(rule_list),
-        generated_at=datetime.utcnow(),
+        generated_at=datetime.now(timezone.utc),
         rules=rule_list,
     )
 
