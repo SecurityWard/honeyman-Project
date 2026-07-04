@@ -37,8 +37,8 @@ const MAX_ACCURACY_DISPLAY_METERS = 2000;
 export default function ThreatMap({
   geoThreats,
   recentThreats = [],
-  center = [37.7749, -122.4194], // Default to San Francisco
-  zoom = 10
+  center = [39.8283, -98.5795], // Geographic center of the contiguous US
+  zoom = 4                       // whole-US view; overridden when a sensor is selected
 }: ThreatMapProps) {
   const [selectedThreat, setSelectedThreat] = useState<GeoThreat | null>(null);
 

@@ -141,21 +141,64 @@ class HoneymanAgent:
         if self.rule_sync:
             await self.rule_sync.start()
 
-        # Start all detectors
-        tasks = []
-        for name, detector in self.detectors.items():
-            logger.info(f"Starting detector: {name}")
-            task = asyncio.create_task(detector.start())
-            tasks.append(task)
+        # Start each detector under its own supervisor. A detector that
+        # raises on startup (e.g. the WiFi detector when the adapter has no
+        # monitor mode, or AirDrop when avahi isn't installed) must NOT take
+        # the whole agent down — otherwise one bad detector kills USB/BLE/
+        # network detection AND the heartbeat, so the sensor silently drops
+        # off the dashboard. Each supervisor retries its detector with
+        # backoff and the others keep running regardless.
+        tasks = [
+            asyncio.create_task(self._supervise_detector(name, detector))
+            for name, detector in self.detectors.items()
+        ]
 
         logger.info("All detectors started successfully")
         logger.info("Honeyman Agent is now monitoring for threats...")
 
-        # Wait for all detector tasks
+        # return_exceptions=True so a supervisor that gives up (or a
+        # CancelledError on shutdown) can't propagate out and tear down
+        # the heartbeat task with it.
         try:
-            await asyncio.gather(*tasks)
+            await asyncio.gather(*tasks, return_exceptions=True)
         except asyncio.CancelledError:
             logger.info("Detector tasks cancelled")
+
+    async def _supervise_detector(self, name, detector):
+        """Run one detector, restarting it with backoff if it crashes.
+
+        Keeps the failure contained to that detector so the rest of the
+        agent (other detectors + heartbeat) stays alive. Gives up after a
+        cap so a permanently-broken detector doesn't spin forever.
+        """
+        backoff = 2.0
+        max_backoff = 300.0
+        attempts = 0
+        max_attempts = 8
+        while self.running:
+            try:
+                await detector.start()
+                return  # detector exited cleanly (self.running went false)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                attempts += 1
+                if attempts >= max_attempts:
+                    logger.error(
+                        "Detector %s crashed %d times; giving up (other "
+                        "detectors + heartbeat keep running). Last error: %s",
+                        name, attempts, exc,
+                    )
+                    return
+                logger.error(
+                    "Detector %s crashed (attempt %d/%d): %s — restarting in %.0fs",
+                    name, attempts, max_attempts, exc, backoff,
+                )
+                try:
+                    await asyncio.sleep(backoff)
+                except asyncio.CancelledError:
+                    raise
+                backoff = min(backoff * 2, max_backoff)
 
     async def stop(self):
         """Stop the agent and all detectors gracefully"""
