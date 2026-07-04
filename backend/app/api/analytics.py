@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, text
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from ..db.base import get_db
 from ..models.sensor import Sensor
@@ -15,6 +15,9 @@ from ..schemas.analytics import (
     OverviewStats, ThreatTrend, TopThreatType, TopSensor,
     GeographicDistribution, MitreAttackCoverage, ThreatVelocity
 )
+# Reuse the same liveness windows the sensors endpoints derive from, so
+# the overview stat cards agree with the sensors list.
+from .sensors import ONLINE_WINDOW, STALE_WINDOW
 
 router = APIRouter()
 
@@ -25,23 +28,30 @@ async def get_overview_stats(
 ):
     """Get dashboard overview statistics"""
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     last_24h = now - timedelta(hours=24)
     last_7d = now - timedelta(days=7)
 
-    # Total sensors
+    # Total sensors ever registered.
     total_sensors_result = await db.execute(select(func.count()).select_from(Sensor))
     total_sensors = total_sensors_result.scalar()
 
-    # Active sensors
+    # Active sensors: heard from within the 72h staleness window (i.e. the
+    # ones that show on the sensors list by default). Derived from
+    # last_heartbeat rather than the stored is_active flag, which only ever
+    # meant "registered and not manually deactivated."
     active_sensors_result = await db.execute(
-        select(func.count()).where(Sensor.is_active == True)
+        select(func.count()).where(
+            func.coalesce(Sensor.last_heartbeat, Sensor.registered_at) >= now - STALE_WINDOW
+        )
     )
     active_sensors = active_sensors_result.scalar()
 
-    # Online sensors
+    # Online sensors: heartbeat within ONLINE_WINDOW. This replaces reading
+    # the stored is_online boolean, which nothing ever reset to false — so
+    # the "online" card used to count every sensor that ever checked in.
     online_sensors_result = await db.execute(
-        select(func.count()).where(Sensor.is_online == True)
+        select(func.count()).where(Sensor.last_heartbeat >= now - ONLINE_WINDOW)
     )
     online_sensors = online_sensors_result.scalar()
 
