@@ -112,9 +112,31 @@ class WifiDetector(BaseDetector):
                 self.use_scapy = False
                 logger.info("Scapy not available, using iwlist fallback")
 
-            # Enable monitor mode if using scapy
+            # Enable monitor mode if using scapy — but never on the
+            # interface carrying our own default route. airmon-ng runs
+            # `check kill` (terminates NetworkManager/wpa_supplicant) and
+            # then flips the adapter to monitor mode, which drops the WiFi
+            # association. On a single-adapter Pi that's connected over
+            # WiFi, that disconnects the sensor from the network entirely:
+            # no heartbeats, no threats reach the dashboard, and it can't
+            # be reached to fix. WiFi monitoring genuinely needs a second,
+            # dedicated adapter.
             if self.use_scapy:
-                await self._enable_monitor_mode()
+                default_iface = self._default_route_iface()
+                base_iface = self.interface.replace('mon', '')
+                if default_iface and default_iface == base_iface:
+                    logger.warning(
+                        "WiFi interface %s carries this sensor's default "
+                        "route — refusing monitor mode (it would disconnect "
+                        "the sensor from the network). WiFi detection needs a "
+                        "dedicated second adapter, e.g. a USB WiFi dongle. "
+                        "Continuing in passive mode without packet capture.",
+                        base_iface,
+                    )
+                    self.use_scapy = False
+                    self.monitor_mode = False
+                else:
+                    await self._enable_monitor_mode()
 
             logger.info("WiFi detector initialized successfully")
 
@@ -163,6 +185,24 @@ class WifiDetector(BaseDetector):
         except Exception as e:
             logger.debug(f"Error detecting interface: {e}")
 
+        return None
+
+    @staticmethod
+    def _default_route_iface() -> Optional[str]:
+        """Return the interface carrying the default route, or None.
+
+        Parses /proc/net/route — the default route is the row whose
+        destination is 00000000. Used to refuse hijacking the sensor's own
+        network interface for monitor mode.
+        """
+        try:
+            with open('/proc/net/route') as f:
+                for line in f.readlines()[1:]:
+                    fields = line.strip().split()
+                    if len(fields) >= 2 and fields[1] == '00000000':
+                        return fields[0]
+        except OSError:
+            pass
         return None
 
     async def _enable_monitor_mode(self):
