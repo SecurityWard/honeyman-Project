@@ -68,6 +68,14 @@ class WifiDetector(BaseDetector):
         self.interface = None
         self.monitor_mode = False
         self.use_scapy = True  # Prefer scapy if available
+        # Operator-specified monitor interface — a dedicated second adapter,
+        # never the one carrying the internet. Accepts 'wlan1' or 'wlan1mon'.
+        # If unset, auto-picked (see _detect_interface).
+        self.configured_interface = self.config.get('wifi.interface')
+        # Track whether *we* flipped the interface into monitor mode, so we
+        # only revert on shutdown what we changed (leave an operator's
+        # hand-configured monitor interface alone).
+        self._we_enabled_monitor = False
 
         # Load whitelist
         self._load_whitelist()
@@ -112,31 +120,13 @@ class WifiDetector(BaseDetector):
                 self.use_scapy = False
                 logger.info("Scapy not available, using iwlist fallback")
 
-            # Enable monitor mode if using scapy — but never on the
-            # interface carrying our own default route. airmon-ng runs
-            # `check kill` (terminates NetworkManager/wpa_supplicant) and
-            # then flips the adapter to monitor mode, which drops the WiFi
-            # association. On a single-adapter Pi that's connected over
-            # WiFi, that disconnects the sensor from the network entirely:
-            # no heartbeats, no threats reach the dashboard, and it can't
-            # be reached to fix. WiFi monitoring genuinely needs a second,
-            # dedicated adapter.
+            # _detect_interface already refused the default-route interface,
+            # so monitoring here can't disconnect the sensor. Enable monitor
+            # mode with per-interface commands (never airmon-ng check kill,
+            # which stops NetworkManager/wpa_supplicant globally and would
+            # drop the internet on the other adapter).
             if self.use_scapy:
-                default_iface = self._default_route_iface()
-                base_iface = self.interface.replace('mon', '')
-                if default_iface and default_iface == base_iface:
-                    logger.warning(
-                        "WiFi interface %s carries this sensor's default "
-                        "route — refusing monitor mode (it would disconnect "
-                        "the sensor from the network). WiFi detection needs a "
-                        "dedicated second adapter, e.g. a USB WiFi dongle. "
-                        "Continuing in passive mode without packet capture.",
-                        base_iface,
-                    )
-                    self.use_scapy = False
-                    self.monitor_mode = False
-                else:
-                    await self._enable_monitor_mode()
+                await self._enable_monitor_mode()
 
             logger.info("WiFi detector initialized successfully")
 
@@ -165,26 +155,84 @@ class WifiDetector(BaseDetector):
 
         logger.info("WiFi detector shut down")
 
-    async def _detect_interface(self) -> Optional[str]:
-        """Detect available WiFi interface"""
+    @staticmethod
+    async def _iw_interfaces() -> Dict[str, str]:
+        """Return {interface_name: type} from `iw dev` (type e.g. managed/monitor)."""
+        out: Dict[str, str] = {}
         try:
-            result = await asyncio.create_subprocess_exec(
+            proc = await asyncio.create_subprocess_exec(
                 'iw', 'dev',
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.DEVNULL,
             )
-
-            stdout, _ = await result.communicate()
-
-            for line in stdout.decode().split('\n'):
-                if 'Interface' in line:
-                    interface = line.split()[-1]
-                    logger.debug(f"Found interface: {interface}")
-                    return interface
-
+            stdout, _ = await proc.communicate()
+            name = None
+            for raw in stdout.decode(errors='replace').splitlines():
+                line = raw.strip()
+                if line.startswith('Interface '):
+                    name = line.split()[1]
+                    out[name] = 'unknown'
+                elif line.startswith('type ') and name:
+                    out[name] = line.split()[1]
         except Exception as e:
-            logger.debug(f"Error detecting interface: {e}")
+            logger.debug("iw dev parse failed: %s", e)
+        return out
 
+    async def _detect_interface(self) -> Optional[str]:
+        """Pick the monitor interface — never the internet-carrying one.
+
+        WiFi monitoring needs a dedicated second adapter; putting the
+        default-route interface into monitor mode disconnects the sensor.
+        Priority:
+          1. wifi.interface from config (accepts 'wlan1' or 'wlan1mon')
+          2. an interface already in monitor mode (not the default route)
+          3. any non-default interface (we'll set monitor mode on it)
+        """
+        default_iface = self._default_route_iface()
+        ifaces = await self._iw_interfaces()
+        if not ifaces:
+            return None
+
+        def is_default(name: str) -> bool:
+            # wlan1 and wlan1mon share one radio — compare base names too.
+            base = name[:-3] if name.endswith('mon') else name
+            return default_iface is not None and default_iface in (name, base)
+
+        # 1. Operator-specified interface (resolve to its monitor variant).
+        if self.configured_interface:
+            want = self.configured_interface
+            variants = [want, want + 'mon'] if not want.endswith('mon') else [want, want[:-3]]
+            for cand in variants:
+                if cand in ifaces:
+                    if is_default(cand):
+                        logger.warning(
+                            "Configured wifi interface %s carries the default "
+                            "route — refusing (it would disconnect the sensor).",
+                            cand,
+                        )
+                        return None
+                    return cand
+            logger.warning(
+                "Configured wifi interface %s not found (available: %s)",
+                want, ", ".join(ifaces) or "none",
+            )
+            return None
+
+        # 2. An interface already in monitor mode (not the default route).
+        for name, itype in ifaces.items():
+            if itype == 'monitor' and not is_default(name):
+                return name
+
+        # 3. Any non-default interface — we'll flip it to monitor.
+        for name in ifaces:
+            if not is_default(name):
+                return name
+
+        logger.warning(
+            "No usable WiFi interface for monitoring — the only adapter(s) "
+            "carry the default route. WiFi detection needs a dedicated second "
+            "adapter (e.g. a USB WiFi dongle)."
+        )
         return None
 
     @staticmethod
@@ -205,56 +253,70 @@ class WifiDetector(BaseDetector):
             pass
         return None
 
+    async def _run(self, *args) -> tuple[int, str]:
+        """Run a command, return (returncode, stderr). Helper for iface setup."""
+        proc = await asyncio.create_subprocess_exec(
+            *args,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, err = await proc.communicate()
+        return proc.returncode, err.decode(errors='replace').strip()
+
     async def _enable_monitor_mode(self):
-        """Enable monitor mode on WiFi interface"""
+        """Put self.interface into monitor mode, touching nothing else.
+
+        Uses per-interface `ip link` + `iw set type monitor`. We deliberately
+        do NOT run `airmon-ng check kill` — that stops NetworkManager and
+        wpa_supplicant *globally*, which drops the internet on the other
+        (internal) adapter and is exactly what used to brick the sensor. If
+        the interface is already in monitor mode (set up by hand, e.g. via
+        airmon-ng), we use it as-is and don't revert it on shutdown.
+        """
         try:
-            # Kill interfering processes
-            await asyncio.create_subprocess_exec(
-                'sudo', 'airmon-ng', 'check', 'kill',
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL
-            )
+            ifaces = await self._iw_interfaces()
+            if ifaces.get(self.interface) == 'monitor':
+                self.monitor_mode = True
+                self._we_enabled_monitor = False
+                logger.info("Interface %s already in monitor mode; using as-is",
+                            self.interface)
+                return
 
-            # Enable monitor mode
-            result = await asyncio.create_subprocess_exec(
-                'sudo', 'airmon-ng', 'start', self.interface,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
+            for args in (
+                ('sudo', 'ip', 'link', 'set', self.interface, 'down'),
+                ('sudo', 'iw', 'dev', self.interface, 'set', 'type', 'monitor'),
+                ('sudo', 'ip', 'link', 'set', self.interface, 'up'),
+            ):
+                rc, err = await self._run(*args)
+                if rc != 0:
+                    raise RuntimeError(f"{' '.join(args[1:])} failed: {err}")
 
-            await result.communicate()
-
-            # Update interface name (usually becomes wlan0mon)
-            self.interface = f"{self.interface}mon"
             self.monitor_mode = True
-
-            logger.info(f"Monitor mode enabled on {self.interface}")
+            self._we_enabled_monitor = True
+            logger.info("Monitor mode enabled on %s", self.interface)
 
         except Exception as e:
-            logger.warning(f"Failed to enable monitor mode: {e}")
+            logger.warning("Failed to enable monitor mode on %s: %s — WiFi "
+                           "detection will be inactive", self.interface, e)
             self.monitor_mode = False
             self.use_scapy = False
 
     async def _disable_monitor_mode(self):
-        """Disable monitor mode"""
+        """Revert to managed mode — but only if we were the ones who flipped
+        it. An operator's hand-configured monitor interface is left alone."""
+        if not (self.monitor_mode and self.interface and self._we_enabled_monitor):
+            return
         try:
-            if self.monitor_mode and self.interface:
-                # Get original interface name
-                original_if = self.interface.replace('mon', '')
-
-                await asyncio.create_subprocess_exec(
-                    'sudo', 'airmon-ng', 'stop', self.interface,
-                    stdout=asyncio.subprocess.DEVNULL,
-                    stderr=asyncio.subprocess.DEVNULL
-                )
-
-                self.interface = original_if
-                self.monitor_mode = False
-
-                logger.info("Monitor mode disabled")
-
+            for args in (
+                ('sudo', 'ip', 'link', 'set', self.interface, 'down'),
+                ('sudo', 'iw', 'dev', self.interface, 'set', 'type', 'managed'),
+                ('sudo', 'ip', 'link', 'set', self.interface, 'up'),
+            ):
+                await self._run(*args)
+            self.monitor_mode = False
+            logger.info("Monitor mode disabled on %s", self.interface)
         except Exception as e:
-            logger.warning(f"Error disabling monitor mode: {e}")
+            logger.debug("Error disabling monitor mode: %s", e)
 
     async def _detect_with_scapy(self):
         """Detect WiFi threats using scapy packet capture"""

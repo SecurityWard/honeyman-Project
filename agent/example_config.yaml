@@ -59,10 +59,26 @@ detectors:
 # --- Per-detector settings -----------------------------------------
 usb:
   # install.sh ships this DB from the cloned source tree's data/ dir
-  # to /var/lib/honeyman/ at install time. ~360 malware signatures.
+  # to /var/lib/honeyman/ at install time. Real MalwareBazaar + EICAR
+  # signatures (rebuild with data/build_malware_db.py).
   hash_database_path: /var/lib/honeyman/malware_hashes.db
   scan_storage_devices: true
   max_file_size_mb: 100
+
+wifi:
+  # WiFi monitoring needs a DEDICATED second adapter — never the one
+  # carrying your internet. The agent refuses to put the default-route
+  # interface into monitor mode, and it never runs `airmon-ng check kill`
+  # (that stops NetworkManager globally and would drop the internet on
+  # the internal radio).
+  #
+  # Set this to your external USB adapter. Accepts the base name (wlan1)
+  # or its monitor name (wlan1mon) — the agent resolves either, and will
+  # flip it into monitor mode itself with per-interface commands. If left
+  # unset, the agent auto-picks a monitor-capable interface that is not
+  # the default route.
+  #
+  # interface: wlan1
 
 # --- Location --------------------------------------------------------
 # Resolution order (next source is tried on a miss):
