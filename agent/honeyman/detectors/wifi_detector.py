@@ -319,27 +319,54 @@ class WifiDetector(BaseDetector):
             logger.debug("Error disabling monitor mode: %s", e)
 
     async def _detect_with_scapy(self):
-        """Detect WiFi threats using scapy packet capture"""
-        try:
-            from scapy.all import sniff, Dot11, Dot11Beacon, Dot11Deauth
+        """Detect WiFi threats using scapy packet capture.
 
-            logger.info("Starting scapy packet capture...")
+        scapy.sniff() is a BLOCKING call — it runs its own capture loop
+        until stop_filter returns True. Calling it directly on the asyncio
+        event loop freezes the whole agent: the heartbeat never sends, the
+        USB/BLE detectors stop processing, nothing else runs. (That is
+        exactly what happened on the first dual-adapter Pi5 — the last log
+        line was "Starting scapy packet capture" and then silence.)
+
+        So we run sniff() in a worker thread via run_in_executor, and
+        marshal each captured packet back onto the event loop with
+        run_coroutine_threadsafe. The event loop stays free for everyone
+        else; only this one detector's blocking capture lives in the thread.
+        """
+        loop = asyncio.get_running_loop()
+
+        def _blocking_sniff():
+            from scapy.all import sniff
 
             def packet_handler(packet):
-                """Handle captured packet"""
-                asyncio.create_task(self._process_packet(packet))
+                # Called from the sniff thread — hand the packet to the
+                # event loop thread-safely rather than touching async state
+                # directly.
+                try:
+                    asyncio.run_coroutine_threadsafe(
+                        self._process_packet(packet), loop
+                    )
+                except Exception:
+                    pass
 
-            # Sniff WiFi packets
             sniff(
                 iface=self.interface,
                 prn=packet_handler,
                 store=False,
-                stop_filter=lambda _: not self.running
+                # Check every packet AND time out every second so a quiet
+                # channel still lets us notice self.running went false.
+                stop_filter=lambda _: not self.running,
+                timeout=1,
             )
 
+        try:
+            logger.info("Starting scapy packet capture on %s...", self.interface)
+            # Keep re-arming the 1s-timeout sniff until we're told to stop,
+            # so the capture is responsive to shutdown without blocking.
+            while self.running:
+                await loop.run_in_executor(None, _blocking_sniff)
         except Exception as e:
-            logger.error(f"Error in scapy detection: {e}")
-            # Fallback to iwlist
+            logger.error("Error in scapy detection: %s", e)
             self.use_scapy = False
             await self._detect_with_iwlist()
 
