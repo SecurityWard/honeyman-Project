@@ -87,7 +87,29 @@ Build a repeatable test matrix; confirm each fires the right
       in aggregate vs per-target, and `whitelist_check` — several rules
       assume enforcement that may not exist
 
-## 6. Stability & soak
+## 6. Location accuracy
+
+- [ ] **Stationary sensor coordinates jumped ~30 miles in a day.**
+      Observed on `rpi5test-fad9` (stationary). It has no GPS and no manual
+      pin, so the location chain falls through to **IP geolocation**
+      (confirmed: `location_method: ip`, accuracy 5000m). IP geo routinely
+      drifts tens of miles when the ISP's IP→location mapping changes or
+      `ipapi.co` returns a different city centroid — the 5km accuracy circle
+      understates the real jump. Fix options:
+      - **Manual pin** for stationary sensors — set `location.manual_latitude`
+        / `manual_longitude` in config; eliminates drift entirely and is the
+        intended pattern for a fixed deployment. (Cheapest fix; make it the
+        documented default for non-mobile sensors.)
+      - **Jump damping / hysteresis** — don't rewrite the reported location
+        on every heartbeat; keep the first fix and only move if a new reading
+        differs by more than the accuracy radius (and, ideally, is corroborated).
+      - **Prefer WiFi positioning over IP** — it's far more accurate (tens of
+        meters). Investigate why it's falling through to IP: no API key? MLS
+        deprecated? Can't scan APs because the spare adapter is in monitor
+        mode and the internal one isn't being used for a positioning scan?
+      - Make the map's accuracy circle honest about how coarse IP really is.
+
+## 7. Stability & soak
 
 - [ ] Let the Pi5 soak for days — watch for memory growth, restarts,
       detector give-ups
@@ -98,7 +120,7 @@ Build a repeatable test matrix; confirm each fires the right
 - [ ] **Multi-sensor** — run Pi Zero + Pi5 simultaneously; confirm
       map/filter/list scale
 
-## 7. Infrastructure / audit backlog
+## 8. Infrastructure / audit backlog
 
 - [ ] **nginx `sites-enabled` is a copy, not a symlink, and drifted** from
       `sites-available` — reconcile (edits to available silently don't
@@ -111,7 +133,7 @@ Build a repeatable test matrix; confirm each fires the right
       `.from_orm/.dict/.json` → v2 (breaks on next major bump, not today)
 - [ ] Purge aged sensor rows if any linger past the 72h auto-hide
 
-## 8. Documentation
+## 9. Documentation
 
 - [ ] Keep `CAPABILITIES.md` honest as detectors get validated (proven vs coded)
 - [ ] Document the dual-adapter WiFi setup (internal internet + external
