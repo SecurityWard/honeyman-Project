@@ -1,32 +1,35 @@
 rule_id: wifi_suspicious_ssid_001
 name: "Suspicious SSID Pattern Detection"
-version: 2.0
+version: 2.1
 enabled: true
 severity: medium
 threat_type: suspicious_ssid
 category: wifi
 
-# Detect suspicious SSID patterns
+# Match only SSID names that are almost never legitimate — prank /
+# intimidation / attack-tool names. The previous version also matched
+# "lure" patterns (Free/Open/Public WiFi, Guest, Complimentary) and
+# "setup" patterns (Setup/Config/Admin/DIRECT-), which fire on nearly
+# every hotspot, printer (WiFi Direct "DIRECT-..."), smart TV, and phone
+# in range — that produced thousands of false positives in hours.
+#
+# A bare "Free WiFi" SSID is only suspicious if it's an evil twin of a
+# known network or shows other attack behaviour; that belongs to the
+# evil_twin / pineapple rules (corroborated), NOT a name-only match here.
 conditions:
   operator: OR
   clauses:
-    # Free WiFi lures
+    # Intimidation / prank names — effectively never a real network.
     - type: ssid_match
       field: ssid
       operator: regex
-      pattern: ".*(Free.*WiFi|Open.*WiFi|Public.*WiFi|.*_Free|.*Guest|.*Complimentary).*"
+      pattern: "(?i)\\b(FBI|NSA|CIA|Surveillance|Virus|Malware|Hacked|Pwned?|Pwnie|Exploit|Backdoor|Trojan)\\b"
 
-    # Setup/Admin pages
+    # Named attack tools / frameworks advertised as an SSID.
     - type: ssid_match
       field: ssid
       operator: regex
-      pattern: ".*(Setup|Config|Admin|DIRECT-).*"
-
-    # Prank/Attack SSIDs
-    - type: ssid_match
-      field: ssid
-      operator: regex
-      pattern: ".*(FBI|NSA|Surveillance|Virus|Hack|Pwn|Exploit|Crack).*"
+      pattern: "(?i)(Pineapple|WiFi[-_ ]?Pineapple|Hak5|MANA|Karma|Fluxion|Wifiphisher|Evil[-_ ]?Twin|Rogue[-_ ]?AP)"
 
 actions:
   - type: alert_dashboard
@@ -41,11 +44,9 @@ metadata:
   tags:
     - suspicious_ssid
     - social_engineering
-    - honeypot_detection
-  description: "Detects suspicious SSID patterns indicating attacks or honeypots"
-  confidence: 0.60
+  description: "SSID name matches a prank/intimidation or known attack-tool pattern"
+  confidence: 0.75
 
 tuning:
-  max_alerts_per_hour: 50
-  false_positive_prone: true
-  whitelist_check: true
+  # Per (rule, SSID) cooldown so one persistent rogue SSID doesn't spam.
+  cooldown_seconds: 3600
