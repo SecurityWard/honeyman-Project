@@ -43,11 +43,11 @@ export default function DashboardPage() {
 
   const hours = getHoursFromRange(dateRange);
 
-  const { data: overview, isLoading: overviewLoading } = useDashboardOverview();
-  const { data: trends, isLoading: trendsLoading } = useThreatTrends('hourly', hours || 8760); // 8760 = 1 year
-  const { data: topThreats, isLoading: topThreatsLoading } = useTopThreats(7, hours || undefined);
+  const { data: overview, isLoading: overviewLoading } = useDashboardOverview(sensorFilter);
+  const { data: trends, isLoading: trendsLoading } = useThreatTrends('hourly', hours || 8760, sensorFilter); // 8760 = 1 year
+  const { data: topThreats, isLoading: topThreatsLoading } = useTopThreats(7, hours || undefined, sensorFilter);
   const { data: topSensors, isLoading: topSensorsLoading } = useTopSensors(5, hours || undefined);
-  const { data: geoData, isLoading: geoLoading } = useGeoMap(hours || undefined);
+  const { data: geoData, isLoading: geoLoading } = useGeoMap(hours || undefined, sensorFilter);
   const { data: threatsData } = useThreats({
     sensor_id: sensorFilter,
     page: 1,

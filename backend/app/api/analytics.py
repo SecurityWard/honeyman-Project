@@ -24,13 +24,26 @@ router = APIRouter()
 
 @router.get("/analytics/overview", response_model=OverviewStats)
 async def get_overview_stats(
+    sensor_id: Optional[str] = Query(None, description="Scope threat stats to one sensor"),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get dashboard overview statistics"""
+    """Get dashboard overview statistics.
+
+    When sensor_id is given, the threat counts scope to that sensor
+    (the sensor-count cards stay global — they describe the fleet, not
+    the selected sensor).
+    """
 
     now = datetime.now(timezone.utc)
     last_24h = now - timedelta(hours=24)
     last_7d = now - timedelta(days=7)
+
+    def scoped(*extra):
+        """Build a WHERE list with the optional sensor filter applied."""
+        conds = list(extra)
+        if sensor_id:
+            conds.append(Threat.sensor_id == sensor_id)
+        return conds
 
     # Total sensors ever registered.
     total_sensors_result = await db.execute(select(func.count()).select_from(Sensor))
@@ -55,42 +68,38 @@ async def get_overview_stats(
     )
     online_sensors = online_sensors_result.scalar()
 
-    # Total threats
-    total_threats_result = await db.execute(select(func.count()).select_from(Threat))
-    total_threats = total_threats_result.scalar()
+    # Total threats (scoped to sensor when requested)
+    total_threats = (await db.execute(
+        select(func.count()).select_from(Threat).where(*scoped())
+    )).scalar()
 
     # Threats last 24h
-    threats_24h_result = await db.execute(
-        select(func.count()).where(Threat.timestamp >= last_24h)
-    )
-    threats_24h = threats_24h_result.scalar()
+    threats_24h = (await db.execute(
+        select(func.count()).where(*scoped(Threat.timestamp >= last_24h))
+    )).scalar()
 
     # Threats last 7d
-    threats_7d_result = await db.execute(
-        select(func.count()).where(Threat.timestamp >= last_7d)
-    )
-    threats_7d = threats_7d_result.scalar()
+    threats_7d = (await db.execute(
+        select(func.count()).where(*scoped(Threat.timestamp >= last_7d))
+    )).scalar()
 
     # Critical threats
-    critical_result = await db.execute(
-        select(func.count()).where(Threat.severity == 'critical')
-    )
-    critical_threats = critical_result.scalar()
+    critical_threats = (await db.execute(
+        select(func.count()).where(*scoped(Threat.severity == 'critical'))
+    )).scalar()
 
     # High threats
-    high_result = await db.execute(
-        select(func.count()).where(Threat.severity == 'high')
-    )
-    high_threats = high_result.scalar()
+    high_threats = (await db.execute(
+        select(func.count()).where(*scoped(Threat.severity == 'high'))
+    )).scalar()
 
     # Threat velocity (threats per hour in last 24h)
     threat_velocity = threats_24h / 24.0 if threats_24h > 0 else 0.0
 
     # Average threat score
-    avg_score_result = await db.execute(
-        select(func.avg(Threat.threat_score)).where(Threat.threat_score.isnot(None))
-    )
-    avg_threat_score = avg_score_result.scalar()
+    avg_threat_score = (await db.execute(
+        select(func.avg(Threat.threat_score)).where(*scoped(Threat.threat_score.isnot(None)))
+    )).scalar()
 
     return OverviewStats(
         total_sensors=total_sensors,
@@ -189,6 +198,7 @@ async def get_top_threats(
     days: Optional[int] = Query(None),
     start_time: Optional[datetime] = None,
     end_time: Optional[datetime] = None,
+    sensor_id: Optional[str] = Query(None, description="Scope to one sensor"),
     db: AsyncSession = Depends(get_db)
 ):
     """Get top threat types"""
@@ -210,6 +220,8 @@ async def get_top_threats(
         query = query.where(Threat.timestamp >= start_time)
     if end_time:
         query = query.where(Threat.timestamp <= end_time)
+    if sensor_id:
+        query = query.where(Threat.sensor_id == sensor_id)
 
     query = query.group_by(Threat.threat_type, Threat.severity)\
                  .order_by(func.count().desc())\
@@ -296,6 +308,7 @@ async def get_threat_map(
     end_time: Optional[datetime] = None,
     hours: Optional[int] = Query(None),
     severity: Optional[List[str]] = Query(None),
+    sensor_id: Optional[str] = Query(None, description="Scope the map to one sensor"),
     db: AsyncSession = Depends(get_db)
 ):
     """Get geographic threat distribution for map visualization.
@@ -327,6 +340,10 @@ async def get_threat_map(
     if end_time:
         conditions.append("t.timestamp <= :end_time")
         params["end_time"] = end_time
+
+    if sensor_id:
+        conditions.append("t.sensor_id = :sensor_id")
+        params["sensor_id"] = sensor_id
 
     where_clause = " AND ".join(conditions)
 
