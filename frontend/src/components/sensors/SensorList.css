@@ -27,7 +27,13 @@
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 14px;
+  background: white;
+  color: #1f2937;   /* explicit — was inheriting a light color, near-invisible on white */
   transition: border-color 0.2s;
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
 }
 
 .search-input:focus {
@@ -42,8 +48,16 @@
   border-radius: 6px;
   font-size: 14px;
   background: white;
+  color: #1f2937;   /* explicit dark text — options were white-on-white until highlighted */
   cursor: pointer;
   transition: border-color 0.2s;
+}
+
+/* The dropdown options render in their own layer; set colors explicitly
+   so they're readable regardless of inherited theme text color. */
+.status-filter option {
+  color: #1f2937;
+  background: white;
 }
 
 .status-filter:focus {
