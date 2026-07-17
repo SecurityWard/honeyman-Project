@@ -1,7 +1,12 @@
 rule_id: wifi_wps_attack_001
 name: "WPS Attack Detection"
-version: 2.0
-enabled: true
+version: 2.1
+# Disabled: the WiFi detector never emits `wps_enabled` or
+# `wps_attempt_rate` — it doesn't parse the WPS information element from
+# beacons/probes, so both clauses are unsatisfiable and the rule can
+# never fire. Enabling proper WPS detection needs IE parsing in the
+# detector (RSN/WPS tag 221, OUI 00:50:F2 type 4). Tracked in ROADMAP §3.
+enabled: false
 severity: high
 threat_type: wps_attack
 category: wifi

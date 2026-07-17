@@ -18,8 +18,10 @@ Build a repeatable test matrix; confirm each fires the right
 - [x] **BLE** — Flipper Zero proven on the Pi5
 - [ ] **BLE** — BLE spam, Apple Continuity abuse, HID keylogger, ESP32
       tools, manufacturer spoofing
-- [ ] **WiFi** — Evil Twin, deauth flood, beacon flood, Pineapple,
-      ESP8266 Deauther, Flipper WiFi, WPS (monitor mode now works)
+- [ ] **WiFi** — testable NOW (rules match emitted fields): Pineapple
+      (SSID/OUI), ESP8266 Deauther, Flipper WiFi, deauth flood
+      (>10/min), beacon flood (>50 SSIDs). Evil Twin + WPS are
+      **disabled** — see §3 (need detector work, not just rules).
 - [ ] **AirDrop/mDNS** — suspicious service names, device spoofing, rapid
       announcement floods, TXT-record abuse
 - [ ] **Network honeypot** — SSH brute-force, HTTP cred harvest, port
@@ -39,7 +41,26 @@ Build a repeatable test matrix; confirm each fires the right
 - [ ] Decide hash-DB refresh cadence — schedule `data/build_malware_db.py`
       (e.g. weekly) so signatures stay current
 
-## 3. WiFi adapter stability across devices
+## 3. WiFi detection — detector gaps (real capability work)
+
+Rule audit (which rules match the fields the detector actually emits):
+- **Work:** suspicious_ssid, pineapple_detection, esp8266_deauther,
+  flipper_wifi (SSID/BSSID match), deauth_attack (`deauth_count_per_minute`),
+  beacon_flooding (`unique_ssids_per_scan`).
+- **Disabled — can't fire as written:**
+  - [ ] **Evil Twin** — needs detector-side correlation: same SSID from a
+        NEW BSSID, ideally with encryption mismatch or suspicious OUI, and
+        must tolerate mesh/enterprise (one SSID, many legit BSSIDs). The old
+        rule matched `rssi` (detector emits `signal`) + lure words — broken
+        and FP-prone. Implement proper detection in the detector.
+  - [ ] **WPS** — detector doesn't parse the WPS information element
+        (tag 221, OUI 00:50:F2 type 4), so `wps_enabled` is never emitted.
+        Add IE parsing to `_handle_beacon`.
+- [ ] `_get_channel_from_packet` and `_get_encryption` are **stubs**
+      (return None / []). Parse the RadioTap header (channel) and RSN/WPA
+      IEs (encryption) — several richer rules depend on these.
+
+## 4. WiFi adapter stability across devices
 
 - [ ] **Reboot persistence** — monitor mode re-establishes after reboot;
       NetworkManager-unmanaged rule survives
@@ -53,7 +74,7 @@ Build a repeatable test matrix; confirm each fires the right
       when a second adapter is detected
 - [ ] Document a supported-adapter list
 
-## 4. Dashboard usability & filtering
+## 5. Dashboard usability & filtering
 
 - [x] **Sensor-filter bug** — fixed. Clicking a sensor now scopes the map,
       stat cards, trends, and top-threats to that sensor (not just the feed).
@@ -66,7 +87,7 @@ Build a repeatable test matrix; confirm each fires the right
       `/threats` already accepts `severity` + `detector_type`; mostly
       frontend UI + wiring the analytics endpoints.
 
-## 5. Rule tuning / false positives
+## 6. Rule tuning / false positives
 
 - [x] **`suspicious_ssid` FP storm** — fixed (v2.1). Dropped the lure/setup
       patterns (`Guest`/`DIRECT-`/`Free WiFi`/`Setup`…); now matches only
@@ -82,7 +103,7 @@ Build a repeatable test matrix; confirm each fires the right
       in aggregate vs per-target, and `whitelist_check` — several rules
       assume enforcement that may not exist
 
-## 6. Location accuracy
+## 7. Location accuracy
 
 - [ ] **Stationary sensor coordinates jumped ~30 miles in a day.**
       Observed on `rpi5test-fad9` (stationary). It has no GPS and no manual
@@ -104,7 +125,7 @@ Build a repeatable test matrix; confirm each fires the right
         mode and the internal one isn't being used for a positioning scan?
       - Make the map's accuracy circle honest about how coarse IP really is.
 
-## 7. Stability & soak
+## 8. Stability & soak
 
 - [ ] Let the Pi5 soak for days — watch for memory growth, restarts,
       detector give-ups
@@ -115,7 +136,7 @@ Build a repeatable test matrix; confirm each fires the right
 - [ ] **Multi-sensor** — run Pi Zero + Pi5 simultaneously; confirm
       map/filter/list scale
 
-## 8. Infrastructure / audit backlog
+## 9. Infrastructure / audit backlog
 
 - [ ] **nginx `sites-enabled` is a copy, not a symlink, and drifted** from
       `sites-available` — reconcile (edits to available silently don't
@@ -128,7 +149,7 @@ Build a repeatable test matrix; confirm each fires the right
       `.from_orm/.dict/.json` → v2 (breaks on next major bump, not today)
 - [ ] Purge aged sensor rows if any linger past the 72h auto-hide
 
-## 9. Documentation
+## 10. Documentation
 
 - [ ] Keep `CAPABILITIES.md` honest as detectors get validated (proven vs coded)
 - [ ] Document the dual-adapter WiFi setup (internal internet + external

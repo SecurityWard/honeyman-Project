@@ -1,7 +1,17 @@
 rule_id: wifi_evil_twin_001
 name: "Evil Twin Access Point Detection"
-version: 2.0
-enabled: true
+version: 2.1
+# Disabled: this rule can't actually detect an evil twin.
+#  1. It matches field `rssi`, but the WiFi detector emits `signal` — the
+#     clause never evaluates, and with operator AND the rule never fires.
+#  2. Even field-fixed, matching "strong signal + lure-word SSID" is not
+#     evil-twin detection and would false-positive on any legitimate strong
+#     "Guest"/"Public" network.
+# Real evil-twin detection needs detector-side correlation: the same SSID
+# appearing from a NEW BSSID, ideally with an encryption mismatch or a
+# suspicious OUI — and must tolerate mesh/enterprise networks that
+# legitimately broadcast one SSID from many BSSIDs. Tracked in ROADMAP §3.
+enabled: false
 severity: high
 threat_type: evil_twin
 category: wifi
