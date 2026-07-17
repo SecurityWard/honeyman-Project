@@ -29,11 +29,13 @@ Build a repeatable test matrix; confirm each fires the right
 
 ## 2. Malware-hash scanning
 
-- [ ] **EICAR end-to-end** — drop an `eicar.com` file on a USB, confirm
-      `known_malware` critical fires and reaches the dashboard (the safe,
-      deterministic proof)
-- [ ] Confirm the agent self-mounts USB read-only and hashes partition files
-- [ ] Confirm a real MalwareBazaar-listed hash matches (EICAR is the safe proxy)
+- [x] **EICAR end-to-end** — proven: an `eicar.com` (exact 68 bytes) on a
+      USB fires `known_malware` critical (`EICAR-Test-File`) to the
+      dashboard. Confirms mount + walk + hash + DB lookup + rule + delivery.
+- [x] Agent self-mounts the USB and hashes partition files (proven by the
+      EICAR test — the hash-match path works)
+- [ ] Confirm a real MalwareBazaar-listed sample matches in the field
+      (EICAR proved the mechanism; a live sample is the last mile)
 - [ ] Decide hash-DB refresh cadence — schedule `data/build_malware_db.py`
       (e.g. weekly) so signatures stay current
 
@@ -53,11 +55,10 @@ Build a repeatable test matrix; confirm each fires the right
 
 ## 4. Dashboard usability & filtering
 
-- [ ] **Sensor-filter bug** — the sensor filter only scopes the live feed.
-      The map, stat cards, and charts stay global. Fix = thread `sensor_id`
-      through the analytics endpoints (`/overview`, `/map`, `/top-threats`,
-      `/trends`) and their frontend hooks so the whole dashboard scopes to
-      the selected sensor.
+- [x] **Sensor-filter bug** — fixed. Clicking a sensor now scopes the map,
+      stat cards, trends, and top-threats to that sensor (not just the feed).
+      `sensor_id` threaded through `/analytics/{map,overview,top-threats,trends}`
+      and the frontend hooks.
 - [ ] **Filter by severity** (critical / high / medium / low)
 - [ ] **Filter by attack class** (detector type: usb / ble / wifi / airdrop
       / network) and/or `threat_type`
@@ -67,17 +68,11 @@ Build a repeatable test matrix; confirm each fires the right
 
 ## 5. Rule tuning / false positives
 
-- [ ] **`suspicious_ssid` FP storm** — hundreds of false positives over a
-      few hours. The rule matches `Guest`, `DIRECT-`, `Free/Open/Public
-      WiFi`, `Complimentary`, `Setup/Config/Admin` — which hit nearly every
-      printer (WiFi Direct `DIRECT-`), smart TV, hotel/airport hotspot, and
-      phone hotspot in range. Fix options: drop the lure/setup patterns and
-      keep only genuinely attack-indicative ones (FBI/NSA/Pwn/Hack/Exploit/
-      tool names), require corroboration (suspicious SSID + evil-twin
-      behavior), or drop to `info` + opt-in. Note: `max_alerts_per_hour`
-      does NOT cap the aggregate (each unique SSID is a separate cooldown
-      target), and `false_positive_prone` / `whitelist_check` metadata may
-      not be enforced by the engine — verify.
+- [x] **`suspicious_ssid` FP storm** — fixed (v2.1). Dropped the lure/setup
+      patterns (`Guest`/`DIRECT-`/`Free WiFi`/`Setup`…); now matches only
+      prank/intimidation names and named attack tools (Pineapple/Hak5/MANA/
+      Evil-Twin/…). Validated: fires on 7/7 attack names, 0 FPs on 8 legit
+      networks. Purged 3361 old FP rows. Per-SSID 1h cooldown.
 - [ ] **`flipper_zero_unleashed` FP storm** — fires on ordinary BLE devices;
       tighten conditions
 - [ ] Broader FP sweep — run a sensor in a busy environment for a day, rank
@@ -144,6 +139,9 @@ Build a repeatable test matrix; confirm each fires the right
 
 ## Recently shipped (context)
 
+- Malware-hash scan **proven** end-to-end (EICAR → known_malware critical)
+- `suspicious_ssid` rule retuned; FP storm eliminated (3361 rows purged)
+- Dashboard sensor filter now scopes the map + stats + charts, not just feed
 - WiFi rework: dedicated adapter, per-interface monitor mode, no
   `airmon-ng check kill` (no more network self-clobber)
 - `scapy.sniff()` moved off the event loop (was freezing the whole agent)
