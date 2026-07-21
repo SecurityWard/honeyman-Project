@@ -1,32 +1,40 @@
 rule_id: ble_flipper_unleashed_001
 name: "Flipper Zero Unleashed/Custom Firmware Detection"
-version: 2.0
+version: 2.1
 enabled: true
 severity: critical
 threat_type: flipper_zero_unleashed
 category: ble
 
-# Detect Flipper Zero with custom firmware (Unleashed, Xtreme, RogueMaster)
+# Detect a Flipper Zero running custom firmware (Unleashed/Xtreme/
+# RogueMaster/Momentum) by its advertised BLE name.
+#
+# v2.1 — killed a false-positive storm (274 hits on ordinary devices).
+# The old rule matched:
+#   - a bare "RM" alternative -> "rm" substring in Garmin/thermostat/alarm/…
+#   - "xtreme"/"momentum" standalone -> JBL Xtreme speakers, Sennheiser
+#     Momentum headphones (both very common BLE devices)
+#   - the Nordic UART Service UUID -> advertised by thousands of legit BLE
+#     devices, and the field name (service_uuid) didn't even match what the
+#     detector emits (service_uuids). Removed.
+# General Flipper detection lives in flipper_zero.yaml; this rule is the
+# custom-firmware specialisation and must be high-signal.
 conditions:
   operator: OR
   clauses:
-    # Custom firmware in device name
+    # A Flipper advertising a custom-firmware name. Require "flipper" AND a
+    # firmware keyword together so it can't fire on a device that merely
+    # contains one of these words.
     - type: file_pattern
       field: device_name
       operator: regex
-      pattern: ".*(unleashed|xtreme|rogue.*master|momentum|RM|FZ_).*"
+      pattern: "flipper.*(unleashed|xtreme|rogue.?master|momentum)"
 
-    # Flipper with Nordic UART service
-    - type: service_name
-      field: service_uuid
-      operator: equals
-      value: "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
-
-    # Rapid service changes (behavioral)
-    - type: behavioral
-      metric: service_change_rate
-      operator: anomaly
-      threshold: 5.0
+    # Flipper custom-firmware BLE name prefix, e.g. "FZ_...".
+    - type: file_pattern
+      field: device_name
+      operator: regex
+      pattern: "\\bFZ_"
 
 actions:
   - type: alert_dashboard
@@ -49,9 +57,8 @@ metadata:
     - flipper_zero
     - custom_firmware
     - ble_attack
-    - badble
-  description: "Detects Flipper Zero with custom firmware via BLE signatures"
-  confidence: 0.98
+  description: "Detects a Flipper Zero running custom firmware via its BLE name"
+  confidence: 0.95
 
 tuning:
   max_alerts_per_hour: 10
