@@ -30,7 +30,7 @@ export default function AboutPage() {
               <h3>USB</h3>
               <ul>
                 <li><strong>BadUSB / HID injection:</strong> Rubber Ducky, Bash Bunny, OMG Cable, Flipper Zero acting as HID, Teensy, Digispark</li>
-                <li><strong>Mass storage scanning:</strong> recursive SHA-256 hashing against a 360+ malware signature database (Stuxnet, WannaCry, Mimikatz, Hak5 payloads, etc.)</li>
+                <li><strong>Mass storage scanning:</strong> recursive SHA-256/MD5 hashing against 600+ real malware signatures from abuse.ch MalwareBazaar (Mirai, AgentTesla, Formbook, RemcosRAT, Vidar, WannaCry, &hellip;) plus the EICAR test file</li>
                 <li><strong>VID/PID fingerprinting</strong> of known attack devices</li>
                 <li><strong>Suspicious volume labels</strong> and autorun.inf inspection</li>
               </ul>
@@ -168,7 +168,7 @@ export default function AboutPage() {
             On a fresh Raspberry Pi (Zero 2 W, 4, or 5), one command:
           </p>
           <div className="formula">
-            <code>curl -sSL https://honeymanproject.com/install | bash</code>
+            <code>curl -sSL https://honeymanproject.com/install | sudo bash</code>
           </div>
           <p>
             The installer detects available hardware, asks for a sensor name and optional

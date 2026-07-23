@@ -25,10 +25,10 @@ pip install -e .
 Use the install script:
 
 ```bash
-curl -sSL https://honeymanproject.com/install | bash
+curl -sSL https://honeymanproject.com/install | sudo bash
 ```
 
-It self-registers the sensor with the backend, captures the one-time API key, and sets up systemd. See `deployment/install.sh`.
+It self-registers the sensor with the backend, captures the one-time API key, and sets up systemd (runs as root). See `deployment/install.sh`.
 
 ## Quick Start (manual)
 

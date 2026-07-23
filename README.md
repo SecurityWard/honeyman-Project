@@ -16,7 +16,7 @@ rules that update without reflashing sensors.
 
 | Vector | Examples |
 |---|---|
-| **USB** | BadUSB / Rubber Ducky / Bash Bunny / OMG Cable, malicious VID/PID, suspicious volume labels (`STARKILLER`, `PAYLOAD`), autorun.inf abuse, and 360+ malware hash signatures (Stuxnet, Conficker, WannaCry, Mimikatz, Hak5 payloads, …) on auto-mounted mass storage. |
+| **USB** | BadUSB / Rubber Ducky / Bash Bunny / OMG Cable, malicious VID/PID, suspicious volume labels (`STARKILLER`, `PAYLOAD`), autorun.inf abuse, and 600+ real malware hash signatures from abuse.ch MalwareBazaar (Mirai, AgentTesla, Formbook, RemcosRAT, Vidar, WannaCry, …) + EICAR, on self-mounted mass storage. |
 | **WiFi** | Evil Twin APs, deauth flooding, beacon flooding, WiFi Pineapple / ESP8266 Deauther / Flipper Zero WiFi, suspicious SSIDs, WPS attacks. |
 | **BLE** | Flipper Zero (incl. Unleashed/Xtreme firmware), BLE spam, Apple Continuity abuse, BLE HID keyloggers, ESP32 attack tools, manufacturer-data spoofing. |
 | **AirDrop / mDNS** | Suspicious service names, generic device spoofing, rapid announcement floods, TXT-record abuse. |
@@ -49,8 +49,10 @@ See [`docs/ARCHITECTURE.mmd`](docs/ARCHITECTURE.mmd) for the detailed diagram.
 On a fresh Raspberry Pi (Pi Zero 2 W, Pi 4, or Pi 5):
 
 ```bash
-curl -sSL https://honeymanproject.com/install | bash
+curl -sSL https://honeymanproject.com/install | sudo bash
 ```
+
+(The installer needs root — it writes to `/etc/honeyman`, `/var/lib/honeyman`, and installs a systemd unit.)
 
 The installer will:
 
@@ -58,7 +60,7 @@ The installer will:
 2. Refuse to default WiFi/AirDrop on if the device has only one wireless adapter (would disconnect the installer from itself mid-run)
 3. Ask you for a sensor name and (optional) location label
 4. Install Python deps + the `honeyman-agent` package
-5. Ship the malware-hash DB (~360 signatures) to `/var/lib/honeyman/malware_hashes.db` so the USB detector can scan files on plugged drives (it self-mounts read-only — no `usbmount` package needed)
+5. Ship the malware-hash DB (600+ real MalwareBazaar signatures + EICAR) to `/var/lib/honeyman/malware_hashes.db` so the USB detector can scan files on plugged drives (it self-mounts read-only — no `usbmount` package needed)
 6. Call `POST /api/v2/sensors/register` to claim a sensor ID and receive a one-time API key
 7. Write the API key to `/etc/honeyman/api_key` (mode 0600, owner root)
 8. Drop a systemd unit at `/etc/systemd/system/honeyman-agent.service` and start it
@@ -68,7 +70,7 @@ Within a minute or two, the sensor appears on the public dashboard.
 For non-interactive installs (e.g. flashing many SD cards), pre-set the env vars:
 
 ```bash
-curl -sSL https://honeymanproject.com/install | \
+curl -sSL https://honeymanproject.com/install | sudo \
   SENSOR_NAME="defcon-hotel" \
   LOCATION="DefCon 32 — Caesars Palace" \
   bash
