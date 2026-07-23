@@ -38,6 +38,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
+      # Fail the build if any enabled detection rule can never fire
+      # (matches a field no detector emits). Catches the silent-breakage
+      # class of bug — see agent/tests/validate_rules.py.
+      - name: validate detection rules
+        working-directory: agent
+        run: python tests/validate_rules.py
 
   frontend:
     name: frontend / build

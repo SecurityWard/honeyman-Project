@@ -41,9 +41,23 @@ Build a repeatable test matrix; confirm each fires the right
 - [ ] Decide hash-DB refresh cadence — schedule `data/build_malware_db.py`
       (e.g. weekly) so signatures stay current
 
-## 3. WiFi detection — detector gaps (real capability work)
+## 3. Detector gaps — rules that need detector work
 
-Rule audit (which rules match the fields the detector actually emits):
+A field validator (`agent/tests/validate_rules.py`, enforced in CI) now
+guarantees every *enabled* rule can fire. These detections are **disabled**
+because they need the detector to emit something it currently doesn't:
+
+- [ ] **Apple Continuity abuse** (BLE) — needs the detector to parse and
+      rate-analyse Continuity messages; a bare Apple-ID (4c00) match would
+      FP on every iPhone/Mac/AirPod.
+- [ ] **AirDrop rapid announcements** — needs per-service announcement
+      rate / churn tracking over a window (detector emits per-service
+      fields, no rates).
+- [ ] **WiFi channel + encryption** — `_get_channel_from_packet` and
+      `_get_encryption` are stubs (None / []). Parse RadioTap (channel) and
+      RSN/WPA IEs (encryption).
+
+Rule audit (which WiFi rules match the fields the detector actually emits):
 - **Work:** suspicious_ssid, pineapple_detection, esp8266_deauther,
   flipper_wifi (SSID/BSSID match), deauth_attack (`deauth_count_per_minute`),
   beacon_flooding (`unique_ssids_per_scan`).
