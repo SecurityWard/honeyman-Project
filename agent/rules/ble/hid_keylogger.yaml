@@ -6,21 +6,20 @@ severity: critical
 threat_type: ble_keylogger
 category: ble
 
-# Detect BLE HID keyloggers
+# Detect BLE HID keyloggers.
+# v2.1 — the old rule ANDed the HID service UUID (wrong field name:
+# service_uuid vs emitted service_uuids) with a name pattern, so it never
+# fired. The HID service alone (0x1812) is on every legitimate BLE
+# keyboard, so it can't be the signal by itself. We fire on a device name
+# that advertises keylogging intent — a silent keylogger masquerading as a
+# plain "Keyboard" is indistinguishable via BLE advert (see ROADMAP).
 conditions:
-  operator: AND
+  operator: OR
   clauses:
-    # HID service UUID
-    - type: service_name
-      field: service_uuid
-      operator: equals
-      value: "00001812-0000-1000-8000-00805f9b34fb"
-
-    # Suspicious device names
     - type: file_pattern
       field: device_name
       operator: regex
-      pattern: ".*(keylog|logger|keyboard|input|hid).*"
+      pattern: "(keylog|keygrab|keystroke.?log|key.?sniff)"
 
 actions:
   - type: alert_dashboard

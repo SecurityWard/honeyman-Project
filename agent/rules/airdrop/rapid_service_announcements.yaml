@@ -1,7 +1,12 @@
 rule_id: airdrop_rapid_announce_001
 name: "Rapid AirDrop Service Announcement Detection"
 version: 2.0
-enabled: true
+# Disabled: both clauses are behavioral metrics (service_announcement_rate,
+# service_churn) that the AirDrop detector doesn't compute — it emits
+# per-service fields (service_name, txt_records, port), not rates. The rule
+# could never fire. Enabling it needs the detector to track announcement
+# rate / churn per service over a window. Tracked in ROADMAP §3.
+enabled: false
 severity: high
 threat_type: airdrop_rapid_announcements
 category: airdrop

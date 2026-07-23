@@ -1,7 +1,13 @@
 rule_id: ble_apple_continuity_001
 name: "Apple Continuity Protocol Abuse Detection"
 version: 2.0
-enabled: true
+# Disabled: the old rule ANDed a dead service_uuid clause and a
+# behavioral metric nothing computes with a bare Apple company-ID match
+# (4c00). It never fired — and matching 4c00 alone would false-positive on
+# every iPhone/Mac/AirPod in range. Real Continuity-abuse detection (BLE
+# spam tools flooding malformed Continuity messages) needs the detector to
+# parse + rate-analyse Continuity message types. Tracked in ROADMAP §3.
+enabled: false
 severity: high
 threat_type: apple_continuity_abuse
 category: ble

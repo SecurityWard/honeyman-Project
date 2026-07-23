@@ -1,26 +1,24 @@
 rule_id: ble_manufacturer_spoofing_001
 name: "BLE Manufacturer Data Spoofing Detection"
-version: 2.0
+version: 2.1
 enabled: true
 severity: medium
 threat_type: manufacturer_spoofing
 category: ble
 
-# Detect manufacturer data spoofing
+# v2.1 — the old rule ANDed a behavioral metric nothing computes
+# (manufacturer_switching) with a bare Apple-ID match, so it could never
+# fire (and matching all 4c00 would FP on every Apple device anyway).
+# The BLE detector tracks manufacturer_changes: the count of times a given
+# MAC has changed its advertised manufacturer data. A device that keeps
+# switching its claimed manufacturer is the actual spoofing signal.
 conditions:
-  operator: AND
+  operator: OR
   clauses:
-    # Device changing manufacturers
-    - type: behavioral
-      metric: manufacturer_switching
-      operator: anomaly
-      threshold: 2.0
-
-    # Suspicious manufacturer prefixes (Apple spoofing)
-    - type: file_pattern
-      field: manufacturer_data
-      operator: regex
-      pattern: "^4c00.*"  # Apple Inc.
+    - type: network_evaluator
+      field: manufacturer_changes
+      operator: greater_than
+      value: 2
 
 actions:
   - type: alert_dashboard
