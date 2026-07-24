@@ -45,11 +45,48 @@
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
+.feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
 .real-time-feed h3 {
-  margin: 0 0 16px 0;
+  margin: 0;
   font-size: 20px;
   font-weight: 600;
   color: #111827;
+}
+
+.feed-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.feed-filter {
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #111827;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.feed-filter:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgb(99 102 241 / 0.25);
+}
+
+/* Ensure dropdown options stay legible (some browsers/themes default to
+   white-on-white). */
+.feed-filter option {
+  color: #111827;
+  background: #ffffff;
 }
 
 .threat-feed {

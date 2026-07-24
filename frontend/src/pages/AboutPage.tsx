@@ -42,7 +42,7 @@ export default function AboutPage() {
                 <li><strong>Evil Twin APs</strong> (same SSID, different BSSIDs)</li>
                 <li><strong>Deauth and beacon flooding</strong></li>
                 <li><strong>Attack tool fingerprints:</strong> WiFi Pineapple, ESP8266 Deauther, Flipper Zero WiFi</li>
-                <li><strong>WPS vulnerabilities and weak encryption</strong> (WEP, vulnerable WPA)</li>
+                <li><strong>Weak encryption</strong> (WEP, vulnerable WPA) on scanned networks</li>
               </ul>
             </div>
 
@@ -50,7 +50,7 @@ export default function AboutPage() {
               <h3>BLE</h3>
               <ul>
                 <li><strong>Flipper Zero</strong> including Unleashed and Xtreme firmware variants</li>
-                <li><strong>BLE spam and Apple Continuity abuse</strong></li>
+                <li><strong>BLE spam / beacon flooding</strong></li>
                 <li><strong>BLE HID keyloggers and ESP32 attack tools</strong></li>
                 <li><strong>Manufacturer-data spoofing</strong></li>
               </ul>

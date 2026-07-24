@@ -34,6 +34,8 @@ const FEED_MAX = 20;
 export default function DashboardPage() {
   const [recentThreats, setRecentThreats] = useState<Threat[]>([]);
   const [dateRange, setDateRange] = useState<DateRange>({ preset: '7d' });
+  const [severityFilter, setSeverityFilter] = useState<string>('all');
+  const [detectorFilter, setDetectorFilter] = useState<string>('all');
 
   // Optional ?sensor_id=… filter so the Sensors page can navigate here
   // scoped to a specific sensor's events.
@@ -66,6 +68,28 @@ export default function DashboardPage() {
     }
     return undefined;
   }, [sensorFilter, filteredSensor?.latitude, filteredSensor?.longitude]);
+
+  // Distinct detector types present in the current feed, so the detector
+  // filter only offers classes we actually have events for.
+  const detectorOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(recentThreats.map(t => t.detector_type).filter(Boolean))
+      ).sort() as string[],
+    [recentThreats]
+  );
+
+  // Client-side filter over the (already-fetched, ≤FEED_MAX) feed. Severity
+  // uses a fixed order; both default to 'all'.
+  const visibleThreats = useMemo(
+    () =>
+      recentThreats.filter(
+        t =>
+          (severityFilter === 'all' || t.severity === severityFilter) &&
+          (detectorFilter === 'all' || t.detector_type === detectorFilter)
+      ),
+    [recentThreats, severityFilter, detectorFilter]
+  );
 
   // Seed the feed from REST so it isn't empty until the next WebSocket frame.
   // Once a WS-delivered threat arrives the feed switches to "live" mode and
@@ -154,12 +178,43 @@ export default function DashboardPage() {
       </div>
 
       <div className="real-time-feed">
-        <h3>Real-Time Threat Feed</h3>
+        <div className="feed-header">
+          <h3>Real-Time Threat Feed</h3>
+          <div className="feed-filters">
+            <select
+              className="feed-filter"
+              aria-label="Filter by severity"
+              value={severityFilter}
+              onChange={e => setSeverityFilter(e.target.value)}
+            >
+              <option value="all">All severities</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <select
+              className="feed-filter"
+              aria-label="Filter by attack class"
+              value={detectorFilter}
+              onChange={e => setDetectorFilter(e.target.value)}
+            >
+              <option value="all">All classes</option>
+              {detectorOptions.map(d => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         <div className="threat-feed">
           {recentThreats.length === 0 ? (
             <p className="no-threats">No recent threats. Monitoring&hellip;</p>
+          ) : visibleThreats.length === 0 ? (
+            <p className="no-threats">No threats match the current filters.</p>
           ) : (
-            recentThreats.map(threat => {
+            visibleThreats.map(threat => {
               const rule = threat.matched_rules?.[0];
               const mitre = [
                 ...(threat.mitre_tactics ?? []),
