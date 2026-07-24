@@ -636,7 +636,13 @@ class WifiDetector(BaseDetector):
         now = datetime.utcnow()
         recent = [d for d in deauths if (now - d['timestamp']).total_seconds() < 60]
 
-        if len(recent) > 10:  # Threshold
+        # Benign APs emit deauth/disassoc frames routinely (client roaming,
+        # idle timeout, band steering) — observed ~11-33/min per BSSID in a
+        # normal environment. A real deauth flood (aireplay-ng, Pineapple,
+        # ESP8266 deauther) is continuous and saturates the maxlen=100 tracker
+        # within seconds. 60/min sits well above background noise and any real
+        # attack blows straight past it, so this is the FP/attack dividing line.
+        if len(recent) > 60:  # Threshold — attack-level rate, not background
             deauth_data = {
                 'threat_type': 'deauth_attack',
                 'bssid': bssid,

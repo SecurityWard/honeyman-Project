@@ -230,6 +230,7 @@ class BleDetector(BaseDetector):
         mac = device_data['mac_address']
         name = device_data['device_name']
         manufacturer = device_data.get('manufacturer_data', '')
+        company_id = manufacturer.split(':', 1)[0] if manufacturer else ''
 
         now = datetime.utcnow()
 
@@ -251,11 +252,20 @@ class BleDetector(BaseDetector):
                     self.device_name_changes[mac].append(name)
                     logger.debug("BLE %s name change: %s -> %s", mac, old_name, name)
 
+            # Compare only the BLE *company identifier* (the 2 bytes before
+            # the ':' in "004c:payload"), not the whole manufacturer_data.
+            # Apple/Google/etc. rotate the payload after the company ID every
+            # few seconds (Continuity nearby-info, handoff, AirPods status),
+            # so comparing the full bytes flagged every iPhone/Watch/AirPod as
+            # "manufacturer spoofing". A genuine spoof is a MAC advertising
+            # different *company IDs* over time.
             old_manufacturer = self.device_history[mac].get('manufacturer_data')
-            if old_manufacturer and old_manufacturer != manufacturer and manufacturer:
-                if manufacturer not in self.device_manufacturer_changes[mac]:
-                    self.device_manufacturer_changes[mac].append(manufacturer)
-                    logger.debug("BLE %s manufacturer change", mac)
+            old_company = old_manufacturer.split(':', 1)[0] if old_manufacturer else ''
+            if old_company and company_id and old_company != company_id:
+                if company_id not in self.device_manufacturer_changes[mac]:
+                    self.device_manufacturer_changes[mac].append(company_id)
+                    logger.debug("BLE %s company-id change: %s -> %s",
+                                 mac, old_company, company_id)
 
         # Update history
         self.device_history[mac] = device_data

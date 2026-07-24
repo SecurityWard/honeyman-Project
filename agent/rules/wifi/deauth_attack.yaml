@@ -10,11 +10,14 @@ category: wifi
 conditions:
   operator: OR
   clauses:
-    # High rate of deauth frames
+    # High rate of deauth frames. 60/min is attack-level: benign APs emit
+    # ~11-33/min (roaming, idle timeout, band steering); real floods saturate
+    # the detector's 100-frame/min tracker. Keep in sync with the detector
+    # gate in wifi_detector._check_deauth_attack.
     - type: network_evaluator
       field: deauth_count_per_minute
       operator: greater_than
-      value: 10
+      value: 60
 
     # Deauth targeting specific client
     - type: behavioral
@@ -42,6 +45,6 @@ metadata:
   confidence: 0.90
 
 tuning:
-  threshold_per_minute: 10
+  threshold_per_minute: 60
   cooldown_seconds: 120
   max_alerts_per_hour: 30
