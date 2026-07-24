@@ -39,7 +39,6 @@ export default function AboutPage() {
             <div className="capability-card">
               <h3>WiFi</h3>
               <ul>
-                <li><strong>Evil Twin APs</strong> (same SSID, different BSSIDs)</li>
                 <li><strong>Deauth and beacon flooding</strong></li>
                 <li><strong>Attack tool fingerprints:</strong> WiFi Pineapple, ESP8266 Deauther, Flipper Zero WiFi</li>
                 <li><strong>Weak encryption</strong> (WEP, vulnerable WPA) on scanned networks</li>

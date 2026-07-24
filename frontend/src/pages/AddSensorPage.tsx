@@ -13,7 +13,15 @@ export default function AddSensorPage() {
     return window.location.origin.replace(/:\d+$/, ':8000');
   }, []);
 
-  const installCommand = `curl -sSL https://honeymanproject.com/install | sudo HONEYMAN_API='${apiBase}' bash`;
+  // install.sh already defaults the backend to this. When the dashboard is
+  // the canonical deployment we show the clean one-liner (identical to the
+  // About page); only a self-hosted backend needs the explicit override, so
+  // the two pages don't disagree about the command everyone actually runs.
+  const DEFAULT_API = 'https://api.honeymanproject.com';
+  const apiOverride = apiBase !== DEFAULT_API;
+  const installCommand = apiOverride
+    ? `curl -sSL https://honeymanproject.com/install | sudo HONEYMAN_API='${apiBase}' bash`
+    : `curl -sSL https://honeymanproject.com/install | sudo bash`;
 
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
@@ -152,16 +160,15 @@ export default function AddSensorPage() {
         <pre className="block-code"><code>{`curl -sSL https://honeymanproject.com/install | sudo \\
   SENSOR_NAME='defcon-hotel' \\
   LOCATION='DefCon 32 hotel lobby' \\
-  NON_INTERACTIVE=1 \\
-  HONEYMAN_API='${apiBase}' \\
+  NON_INTERACTIVE=1 \\${apiOverride ? `\n  HONEYMAN_API='${apiBase}' \\` : ''}
   bash`}</code></pre>
       </section>
 
       <section className="install-card secondary">
         <h2>What the sensor detects</h2>
         <div className="capabilities-list">
-          <span><strong>USB</strong> &mdash; BadUSB, Rubber Ducky, OMG Cable, 360+ malware-hash matches</span>
-          <span><strong>WiFi</strong> &mdash; Evil Twin, deauth, Pineapple, beacon flooding</span>
+          <span><strong>USB</strong> &mdash; BadUSB, Rubber Ducky, OMG Cable, 600+ malware-hash matches</span>
+          <span><strong>WiFi</strong> &mdash; deauth, beacon flooding, Pineapple, ESP8266 Deauther</span>
           <span><strong>BLE</strong> &mdash; Flipper Zero, BLE spam, HID keyloggers, manufacturer-data spoofing</span>
           <span><strong>AirDrop / mDNS</strong> &mdash; service flooding, suspicious names, TXT-record abuse</span>
           <span><strong>Network honeypot</strong> &mdash; SSH brute force, HTTP credential harvesting, port scans (toggleable)</span>
