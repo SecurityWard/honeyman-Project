@@ -424,6 +424,15 @@ install_agent() {
         || pip3 install --quiet -e "${INSTALL_DIR}/src/agent" \
         || fail "pip install of honeyman-agent failed"
     success "Agent installed (importable as 'honeyman')"
+
+    # Install the one-step updater so operators can pull new rules + code
+    # with `sudo honeyman-update` instead of hand-copying into
+    # /etc/honeyman/rules.
+    if [[ -f "${INSTALL_DIR}/src/deployment/honeyman-update.sh" ]]; then
+        install -m 0755 "${INSTALL_DIR}/src/deployment/honeyman-update.sh" \
+            /usr/local/sbin/honeyman-update
+        success "Installed 'honeyman-update' (run: sudo honeyman-update)"
+    fi
 }
 
 copy_rules() {

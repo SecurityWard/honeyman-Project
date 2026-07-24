@@ -98,9 +98,11 @@ There is no login. There are no actions. It's a viewing surface.
 
 Detection rules are YAML files. Each sensor ships with the default rule set under `/etc/honeyman/rules/<category>/`. To add or modify rules:
 
-**Locally on a sensor** — drop a YAML file into `/etc/honeyman/rules/<category>/` or edit an existing one, then `sudo systemctl restart honeyman-agent`. The agent loads everything under that tree at startup.
+**Pull the latest defaults** — on any installed sensor, run `sudo honeyman-update`. It fetches the newest source, syncs the default rules into `/etc/honeyman/rules/` and refreshes the malware-hash DB, then restarts the agent. Rules you've customised locally are preserved (see the `.local` marker below).
 
-**Centrally** — open a PR against this repo's `agent/rules/` directory. Sensors with `rule_sync.enabled: true` poll `GET /api/v2/rules` every 5 minutes and write any new/changed rules to disk; the change takes effect on the next agent restart. A `<rule>.yaml.local` marker file next to any rule pins it against being overwritten by central sync.
+**Locally on a sensor** — drop a YAML file into `/etc/honeyman/rules/<category>/` or edit an existing one, then `sudo systemctl restart honeyman-agent`. The agent loads everything under that tree at startup. To keep your edit from being overwritten by `honeyman-update` or central sync, drop an empty marker next to it: `touch /etc/honeyman/rules/<category>/<rule>.yaml.local`.
+
+**Centrally** — open a PR against this repo's `agent/rules/` directory. CI validates every rule can actually fire (`agent/tests/validate_rules.py`). Sensors then pick it up via `sudo honeyman-update` (or `rule_sync.enabled: true`, which polls `GET /api/v2/rules`).
 
 A rule looks like:
 
