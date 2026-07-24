@@ -43,9 +43,15 @@ Build a repeatable test matrix; confirm each fires the right
 
 ## 3. Detector gaps — rules that need detector work
 
-A field validator (`agent/tests/validate_rules.py`, enforced in CI) now
-guarantees every *enabled* rule can fire. These detections are **disabled**
-because they need the detector to emit something it currently doesn't:
+A rule validator (`agent/tests/validate_rules.py`, enforced in CI) now
+guarantees every *enabled* rule can fire. It checks two failure classes:
+(a) a clause field the detector never emits, and (b) a clause `type` the
+engine doesn't dispatch to an evaluator. Class (b) caught 7 rules that
+silently always returned False — deauth/beacon flood among them — fixed by
+registering `pattern`/`network`/`network_evaluator` aliases in the engine.
+
+Remaining **disabled** detections still need the detector to emit
+something it currently doesn't:
 
 - [ ] **Apple Continuity abuse** (BLE) — needs the detector to parse and
       rate-analyse Continuity messages; a bare Apple-ID (4c00) match would
@@ -94,12 +100,14 @@ Rule audit (which WiFi rules match the fields the detector actually emits):
       stat cards, trends, and top-threats to that sensor (not just the feed).
       `sensor_id` threaded through `/analytics/{map,overview,top-threats,trends}`
       and the frontend hooks.
-- [ ] **Filter by severity** (critical / high / medium / low)
-- [ ] **Filter by attack class** (detector type: usb / ble / wifi / airdrop
-      / network) and/or `threat_type`
-- [ ] Ensure filters **compose** (sensor + severity + class together).
-      `/threats` already accepts `severity` + `detector_type`; mostly
-      frontend UI + wiring the analytics endpoints.
+- [x] **Filter by severity** (critical / high / medium / low) — client-side
+      dropdown over the live feed.
+- [x] **Filter by attack class** (detector type) — client-side dropdown,
+      options derived from events present in the feed.
+- [ ] Push severity/class filters **server-side** so they scope the whole
+      view (map + stats + charts), not just the ≤20-item feed, and
+      **compose** with the sensor filter. `/threats` already accepts
+      `severity` + `detector_type`; needs the analytics endpoints wired.
 
 ## 6. Rule tuning / false positives
 
@@ -174,6 +182,18 @@ Rule audit (which WiFi rules match the fields the detector actually emits):
 
 ## Recently shipped (context)
 
+- **7 dead rules revived** — validator now checks clause *type* against the
+  engine's registered evaluators, not just fields. Found 7 enabled rules
+  (deauth flood, beacon flood, manufacturer spoofing, 4 airdrop) whose
+  clause type was never registered, so they silently always returned False.
+  Fixed with engine aliases; deauth/beacon confirmed to fire end-to-end.
+- **autorun.inf content inspection** — detector parses `open=` /
+  `shellexecute=` / `command=` directives; new high-severity
+  `autorun_execute` rule fires only when one auto-launches an executable
+  (vs `autorun_abuse` staying low/informational on mere presence).
+- Live-feed **severity + attack-class filters** on the dashboard.
+- **About-page accuracy pass** — dropped WPS + Apple Continuity claims
+  (both disabled/unbacked); kept claims now backed by working detectors.
 - Malware-hash scan **proven** end-to-end (EICAR → known_malware critical)
 - `suspicious_ssid` rule retuned; FP storm eliminated (3361 rows purged)
 - Dashboard sensor filter now scopes the map + stats + charts, not just feed
