@@ -1,0 +1,45 @@
+rule_id: usb_autorun_execute_001
+name: "Autorun.inf Auto-Executes Payload"
+version: 1.0
+enabled: true
+severity: high
+threat_type: autorun_execute
+category: usb
+
+# The high-confidence companion to autorun_abuse (which only notes that an
+# autorun.inf is present — legitimate on launcher drives). This rule fires
+# only when the file's *contents* auto-launch an executable, i.e. an
+# `open=`, `shellexecute=`, or `shell\...\command=` directive points at an
+# .exe/.bat/.com/.scr/.pif/.vbs/.ps1/.js/.hta target — the classic
+# autorun-worm delivery pattern (Conficker/Stuxnet). The detector sets
+# `autorun_executes: true` only in that case, so this cannot false-positive
+# on a benign launcher drive that merely sets icon=/label=.
+conditions:
+  operator: AND
+  clauses:
+    - type: network_pattern
+      field: autorun_executes
+      operator: equals
+      value: true
+
+actions:
+  - type: alert_dashboard
+    priority: high
+
+  - type: local_log
+    severity: high
+
+metadata:
+  mitre_attack:
+    - T1091  # Replication Through Removable Media
+    - T1204.002  # User Execution: Malicious File
+  tags:
+    - autorun
+    - persistence
+    - removable_media
+    - worm
+  description: "autorun.inf contains a directive that auto-launches an executable"
+  confidence: 0.9
+
+tuning:
+  cooldown_seconds: 600

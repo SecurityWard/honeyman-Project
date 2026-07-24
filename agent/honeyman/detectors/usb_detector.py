@@ -544,6 +544,13 @@ class UsbDetector(BaseDetector):
                         'file_extension': file_path.suffix.lower()
                     }
 
+                    # autorun.inf: the mere presence of the file is a weak
+                    # signal (legit launcher drives have it). Read its
+                    # contents to tell real autorun abuse — a directive that
+                    # auto-launches an executable — from a benign launcher.
+                    if filename.lower() == 'autorun.inf' and file_size <= 64 * 1024:
+                        file_data.update(self._inspect_autorun(file_path))
+
                     # Check filename patterns
                     await self.evaluate_event(file_data)
 
@@ -560,6 +567,40 @@ class UsbDetector(BaseDetector):
         """Check if file is executable"""
         exec_extensions = {'.exe', '.scr', '.bat', '.cmd', '.ps1', '.vbs', '.js', '.jar', '.app', '.sys', '.dll'}
         return Path(filename).suffix.lower() in exec_extensions
+
+    def _inspect_autorun(self, file_path: Path) -> Dict[str, Any]:
+        """Parse autorun.inf and report whether it auto-launches an executable.
+
+        Real autorun-worm abuse (Conficker/Stuxnet era) uses `open=`,
+        `shellexecute=`, or a `shell\\...\\command=` directive pointing at an
+        .exe/.bat/.com/.scr/etc. A benign launcher drive typically only sets
+        `icon=`/`label=`. Emitting these fields lets the rule alert loudly
+        only on the malicious pattern while treating a plain autorun.inf as
+        an informational note:
+
+            autorun_executes : bool  — a directive launches an executable
+            autorun_target   : str   — the referenced program (if any)
+        """
+        result: Dict[str, Any] = {"autorun_executes": False}
+        try:
+            text = file_path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            return result
+
+        exec_ext = (".exe", ".bat", ".cmd", ".com", ".scr", ".pif", ".vbs",
+                    ".ps1", ".js", ".hta")
+        for raw in text.splitlines():
+            line = raw.strip()
+            low = line.lower()
+            if low.startswith(("open=", "shellexecute=")) or "\\command=" in low:
+                value = line.split("=", 1)[1].strip() if "=" in line else ""
+                if value:
+                    result["autorun_target"] = value
+                    target = value.split()[0].strip('"').lower()
+                    if target.endswith(exec_ext):
+                        result["autorun_executes"] = True
+                        break
+        return result
 
     async def _analyze_executable(self, file_path: Path, file_data: Dict[str, Any]):
         """

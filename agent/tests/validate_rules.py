@@ -28,6 +28,18 @@ import yaml
 
 RULES_DIR = Path(__file__).resolve().parent.parent / "rules"
 
+# Clause `type` values the rule engine actually dispatches to an evaluator
+# (rule_engine.py `self.evaluators`). A clause whose type isn't here hits
+# the "No evaluator found" branch and evaluates to False — a dead clause,
+# no matter how correct its field is. Keep in sync with rule_engine.py.
+REGISTERED_TYPES = {
+    "file_hash_match", "device_vendor", "device_product", "file_pattern",
+    "ssid_match", "network_pattern", "behavioral", "signal_strength",
+    "mac_address", "service_name",
+    # Aliases registered in rule_engine.py for legacy short type names.
+    "pattern", "network", "network_evaluator",
+}
+
 # Fields each detector puts into the event dict passed to evaluate_event.
 # Derived from the *_detector.py event construction. Keep in sync when a
 # detector adds/renames an emitted field.
@@ -40,6 +52,8 @@ EMITTED_FIELDS = {
         "file_extension", "sha256", "md5", "malware_name", "malware_family",
         "malware_threat_type", "malware_description", "malware_db_severity",
         "timestamp", "add", "remove",
+        # autorun.inf content inspection (_inspect_autorun)
+        "autorun_executes", "autorun_target",
     },
     "ble": {
         "mac_address", "device_name", "rssi", "manufacturer_data",
@@ -113,10 +127,19 @@ def check_rule(path: Path) -> tuple[list[str], list[str]]:
 
     per_clause_ok = []
     for c in clauses:
+        ctype = c.get("type")
+        # A clause only fires if its type dispatches to an evaluator AND its
+        # field is emitted (or, for behavioral, its metric is computed — it
+        # never is, so those stay dead).
+        type_ok = ctype in REGISTERED_TYPES
         fields = clause_fields(c)
-        ok = bool(fields) and all(is_emitted(f, emitted) for f in fields)
+        fields_ok = bool(fields) and all(is_emitted(f, emitted) for f in fields)
+        ok = type_ok and fields_ok
         per_clause_ok.append(ok)
-        if not ok:
+        if not type_ok:
+            warnings.append(f"{rel}: dead clause — unknown clause type "
+                            f"{ctype!r} (no evaluator; always False)")
+        elif not fields_ok:
             bad = [f for f in fields if not is_emitted(f, emitted)]
             warnings.append(f"{rel}: dead clause — field(s) not emitted by "
                             f"{category} detector: {', '.join(bad)}")

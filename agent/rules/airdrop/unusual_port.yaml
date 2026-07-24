@@ -11,13 +11,13 @@ conditions:
   operator: OR
   clauses:
     # Low privileged ports (unusual for AirDrop)
-    - type: device
+    - type: network_pattern
       field: port
       operator: less_than
       value: 1024
 
     # Very high ports (suspicious)
-    - type: device
+    - type: network_pattern
       field: port
       operator: greater_than
       value: 65000

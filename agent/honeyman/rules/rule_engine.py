@@ -76,6 +76,13 @@ class RuleEngine:
             'signal_strength': NetworkEvaluator(),
             'mac_address': PatternEvaluator(),
             'service_name': PatternEvaluator(),
+            # Aliases — many rule files use these short/legacy type names.
+            # Without them the clause hits "No evaluator found" and silently
+            # evaluates to False, so the whole rule can never fire. Keep this
+            # set in sync with tests/validate_rules.py REGISTERED_TYPES.
+            'pattern': PatternEvaluator(),          # -> file_pattern
+            'network': NetworkEvaluator(),          # -> network_pattern
+            'network_evaluator': NetworkEvaluator(),  # -> network_pattern
         }
 
         # Load rules on initialization
