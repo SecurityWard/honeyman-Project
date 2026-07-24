@@ -1,42 +1,36 @@
 rule_id: usb_autorun_001
 name: "Autorun.inf Abuse Detection"
-version: 2.0
+version: 2.1
 enabled: true
-severity: high
+severity: low
 threat_type: autorun_abuse
 category: usb
 
-# Detect autorun abuse and suspicious executable files
+# v2.1 — this rule was a false-positive bomb at `high` severity. It fired
+# on EVERY .exe/.bat/.ps1/.js file on any drive, and on desktop.ini /
+# .DS_Store / Thumbs.db — OS artifacts Windows and macOS create on nearly
+# every USB stick. It also flagged bare autorun.inf, which every U3 /
+# launcher drive (e.g. SanDisk Cruzer) ships legitimately.
+#
+# On a Linux sensor we can't observe auto-execution, so autorun.inf
+# presence is only a weak, informational indicator — kept at `low`
+# severity. Real autorun-delivered malware is caught by the malware-hash
+# rule (known payloads) and suspicious_volume_label. The
+# any-executable and OS-artifact clauses are removed entirely.
 conditions:
   operator: OR
   clauses:
-    # Autorun.inf file
     - type: file_pattern
       field: filename
       operator: equals
       pattern: "autorun.inf"
 
-    # Suspicious executable with autorun
-    - type: file_pattern
-      field: filename
-      operator: regex
-      pattern: ".*\\.(exe|scr|bat|cmd|ps1|vbs|js)$"
-
-    # Hidden system file patterns
-    - type: file_pattern
-      field: filename
-      operator: in
-      values:
-        - "desktop.ini"
-        - ".DS_Store"
-        - "Thumbs.db"
-
 actions:
   - type: alert_dashboard
-    priority: high
+    priority: low
 
   - type: local_log
-    severity: high
+    severity: low
 
 metadata:
   mitre_attack:
@@ -50,8 +44,6 @@ metadata:
   confidence: 0.80
 
 tuning:
-  max_alerts_per_hour: 20
-  exclude_extensions:
-    - ".txt"
-    - ".jpg"
-    - ".png"
+  # One note per device per hour — a launcher drive re-inserted repeatedly
+  # shouldn't spam.
+  cooldown_seconds: 3600

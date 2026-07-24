@@ -14,7 +14,9 @@ conditions:
     - type: file_pattern
       field: device_name
       operator: regex
-      pattern: ".*(spam|flood|beacon|rapid|annoying).*"
+      # Dropped "beacon"/"rapid" — both match legitimate BLE beacons
+      # (Estimote, iBeacon, "*Beacon*") that are everywhere.
+      pattern: "(ble.?spam|spam.?bl|flood|flipper.?spam|nrf.?spam|appleflood|spooftooph)"
 
     # Rapid appearance pattern
     - type: behavioral

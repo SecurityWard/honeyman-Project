@@ -14,7 +14,8 @@ conditions:
     - type: pattern
       field: service_name
       operator: regex
-      pattern: ".*(flipper|hack|pwn|test|exploit|payload|shell|attack|pentest).*"
+      # Dropped generic "test" — matches "MacBook test", "test iPhone", etc.
+      pattern: "(flipper|hack|pwn|exploit|payload|reverse.?shell|attack|pentest|c2)"
 
     # Tool-specific names
     - type: pattern
