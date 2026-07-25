@@ -15,8 +15,10 @@ conditions:
       field: device_name
       operator: regex
       # Dropped "beacon"/"rapid" — both match legitimate BLE beacons
-      # (Estimote, iBeacon, "*Beacon*") that are everywhere.
-      pattern: "(ble.?spam|spam.?bl|flood|flipper.?spam|nrf.?spam|appleflood|spooftooph)"
+      # (Estimote, iBeacon, "*Beacon*") that are everywhere. Also dropped the
+      # bare "flood" token — it matched "Floodlight" smart cameras/lights
+      # (Ring, Wyze, etc.); the specific "appleflood" tool name is kept.
+      pattern: "(ble.?spam|spam.?bl|flipper.?spam|nrf.?spam|appleflood|spooftooph)"
 
     # Rapid appearance pattern
     - type: behavioral

@@ -10,11 +10,15 @@ category: ble
 conditions:
   operator: OR
   clauses:
-    # Flipper Zero firmware signatures
+    # Flipper Zero advertises with "Flipper" in its BLE name. Dropped the
+    # broad tokens that matched common consumer gear: "momentum" (Sennheiser
+    # Momentum headphones), "\bRM\b" (a model prefix on many devices), and
+    # "\bFZ\b" (too short). Custom-firmware variants (Unleashed/Xtreme/
+    # RogueMaster/"FZ_") are handled by flipper_zero_unleashed.yaml.
     - type: file_pattern
       field: device_name
       operator: regex
-      pattern: ".*(flipper|momentum|unleashed|roguemaster|\\bRM\\b|\\bFZ\\b).*"
+      pattern: ".*[Ff]lipper.*"
 
     # Suspicious BLE service UUIDs
     - type: service_name

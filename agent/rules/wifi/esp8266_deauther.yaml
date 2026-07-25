@@ -16,11 +16,13 @@ conditions:
       operator: regex
       pattern: ".*(pwned|deauther|esp8266).*"
 
-    # ESP8266 MAC OUI
-    - type: mac_address
-      field: bssid
-      operator: regex
-      pattern: "^(5C:CF:7F|EC:FA:BC|2C:3A:E8):.*"
+    # NOTE: an Espressif OUI clause (5C:CF:7F / EC:FA:BC / 2C:3A:E8) was
+    # removed here — those OUIs belong to *every* ESP8266/ESP32, which is
+    # the chip in a huge fraction of consumer IoT. Any smart plug/bulb/
+    # sensor in AP (setup) mode broadcasts a beacon with that OUI, so the
+    # clause fired `high` on ordinary smart-home gear and could not tell a
+    # deauther from a light switch. A real deauther is caught by its SSID
+    # (above) and by the deauth flood itself (deauth_attack rule).
 
     # Continuous deauth pattern
     - type: behavioral

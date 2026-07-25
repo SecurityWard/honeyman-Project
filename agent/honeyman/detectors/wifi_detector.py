@@ -608,8 +608,10 @@ class WifiDetector(BaseDetector):
 
     async def _check_beacon_flooding(self):
         """Check for beacon flooding attack"""
-        # Count unique SSIDs in last minute
-        recent_threshold = 50
+        # Count unique SSIDs. A dense apartment/urban scan legitimately sees
+        # 50-100+ real APs; a beacon-flood tool fabricates hundreds+. Keep in
+        # sync with the rule threshold in wifi/beacon_flooding.yaml.
+        recent_threshold = 150
 
         if len(self.beacon_tracker) > recent_threshold:
             flood_data = {

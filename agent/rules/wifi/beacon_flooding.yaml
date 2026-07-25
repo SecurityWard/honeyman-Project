@@ -10,11 +10,15 @@ category: wifi
 conditions:
   operator: OR
   clauses:
-    # Excessive unique SSIDs in short time
+    # Excessive unique SSIDs. 150 is attack-level: a dense apartment/urban
+    # scan legitimately returns 50-100+ APs, but a beacon-flood tool
+    # (mdk4, Flipper/Marauder, Pineapple beacon spam) fabricates hundreds to
+    # thousands of fake SSIDs. Keep in sync with the detector gate in
+    # wifi_detector._check_beacon_flooding.
     - type: network_evaluator
       field: unique_ssids_per_scan
       operator: greater_than
-      value: 50
+      value: 150
 
     # Rapid SSID appearance
     - type: behavioral
@@ -41,6 +45,6 @@ metadata:
   confidence: 0.80
 
 tuning:
-  threshold_ssids: 50
+  threshold_ssids: 150
   scan_window_seconds: 60
   max_alerts_per_hour: 20

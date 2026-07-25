@@ -14,10 +14,13 @@ category: ble
 conditions:
   operator: OR
   clauses:
+    # Dropped bare "badge" and "conference" — they matched conference-room
+    # AV gear ("Conference Room" speakers/displays, Zoom Rooms) and any
+    # device with "badge" in its name. Kept the specific event identifiers.
     - type: file_pattern
       field: device_name
       operator: regex
-      pattern: "(defcon|dc29|dc30|dc31|dc32|badge|conference|blackhat|bsides)"
+      pattern: "(defcon|dc29|dc30|dc31|dc32|blackhat|bsides)"
 
 actions:
   - type: alert_dashboard
