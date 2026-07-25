@@ -116,10 +116,39 @@ Rule audit (which WiFi rules match the fields the detector actually emits):
       prank/intimidation names and named attack tools (Pineapple/Hak5/MANA/
       Evil-Twin/…). Validated: fires on 7/7 attack names, 0 FPs on 8 legit
       networks. Purged 3361 old FP rows. Per-SSID 1h cooldown.
-- [ ] **`flipper_zero_unleashed` FP storm** — fires on ordinary BLE devices;
-      tighten conditions
-- [ ] Broader FP sweep — run a sensor in a busy environment for a day, rank
-      rules by fire count, calm the noisy ones (tighter matches / cooldowns)
+- [x] **`flipper_zero_unleashed` FP storm** — fixed (v2.1): requires
+      `flipper`+firmware keyword together, or `FZ_` prefix.
+- [x] **`deauth_attack` / `manufacturer_spoofing` FP storms** — surfaced when
+      the alias fix revived them. deauth gate raised 10→60/min (background is
+      ~11-33); manufacturer_spoofing detector now compares the 2-byte BLE
+      company id, not the rotating Apple Continuity payload. 97 FP rows purged.
+- [x] **Static FP-risk sweep of all enabled rules** — reviewed every rule's
+      trigger against what a benign environment produces. Fixed the confirmed
+      ambient offenders: `flipper_zero` ("momentum"→Sennheiser, `\bRM\b`),
+      `ble_spam` ("flood"→Floodlight cams), `conference_badge`
+      ("conference"/"badge"→AV gear), `esp8266_deauther` (Espressif OUI→every
+      ESP smart device), `beacon_flooding` (50→150 SSIDs). Confirmed benign:
+      `badusb` HID clause is dead; airdrop rules browse only `_airdrop._tcp`
+      (hashed names).
+- [ ] **FP judgment calls left for a decision** (not auto-changed — they trade
+      real detection for fewer FPs):
+      - `ble/esp32_attack` — `high` on device names "esp32/espressif/arduino",
+        which are in tons of legit IoT/hobbyist BLE gear (already flagged
+        `false_positive_prone`). Lower to `medium`, or require corroboration?
+      - `wifi/pineapple_detection` — `critical`; SSID regex includes "Karma"/
+        "MANA" (a network legitimately named "Karma" would hit it) and the
+        Alfa OUI `00:C0:CA`. High cost per FP given `critical`.
+      - `usb/omg_cable` — product/mfr regex "Elite" (HP EliteBook, etc.) and
+        "MG"; plus real Apple PIDs under `05ac:*`. Low ambient risk (needs
+        physical insertion) but broad.
+      - `usb/rubber_ducky` — Arduino Leonardo/Micro PIDs match genuine Arduino
+        boards. Dual-use; defensible, but note it.
+- [ ] **`beacon_flooding` needs a time window** — the detector accumulates
+      unique SSIDs with no decay and only resets on alert, so any threshold
+      eventually trips given enough uptime in a busy area. Proper fix: count
+      unique SSIDs per rolling window (rate), not cumulative.
+- [ ] Live FP sweep — run a sensor in a busy environment for a day, rank
+      rules by fire count, calm any remaining noisy ones.
 - [ ] Revisit `mac_randomization` (currently off by default) — salvageable?
 - [ ] Audit whether the rule engine actually honors `tuning.max_alerts_per_hour`
       in aggregate vs per-target, and `whitelist_check` — several rules
