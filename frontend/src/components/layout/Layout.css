@@ -30,8 +30,8 @@
 }
 
 .brand-logo {
-  width: 44px;
-  height: 44px;
+  height: 34px;
+  width: auto;
   object-fit: contain;
 }
 

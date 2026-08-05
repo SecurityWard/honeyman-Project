@@ -56,8 +56,11 @@ class WifiDetector(BaseDetector):
             'beacon_count': 0
         })
 
-        # Attack tracking
-        self.deauth_tracker = defaultdict(lambda: deque(maxlen=100))
+        # Attack tracking. maxlen bounds the per-BSSID rolling window; it also
+        # caps the reportable count, so keep it well above the alert threshold
+        # (a real flood should be able to report a number that dwarfs the
+        # threshold, not sit pinned at the cap).
+        self.deauth_tracker = defaultdict(lambda: deque(maxlen=500))
         # Beacon-flood detection by *rate of new SSIDs*, not cumulative count.
         # seen_ssids = every SSID observed so far; new_ssid_times = the arrival
         # time of each first-ever sighting, pruned to a rolling window. A dense
@@ -661,13 +664,15 @@ class WifiDetector(BaseDetector):
         now = datetime.utcnow()
         recent = [d for d in deauths if (now - d['timestamp']).total_seconds() < 60]
 
-        # Benign APs emit deauth/disassoc frames routinely (client roaming,
-        # idle timeout, band steering) — observed ~11-33/min per BSSID in a
-        # normal environment. A real deauth flood (aireplay-ng, Pineapple,
-        # ESP8266 deauther) is continuous and saturates the maxlen=100 tracker
-        # within seconds. 60/min sits well above background noise and any real
-        # attack blows straight past it, so this is the FP/attack dividing line.
-        if len(recent) > 60:  # Threshold — attack-level rate, not background
+        # Benign APs emit deauth/disassoc frames routinely, and in a busy
+        # environment (many APs, multi-BSSID radios) a single BSSID can sit at
+        # 60-100/min of ordinary management traffic — enough to false-fire the
+        # old >60 gate. A real flood (aireplay-ng --deauth 0, Pineapple, ESP8266
+        # deauther) is continuous at 100s/sec and instantly saturates the
+        # maxlen=500 window. 250/min gives a wide margin over observed benign
+        # rates while any real attack blows straight through it. Keep in sync
+        # with wifi/deauth_attack.yaml.
+        if len(recent) > 250:  # Threshold — attack-level rate, not background
             deauth_data = {
                 'threat_type': 'deauth_attack',
                 'bssid': bssid,

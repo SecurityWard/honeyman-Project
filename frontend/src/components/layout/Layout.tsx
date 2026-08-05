@@ -7,9 +7,8 @@ export default function Layout() {
       <header className="header">
         <div className="header-content">
           <div className="brand">
-            <img src="/honeyman-logo.png" alt="Honeyman Logo" className="brand-logo" />
+            <img src="/honeyman-logo.svg" alt="Honeyman" className="brand-logo" />
             <div className="brand-text">
-              <h1>Honeyman</h1>
               <span className="version">Dashboard</span>
             </div>
           </div>
