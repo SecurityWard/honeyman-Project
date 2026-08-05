@@ -1,8 +1,12 @@
 rule_id: ble_esp32_attack_001
 name: "ESP32 BLE Attack Board Detection"
-version: 2.0
+version: 2.1
 enabled: true
-severity: high
+# medium, not high: a device merely *named* esp32/espressif/arduino is a
+# weak indicator, not a confirmed attack. ESP32 is the chip in countless
+# legit IoT devices and event badges (DEF CON badges included), so a high-
+# severity alert here would bury real criticals in a dense environment.
+severity: medium
 threat_type: esp32_attack
 category: ble
 
@@ -30,10 +34,10 @@ conditions:
 
 actions:
   - type: alert_dashboard
-    priority: high
+    priority: medium
 
   - type: local_log
-    severity: high
+    severity: medium
 
 metadata:
   mitre_attack:

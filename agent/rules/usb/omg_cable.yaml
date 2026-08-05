@@ -19,17 +19,20 @@ conditions:
         - "05ac:12a8"  # Apple USB-C (spoofed)
         - "05ac:1460"  # Apple USB-C (spoofed)
 
-    # Product string indicators
+    # Product string indicators. Dropped the bare "Elite" token — it matched
+    # legit peripherals (HP EliteBook docks, gaming "Elite" controllers) and
+    # this rule is `critical`. Kept the O.MG-specific spellings.
     - type: file_pattern
       field: product_name
       operator: regex
-      pattern: ".*(O\\.?M\\.?G|Elite|OMG.*Cable).*"
+      pattern: ".*(O\\.?M\\.?G|OMG.?Cable).*"
 
-    # Manufacturer indicators
+    # Manufacturer indicators. Dropped bare "MG"/"Elite" (matched "IMG",
+    # "Samsung"-adjacent strings, "Elite" gear) — far too broad for critical.
     - type: file_pattern
       field: manufacturer
       operator: regex
-      pattern: ".*(MG|O\\.MG|Elite).*"
+      pattern: ".*(O\\.?M\\.?G|OMG.?Cable).*"
 
 actions:
   - type: alert_dashboard

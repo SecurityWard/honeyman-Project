@@ -58,7 +58,13 @@ class WifiDetector(BaseDetector):
 
         # Attack tracking
         self.deauth_tracker = defaultdict(lambda: deque(maxlen=100))
-        self.beacon_tracker = defaultdict(int)
+        # Beacon-flood detection by *rate of new SSIDs*, not cumulative count.
+        # seen_ssids = every SSID observed so far; new_ssid_times = the arrival
+        # time of each first-ever sighting, pruned to a rolling window. A dense
+        # environment has a large but stable SSID set (few new ones after
+        # warmup); a flood tool emits a high rate of brand-new SSIDs.
+        self.seen_ssids: set = set()
+        self.new_ssid_times: deque = deque()
 
         # Whitelist
         self.bssid_whitelist: Set[str] = set()
@@ -403,8 +409,12 @@ class WifiDetector(BaseDetector):
             bssid = packet[Dot11].addr2
             ssid = packet[Dot11Elt].info.decode('utf-8', errors='ignore')
 
-            # Track beacon
-            self.beacon_tracker[ssid] += 1
+            # Track beacon: record only the first-ever sighting of each SSID,
+            # timestamped, so _check_beacon_flooding can measure the *rate* of
+            # new SSIDs over a rolling window.
+            if ssid and ssid not in self.seen_ssids:
+                self.seen_ssids.add(ssid)
+                self.new_ssid_times.append(datetime.utcnow())
 
             # Extract network info
             network_data = {
@@ -607,23 +617,36 @@ class WifiDetector(BaseDetector):
         history['beacon_count'] += 1
 
     async def _check_beacon_flooding(self):
-        """Check for beacon flooding attack"""
-        # Count unique SSIDs. A dense apartment/urban scan legitimately sees
-        # 50-100+ real APs; a beacon-flood tool fabricates hundreds+. Keep in
-        # sync with the rule threshold in wifi/beacon_flooding.yaml.
-        recent_threshold = 150
+        """Check for beacon flooding — rate of *new* SSIDs over a rolling window.
 
-        if len(self.beacon_tracker) > recent_threshold:
+        A dense apartment/con-hall scan legitimately sees 50-100+ APs, but its
+        SSID set is stable, so few brand-new SSIDs appear per minute after
+        warmup. A flood tool (mdk4, Flipper/Marauder, Pineapple beacon spam)
+        fabricates a high rate of never-before-seen SSIDs. Counting new SSIDs
+        per window separates the two; a cumulative count could not. Keep the
+        threshold in sync with wifi/beacon_flooding.yaml.
+        """
+        window_seconds = 60
+        recent_threshold = 150
+        now = datetime.utcnow()
+
+        # Drop first-sighting timestamps that have aged out of the window.
+        while self.new_ssid_times and \
+                (now - self.new_ssid_times[0]).total_seconds() > window_seconds:
+            self.new_ssid_times.popleft()
+
+        if len(self.new_ssid_times) > recent_threshold:
             flood_data = {
                 'threat_type': 'beacon_flood',
-                'unique_ssids_per_scan': len(self.beacon_tracker),
-                'timestamp': datetime.utcnow().isoformat()
+                'unique_ssids_per_scan': len(self.new_ssid_times),
+                'timestamp': now.isoformat()
             }
 
             await self.evaluate_event(flood_data)
 
-            # Reset tracker after alert
-            self.beacon_tracker.clear()
+            # Clear the window so we alert once per burst, not every scan tick
+            # while it drains.
+            self.new_ssid_times.clear()
 
     async def _check_deauth_attack(self, bssid: str):
         """
