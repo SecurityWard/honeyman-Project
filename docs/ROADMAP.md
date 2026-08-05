@@ -130,23 +130,21 @@ Rule audit (which WiFi rules match the fields the detector actually emits):
       ESP smart device), `beacon_flooding` (50→150 SSIDs). Confirmed benign:
       `badusb` HID clause is dead; airdrop rules browse only `_airdrop._tcp`
       (hashed names).
-- [ ] **FP judgment calls left for a decision** (not auto-changed — they trade
-      real detection for fewer FPs):
-      - `ble/esp32_attack` — `high` on device names "esp32/espressif/arduino",
-        which are in tons of legit IoT/hobbyist BLE gear (already flagged
-        `false_positive_prone`). Lower to `medium`, or require corroboration?
-      - `wifi/pineapple_detection` — `critical`; SSID regex includes "Karma"/
-        "MANA" (a network legitimately named "Karma" would hit it) and the
-        Alfa OUI `00:C0:CA`. High cost per FP given `critical`.
-      - `usb/omg_cable` — product/mfr regex "Elite" (HP EliteBook, etc.) and
-        "MG"; plus real Apple PIDs under `05ac:*`. Low ambient risk (needs
-        physical insertion) but broad.
-      - `usb/rubber_ducky` — Arduino Leonardo/Micro PIDs match genuine Arduino
-        boards. Dual-use; defensible, but note it.
-- [ ] **`beacon_flooding` needs a time window** — the detector accumulates
-      unique SSIDs with no decay and only resets on alert, so any threshold
-      eventually trips given enough uptime in a busy area. Proper fix: count
-      unique SSIDs per rolling window (rate), not cumulative.
+- [x] **FP judgment calls — resolved pre-DEF CON** (optimised for a max-
+      density hostile floor where every `critical` must count):
+      - `ble/esp32_attack` — lowered `high`→`medium` (weak "named esp32/
+        arduino" indicator; badges everywhere at a con).
+      - `wifi/pineapple_detection` — **kept as-is** (`critical`). The
+        "Karma"/"MANA"/Alfa FP concern inverts at DEF CON; there they're
+        real attacks.
+      - `usb/omg_cable` — dropped the broad "Elite"/"MG" regex tokens; kept
+        O.MG spellings + spoofed Apple PIDs.
+      - `usb/rubber_ducky` — **kept as-is** (USB-only; Arduino Leonardo into
+        a honeypot is a test or an attack either way).
+- [x] **`beacon_flooding` time window** — replaced cumulative unique-SSID
+      counting with a rolling-window *rate of new SSIDs* (>150 first-ever
+      sightings / 60s). Separates a real flood from mere density; the
+      cumulative version would false-fire on a con floor.
 - [ ] Live FP sweep — run a sensor in a busy environment for a day, rank
       rules by fire count, calm any remaining noisy ones.
 - [ ] Revisit `mac_randomization` (currently off by default) — salvageable?
