@@ -56,9 +56,16 @@ something it currently doesn't:
 - [ ] **Apple Continuity abuse** (BLE) — needs the detector to parse and
       rate-analyse Continuity messages; a bare Apple-ID (4c00) match would
       FP on every iPhone/Mac/AirPod.
-- [ ] **AirDrop rapid announcements** — needs per-service announcement
-      rate / churn tracking over a window (detector emits per-service
-      fields, no rates).
+- [ ] **AirDrop TXT records are never captured** — `_parse_avahi_output`
+      reads TXT only from lines starting with `"`, but `avahi-browse -r`
+      emits them on a `txt = [...]` line, so `txt_record_abuse.yaml` has
+      nothing to match. Switch the scan to `avahi-browse -p` (parseable,
+      `;`-delimited) and split the TXT field.
+- [ ] **AirDrop rapid announcements — wrong flood key.** `_get_service_key`
+      keys on `address:port:name`, but a flood announces many distinct
+      *hashed* names, so each is a fresh key and the per-key count stays ~1.
+      Rate must be per source-address / per-interface over a window, counting
+      distinct names. (This is the disabled §-rapid_announcements detector.)
 - [ ] **WiFi channel + encryption** — `_get_channel_from_packet` and
       `_get_encryption` are stubs (None / []). Parse RadioTap (channel) and
       RSN/WPA IEs (encryption).
@@ -147,7 +154,15 @@ Rule audit (which WiFi rules match the fields the detector actually emits):
       cumulative version would false-fire on a con floor.
 - [ ] Live FP sweep — run a sensor in a busy environment for a day, rank
       rules by fire count, calm any remaining noisy ones.
-- [ ] Revisit `mac_randomization` (currently off by default) — salvageable?
+- [ ] **BLE behavioral state is MAC-keyed and blind to rotation.** Every
+      counter (`device_appearances`, `device_name_changes`, `device_history`)
+      keys on `mac`. iOS/Android privacy addressing and BLE-spam tools rotate
+      the MAC every few minutes, resetting appearance-rate and name-change
+      accumulation — so a rotating attacker never trips the thresholds, which
+      is the exact evasion `mac_randomization` is about. Rotation also
+      undercuts the other BLE behavioral rules. Needs a rotation-invariant key
+      (adv-structure / manufacturer-payload fingerprint or timing), not the
+      MAC. (Supersedes the old "revisit mac_randomization — salvageable?".)
 - [ ] Audit whether the rule engine actually honors `tuning.max_alerts_per_hour`
       in aggregate vs per-target, and `whitelist_check` — several rules
       assume enforcement that may not exist
@@ -209,6 +224,13 @@ Rule audit (which WiFi rules match the fields the detector actually emits):
 
 ## Recently shipped (context)
 
+- **PR-review fixes (Fable 5):** (1) threat scoring no longer averages a
+  critical down — the strongest matched rule sets the band, corroboration only
+  raises the score; (2) OpenCanary webhook binds loopback by default + optional
+  shared-token auth (was unauthenticated on 0.0.0.0); (3) log-tail resets its
+  offset on rotation instead of seeking past EOF; (4) the bluetoothctl BLE
+  fallback normalises manufacturer data to `companyid:payload`, so the Apple
+  Continuity FP fix holds even without bleak.
 - **7 dead rules revived** — validator now checks clause *type* against the
   engine's registered evaluators, not just fields. Found 7 enabled rules
   (deauth flood, beacon flood, manufacturer spoofing, 4 airdrop) whose

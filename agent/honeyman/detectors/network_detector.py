@@ -14,6 +14,7 @@ Detects network-based threats via OpenCanary:
 import asyncio
 import logging
 import json
+import os
 import time
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
@@ -32,7 +33,14 @@ class NetworkDetector(BaseDetector):
 
         # Configuration
         self.webhook_port = config.get('network', {}).get('webhook_port', 8888)
-        self.webhook_host = config.get('network', {}).get('webhook_host', '0.0.0.0')
+        # Bind loopback by default: OpenCanary is co-located on the sensor, so
+        # the webhook never needs to be reachable off-box. Binding 0.0.0.0
+        # let anyone on a hostile LAN POST forged canary events that the sensor
+        # would then enrich, score, and forward under its own real API key —
+        # laundering fabricated threats onto the public map. Override only with
+        # a token set (webhook_token) if a remote OpenCanary must reach it.
+        self.webhook_host = config.get('network', {}).get('webhook_host', '127.0.0.1')
+        self.webhook_token = config.get('network', {}).get('webhook_token', '')
         self.opencanary_log_path = config.get('network', {}).get('opencanary_log', '/var/log/opencanary/opencanary.log')
         self.log_tail_mode = config.get('network', {}).get('log_tail_mode', False)
 
@@ -118,6 +126,17 @@ class NetworkDetector(BaseDetector):
 
         while self.running:
             try:
+                # Detect log rotation: if the file is now smaller than our saved
+                # offset it was rotated/truncated, so start from the top —
+                # otherwise seek() lands past EOF and every event is silently
+                # dropped until the log grows back past the old size.
+                try:
+                    if os.stat(self.opencanary_log_path).st_size < self.log_position:
+                        logger.info("OpenCanary log rotated; resetting tail offset")
+                        self.log_position = 0
+                except FileNotFoundError:
+                    self.log_position = 0
+
                 with open(self.opencanary_log_path, 'r') as f:
                     # Seek to last position
                     f.seek(self.log_position)
@@ -160,6 +179,16 @@ class NetworkDetector(BaseDetector):
     async def _handle_webhook(self, request):
         """Handle incoming OpenCanary webhook"""
         try:
+            # If a shared token is configured, require it. Prevents anyone who
+            # can reach the port from injecting forged canary events that the
+            # sensor would forward under its own API key.
+            if self.webhook_token:
+                if request.headers.get('X-Honeyman-Token', '') != self.webhook_token:
+                    logger.warning("Rejected webhook POST with missing/invalid token")
+                    return web.json_response(
+                        {'status': 'error', 'message': 'unauthorized'}, status=401
+                    )
+
             event_data = await request.json()
 
             if event_data:

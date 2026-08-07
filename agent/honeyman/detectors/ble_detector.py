@@ -306,9 +306,37 @@ class BleDetector(BaseDetector):
         return int(match.group(1)) if match else -100
 
     def _extract_manufacturer(self, info_output: str) -> str:
-        """Extract manufacturer data from bluetoothctl info output"""
-        match = re.search(r'ManufacturerData.*?:\s*([0-9a-f]+)', info_output, re.IGNORECASE)
-        return match.group(1) if match else ''
+        """Extract manufacturer data from bluetoothctl info, normalised to the
+        same 'companyid:payload' shape the bleak backend emits
+        (_format_manufacturer_data).
+
+        This matters: _track_device compares only the 2-byte company id (via
+        split(':',1)[0]) so that Apple/Google devices rotating their Continuity
+        payload don't look like "manufacturer spoofing". If this fallback
+        returned bare hex, that split would grab the whole rotating payload and
+        the FP would come straight back whenever bleak isn't installed.
+        """
+        # Modern bluetoothctl prints the company id and payload separately:
+        #   ManufacturerData Key: 0x004c
+        #   ManufacturerData Value:\n  06 44 1d ...
+        key = re.search(r'ManufacturerData Key:\s*(?:0x)?([0-9a-fA-F]{1,4})',
+                        info_output)
+        if key:
+            company_id = f"{int(key.group(1), 16):04x}"
+            val = re.search(r'ManufacturerData Value:\s*((?:[0-9a-fA-F]{2}[\s:]*)+)',
+                            info_output)
+            payload = re.sub(r'[^0-9a-fA-F]', '', val.group(1)) if val else ''
+            return f"{company_id}:{payload}"
+
+        # Fallback: a single bare hex blob whose first two bytes are the
+        # company id, little-endian (as in raw BLE manufacturer_data).
+        blob = re.search(r'ManufacturerData.*?:\s*(?:0x)?([0-9a-fA-F]{4,})',
+                         info_output, re.IGNORECASE)
+        if not blob:
+            return ''
+        raw = blob.group(1).lower()
+        company_id = f"{raw[2:4]}{raw[0:2]}"  # little-endian -> company id
+        return f"{company_id}:{raw[4:]}"
 
     def _extract_services(self, info_output: str) -> List[str]:
         """Extract service UUIDs from bluetoothctl info output"""

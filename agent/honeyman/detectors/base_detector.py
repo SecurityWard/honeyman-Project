@@ -298,7 +298,9 @@ class BaseDetector(ABC):
             Threat dict ready to ship via transport.send(threat, topic='threats')
         """
         threat_score = self._calculate_threat_score(rules)
-        severity = self._get_risk_level(threat_score)
+        # Band from the strongest matched rule, not the (corroboration-diluted)
+        # score — a critical stays critical even when weaker rules co-fire.
+        severity = self._highest_severity(rules)
         confidence = self._max_confidence(rules)
 
         # Pull a top-level latitude/longitude (backend stores them denormalised
@@ -418,42 +420,45 @@ class BaseDetector(ABC):
         except Exception as exc:
             logger.error("Error sending threat: %s", exc)
 
+    # Ordered weakest -> strongest; used for both the score floor and the band.
+    _SEVERITY_ORDER = ['info', 'low', 'medium', 'high', 'critical']
+    _SEVERITY_WEIGHTS = {
+        'critical': 1.0, 'high': 0.8, 'medium': 0.5, 'low': 0.3, 'info': 0.1,
+    }
+
     def _calculate_threat_score(self, rules: List[Any]) -> float:
-        """
-        Calculate aggregate threat score from matching rules
+        """Aggregate 0-1 threat score.
 
-        Args:
-            rules: List of matched rules
-
-        Returns:
-            Threat score between 0.0 and 1.0
+        The strongest matched rule sets the *floor*; each corroborating match
+        adds a small, diminishing bonus. Corroboration can only raise the
+        score, never lower it. The old implementation returned the plain mean
+        of the severity weights, so a low-severity co-match dragged a critical
+        down (critical+low -> 0.65 -> "high") — the exact inverse of what we
+        want on a dense floor where several rules fire on one device.
         """
         if not rules:
             return 0.0
 
-        # Weight rules by severity
-        severity_weights = {
-            'critical': 1.0,
-            'high': 0.8,
-            'medium': 0.5,
-            'low': 0.3,
-            'info': 0.1
-        }
+        weights = sorted(
+            (self._SEVERITY_WEIGHTS.get(
+                (getattr(rule, 'severity', '') or 'medium').lower(), 0.5)
+             for rule in rules),
+            reverse=True,
+        )
+        score = weights[0] + sum(weights[1:]) * 0.1
+        return round(min(1.0, score), 3)
 
-        total_weight = 0.0
-        weighted_sum = 0.0
-
-        for rule in rules:
-            weight = severity_weights.get(rule.severity.lower(), 0.5)
-            total_weight += weight
-            weighted_sum += weight
-
-        if total_weight == 0:
-            return 0.5
-
-        # Normalize to 0-1 range
-        score = min(1.0, weighted_sum / len(rules))
-        return round(score, 3)
+    def _highest_severity(self, rules: List[Any]) -> str:
+        """The dashboard band is the highest severity among the matched rules —
+        the rule author's own classification. Corroboration may raise the
+        score, but the band is never demoted below the strongest match."""
+        if not rules:
+            return 'info'
+        return max(
+            ((getattr(rule, 'severity', '') or 'medium').lower() for rule in rules),
+            key=lambda s: self._SEVERITY_ORDER.index(s)
+            if s in self._SEVERITY_ORDER else self._SEVERITY_ORDER.index('medium'),
+        )
 
     def _get_risk_level(self, score: float) -> str:
         """
