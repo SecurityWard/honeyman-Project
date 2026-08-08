@@ -119,6 +119,20 @@ async def create_threat(
         )
 
     db_threat = Threat(**threat.dict())
+
+    # Backfill location from the sensor's registered position when the event
+    # arrived without one. Events detected while the sensor was offline can't
+    # run location enrichment (IP-geo / WiFi lookup need connectivity), so they
+    # drain from the local buffer with no coordinates and would land in the
+    # feed but never on the map. The sensor's own location is the right stand-in.
+    if db_threat.latitude is None and sensor.latitude is not None:
+        db_threat.latitude = sensor.latitude
+        db_threat.longitude = sensor.longitude
+        db_threat.city = db_threat.city or sensor.city
+        db_threat.country = db_threat.country or sensor.country
+        db_threat.accuracy_meters = sensor.location_accuracy
+        db_threat.location_method = "sensor"
+
     db.add(db_threat)
     await db.commit()
     await db.refresh(db_threat)
