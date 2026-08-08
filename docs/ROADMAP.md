@@ -195,8 +195,19 @@ Rule audit (which WiFi rules match the fields the detector actually emits):
       detector give-ups
 - [ ] **Detector supervision in practice** — kill a detector, confirm it
       restarts and the others + heartbeat keep running
-- [ ] **Offline buffer** — pull the network, fire a threat, restore, confirm
-      the queue drains
+- [x] **Offline buffer — proven in the field.** A sensor offline ~63h
+      buffered a batch to SQLite and drained it all on reconnect. Two issues
+      surfaced and were addressed:
+      - [x] *Buffered events had no location* (enrichment needs connectivity),
+            so 37/50 never hit the map. Fixed: backend now backfills lat/lon
+            from the sensor's registered position on ingest when a threat has
+            none (method='sensor'); existing rows backfilled once.
+      - [ ] *Replay isn't idempotent* — 7 events double-inserted (each POST
+            gets a fresh server id, no dedup key). Proper fix (fast-follow):
+            agent stamps a stable `event_id` at detection, buffer/POST carries
+            it, backend adds a unique index + on-conflict-do-nothing. Needs a
+            small additive migration, so not a night-before change. (7 dupes
+            purged for now.)
 - [ ] **Multi-sensor** — run Pi Zero + Pi5 simultaneously; confirm
       map/filter/list scale
 
